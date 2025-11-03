@@ -1,56 +1,68 @@
-name: DCO Check
-on: workflow_call
+name: Reusable DCO Check
+
+on:
+  workflow_call:
+    # no inputs/secrets needed
+
+permissions:
+  contents: read
+  pull-requests: read
 
 jobs:
   dco:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: read
-
     steps:
       - name: Checkout PR head
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          # For pull_request calls, this checks out the HEAD ref of the PR
           ref: ${{ github.event.pull_request.head.sha }}
 
       - name: Verify DCO sign-offs
+        shell: bash
         run: |
           set -euo pipefail
+
           base_sha='${{ github.event.pull_request.base.sha }}'
           head_sha='${{ github.event.pull_request.head.sha }}'
 
           echo "Base: $base_sha" >&2
           echo "Head: $head_sha" >&2
+
           git fetch --no-tags --prune origin "$base_sha" "$head_sha" || true
-      
+
           missing=$(
             git log --format='%H' "${base_sha}..${head_sha}" |
             while read -r c; do
               echo "---- checking commit: $c ----" >&2
               msg="$(git show -s --format=%B "$c")"
               echo "$msg" | sed 's/^/    /' >&2
-      
+
               if printf '%s' "$msg" | git interpret-trailers --parse | grep -iq '^signed-off-by:'; then
                 :  # ok
               else
-                echo "$c"   # <-- ONLY the SHA goes to stdout (captured into $missing)
-                echo "$msg" 
+                # IMPORTANT: only echo the SHA to stdout so $missing is clean
+                echo "$c"
               fi
             done
           )
 
-          if [ -n "$missing" ]; then
+          if [ -n "${missing}" ]; then
             echo
             echo "❌ Missing DCO sign-off in commit(s):"
-            echo "$missing"
+            echo "${missing}"
             echo
             echo "Fix latest commit:"
             echo "  git commit --amend -s --no-edit && git push --force-with-lease"
-            echo "Fix multiple commits:"
-            echo "  git rebase -i ${base_sha}  # add -s to each, then push --force-with-lease"
+            echo
+            echo "Fix older commits:"
+            echo "  git rebase -i <good-base-commit>  # mark commits as 'edit', then:"
+            echo "  git commit --amend -s"
+            echo "  git rebase --continue"
+            echo "  git push --force-with-lease"
             exit 1
+          else
+            echo "✅ All commits have DCO sign-offs."
           fi
 
-          echo "✅ All commits contain a Signed-off-by trailer."
