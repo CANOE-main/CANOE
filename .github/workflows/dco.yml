@@ -1,7 +1,5 @@
 name: DCO Check
-on:
-  pull_request:
-    types: [opened, synchronize, reopened, edited]
+on: workflow_call
 
 jobs:
   dco:
