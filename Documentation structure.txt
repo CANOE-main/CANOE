@@ -1,0 +1,27 @@
+Documentation requirements
+
+1.	Tentative layout for documentation.
+2.	Landing page
+	a.	What is CANOE
+	b.	What can it do
+	c.	Why should you use it
+3.	Quick start guide
+4.	Data guide
+	a.	Data architecture
+	i.	Python-based construction
+	ii.	Data management
+		1.	SQLite annual release
+		2.	Data IDs
+		3.	Referencing
+		4.	DQIs
+	b.	Electricity
+		i.	Data sources -> processing/assumptions -> final data
+	c.	Transportation
+		i.	...
+	d.	Industry
+	e.	Residential buildings
+	f.	Commercial buildings
+	g.	Fuels
+5.	Changelog
+6.	Publications
+7.	Contact

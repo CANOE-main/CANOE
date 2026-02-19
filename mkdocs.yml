@@ -1,0 +1,65 @@
+site_name: CANOE Documentation
+site_description: Documentation for the Canadian Open Energy Model (CANOE)
+site_url: https://CANOE-main.github.io/CANOE/
+repo_url: https://github.com/CANOE-main/CANOE
+repo_name: CANOE-main/CANOE
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  features:
+    - navigation.expand
+    - navigation.indexes
+    - navigation.top
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+  palette:
+    - scheme: default
+      primary: teal
+      accent: purple
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: lime
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Quickstart: quickstart.md
+  - Data Guide:
+    - Overview: data_guide/index.md
+    - Electricity: data_guide/electricity.md
+    - Transportation: data_guide/transportation.md
+    - Industry: data_guide/industry.md
+    - Residential: data_guide/residential.md
+    - Commercial: data_guide/commercial.md
+    - Fuels: data_guide/fuels.md
+  - Related Repos: related_repos.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+  - Publications: publications.md
+  - Contact: contact.md
+  - License: license.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - toc:
+      permalink: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/CANOE-main
