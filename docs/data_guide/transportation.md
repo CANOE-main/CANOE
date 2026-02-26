@@ -11,17 +11,20 @@ The transportation sector model relies on a combination of regional spreadsheets
 
 ### Spreadsheet Databases
 The primary input data is stored in the `transportation/spreadsheet_database/` directory. Each spreadsheet contains several critical sheets:
+
 - **Techs & Comms**: Definitions of vehicle technologies and energy commodities.
 - **Demand**: Historical and projected energy or transport demand (e.g., VKT - Vehicle Kilometers Traveled).
 - **ExCap**: Existing vehicle population by vintage (2000-2020).
 - **Efficiency & Costs**: Characterization of vehicle performance and financial parameters.
 - **CapFactor**: Constraints on vehicle usage and charging profile requirements.
 
+
 ### Charging Profiles
 Synthetic Light-Duty Electric Vehicle (LD EV) charging profiles are sourced from the **RAMP-mobility** framework. These profiles provide hourly distribution of charging demand, which is critical for representing peak grid loads.
 
 ### External Dataset References
 Key parameters (such as efficiency and cost trajectories) are benchmarked against:
+
 - **NRCan**: Natural Resources Canada (Energy Use Data).
 - **GREET**: Greenhouse gases, Regulated Emissions, and Energy use in Technologies model.
 - **AEO**: EIA Annual Energy Outlook.
@@ -59,4 +62,4 @@ The output of the processing pipeline is a set of SQLite databases optimized for
 - **Granularity**: The final data includes hourly resolution for charging demands and annual/vintage resolution for vehicle stocks and efficiencies.
 
 > [!NOTE]
-> For more details on running the compilation or analysis, refer to the [README.md](file:///c:/Users/david/CANOE_REPO/canoe-transportation/README.md).
+> For more details on running the compilation or analysis, refer to the [README.md](https://github.com/CANOE-main/canoe-transportation).

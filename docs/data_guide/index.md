@@ -12,3 +12,13 @@ The data is organized by sector, with robust relationships defined between them.
 - **Data IDs**: Unique identifiers for all data points.
 - **Referencing**: Strict referencing of all data sources.
 - **DQIs**: Data Quality Indicators.
+
+### Sector Guides
+- [Electricity](electricity.md)
+- [Transportation](transportation.md)
+- [Industry](industry.md)
+- [Residential](residential.md)
+- [Commercial](commercial.md)
+- [Fuels](fuels.md)
+- [Agriculture](agriculture.md)
+- [CEF Data](cef.md)

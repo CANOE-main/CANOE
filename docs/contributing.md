@@ -4,7 +4,7 @@ We are happy that you're interested in contributing to CANOE!
 
 ## Resources
 * [Model Documentation](index.md)
-* [Issue Tracker](https://github.com/CANOE-main/CANOE/issues)
+* [Issue Tracker](https://groups.google.com/forum/#!forum/temoa-projects)
 
 ## Submitting Changes
 1. Fork the repository.
