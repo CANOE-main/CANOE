@@ -19,6 +19,7 @@ The pipeline reads the CEF demand projections directly from the downloaded CSV f
 
 ### 2. Dimension Mapping
 CEF regions, energy branches (sectors), and fuels undergo transformation directly into CANOE's internal naming schema. For instance:
+
 - Commercial electricity maps to `C_elc`.
 - Residential natural gas maps to `R_ng`.
 - Industrial biofuel maps to `I_bio`.
