@@ -2,40 +2,19 @@
 
 ## Installation
 
-### Prerequisites
-- Python 3.8+
-- Git
+### Step 1:The Dataset
 
-### Steps
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/CANOE-main/CANOE.git
-   cd CANOE
-   ```
-2. create a virtual environment:
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-   ```
-3. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+Go to the Zenodo link for the [dataset]()
 
-## Running the Application
+### Step 2: Filtering the Data
 
-To launch the CANOE Interface:
+Go to [canoe_interface](https://github.com/CANOE-main/canoe_interface), you can either clone and use the app via the command line or go to the releases section and download executable file/app
 
-```bash
-python canoe_interface/main.py
-```
+### Step 3: Selecting Temporal Resolution
 
-This will open the graphical interface for managing model inputs and processing datasets.
+Filter the dataset using the app, then use the [representive_periods](https://github.com/CANOE-main/representative_periods) repository to add in the temporal data.
 
-## CLI Usage
+### Step 4: Running the Model
 
-(TODO: Add CLI usage details if applicable)
+Clone the [Temoa](https://github.com/CANOE-main/temoa) repository using the 1.0.0-dev-operator branch. Follow the instructions at the [Temoa](https://github.com/CANOE-main/temoa) repository to run the model.
 
-## Configuration
-
-(TODO: Add configuration details)
