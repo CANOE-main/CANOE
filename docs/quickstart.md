@@ -4,7 +4,7 @@
 
 ### Step 1:The Dataset
 
-Go to the Zenodo link for the [dataset]()
+Go to the Zenodo link for the [dataset](https://zenodo.org/records/18435395)
 
 ### Step 2: Filtering the Data
 
@@ -17,4 +17,5 @@ Filter the dataset using the app, then use the [representive_periods](https://gi
 ### Step 4: Running the Model
 
 Clone the [Temoa](https://github.com/CANOE-main/temoa) repository using the 1.0.0-dev-operator branch. Follow the instructions at the [Temoa](https://github.com/CANOE-main/temoa) repository to run the model.
+
 
