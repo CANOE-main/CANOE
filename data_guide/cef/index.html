@@ -1062,11 +1062,13 @@
 <h3 id="1-data-ingestion-filtering">1. Data Ingestion &amp; Filtering<a class="headerlink" href="#1-data-ingestion-filtering" title="Permanent link">&para;</a></h3>
 <p>The pipeline reads the CEF demand projections directly from the downloaded CSV files and filters them appropriately according to the configured scenarios (e.g., Global Net-zero) and geographic boundaries.</p>
 <h3 id="2-dimension-mapping">2. Dimension Mapping<a class="headerlink" href="#2-dimension-mapping" title="Permanent link">&para;</a></h3>
-<p>CEF regions, energy branches (sectors), and fuels undergo transformation directly into CANOE's internal naming schema. For instance:
-- Commercial electricity maps to <code>C_elc</code>.
-- Residential natural gas maps to <code>R_ng</code>.
-- Industrial biofuel maps to <code>I_bio</code>.
-- Transportation gasoline maps to <code>T_gsl</code>.</p>
+<p>CEF regions, energy branches (sectors), and fuels undergo transformation directly into CANOE's internal naming schema. For instance:</p>
+<ul>
+<li>Commercial electricity maps to <code>C_elc</code>.</li>
+<li>Residential natural gas maps to <code>R_ng</code>.</li>
+<li>Industrial biofuel maps to <code>I_bio</code>.</li>
+<li>Transportation gasoline maps to <code>T_gsl</code>.</li>
+</ul>
 <h3 id="3-load-distribution-optional">3. Load Distribution (Optional)<a class="headerlink" href="#3-load-distribution-optional" title="Permanent link">&para;</a></h3>
 <p>If configured within the scenario generation, Demand Specific Distributions (DSD) can be applied specifically to electricity demands produced by the CEF projections. This establishes high-resolution regional load profiles for the optimization horizon.</p>
 <hr />
