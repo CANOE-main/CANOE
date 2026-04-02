@@ -3,6 +3,8 @@
 
 This page provides an overview of the data pipeline for the transportation sector within the CANOE (Canadian Open Energy Model) framework. It outlines how raw data is gathered, processed, and transformed into the final models used for energy system analysis.
 
+For in-depth details about the transportation sector: [Detailed Transportation](https://canoe-main.github.io/canoe-transportation/)
+
 ---
 
 ## Data Sources

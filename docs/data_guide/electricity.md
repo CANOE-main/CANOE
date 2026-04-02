@@ -2,6 +2,8 @@
 
 This repository aggregates the Canadian electricity sector for the CANOE model. It processes raw data from various national and international sources into a unified, aggregated format suitable for large-scale energy system modeling.
 
+For in-depth details about the electricity sector: [Detailed Electricity](https://canoe-main.github.io/canoe-electricity/)
+
 ## Data Sources
 
 The aggregation process draws from several primary databases and datasets:

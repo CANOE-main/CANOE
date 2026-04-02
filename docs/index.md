@@ -1,6 +1,6 @@
 # Welcome to CANOE
 
-**CANOE** (Canadian Open Energy Model) is a comprehensive energy systems model designed for Canada.
+**CANOE** (Canadian Open Energy Model) is an energy systems model built of the temoa framework. It is designed for Canada. CANOE is currently in its early-stages, however we plan to update the dataset and model over the upcoming years.  
 
 ## What is CANOE?
 
@@ -17,6 +17,10 @@ CANOE provides a detailed representation of the Canadian energy system, includin
 - **Open Source**: Transparent and extensible.
 - **Data-Driven**: Built on robust datasets and validated assumptions.
 - **Flexible**: Adaptable to new questions and regional contexts.
+
+## How often is the dataset updated?
+
+The dataset is updated on an annual basis and is released before the end of Summer. Around this time we also review github admins who review data issues and address pull requests. 
 
 ## Getting Started
 

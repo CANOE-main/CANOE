@@ -2,6 +2,8 @@
 
 This page details the end-to-end data flow for the CANOE Agriculture Sector model, from raw external sources to the structured SQLite tables.
 
+For in-depth details about the agriculture sector: [Detailed Agriculture](https://canoe-main.github.io/canoe-agriculture/)
+
 ## Data Sources
 
 ### Primary Energy Data

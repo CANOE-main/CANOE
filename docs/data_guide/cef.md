@@ -2,6 +2,8 @@
 
 This page details the extraction and processing of Canada's Energy Futures (CEF) data for use in CANOE. This pipeline is used to convert annual energy demand projections for lower-resolution sectors (which act as "black boxes") into Temoa-compatible databases.
 
+For in-depth details relating to the CEF data (both Net-Zero and Current Measures Scenario), please visit here: [Detailed CEF](https://canoe-main.github.io/canoe-cef/)
+
 ## Data Sources
 
 ### Primary Energy Data
@@ -19,6 +21,7 @@ The pipeline reads the CEF demand projections directly from the downloaded CSV f
 
 ### 2. Dimension Mapping
 CEF regions, energy branches (sectors), and fuels undergo transformation directly into CANOE's internal naming schema. For instance:
+
 - Commercial electricity maps to `C_elc`.
 - Residential natural gas maps to `R_ng`.
 - Industrial biofuel maps to `I_bio`.

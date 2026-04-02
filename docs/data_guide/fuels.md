@@ -2,6 +2,9 @@
 
 This section provides a technical overview of the data pipeline for the fuel sector, covering how raw data is sourced, normalized, and transformed into the final SQLite database.
 
+For in-depth details about the fuel sector: [Detailed Fuel](https://canoe-main.github.io/canoe-fuel/)
+
+
 ## Data Sources
 
 The aggregator draws from a mix of international energy APIs, technical reports, and localized biofuel studies to ensure comprehensive coverage of the fuel commodity landscape.
