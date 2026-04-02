@@ -2,6 +2,9 @@
 
 This page documents the data lifecycle for the Industry sector in the CANOE database, covering the sources, ETL processing logic, and the resulting data structure.
 
+For in-depth details about the industry sector: [Detailed Industry](https://canoe-main.github.io/canoe-industry/)
+
+
 ## 1. Data Sources
 
 The industry pipeline integrates three primary external datasets to build a comprehensive view of energy demand and technological shares across Canada.

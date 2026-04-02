@@ -31,11 +31,14 @@ theme:
 
 plugins:
   - search
+  - git-revision-date-localized:
+      type: date
+      enable_creation_date: true
 
 nav:
   - Home: index.md
   - Quickstart: quickstart.md
-  - Data Guide:
+  - Data Guide Quickstart:
     - Overview: data_guide/index.md
     - Electricity: data_guide/electricity.md
     - Transportation: data_guide/transportation.md

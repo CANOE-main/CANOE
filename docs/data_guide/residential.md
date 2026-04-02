@@ -1,5 +1,6 @@
 # Residential Sector
 
+For in-depth details about the residential sector: [Detailed Residential](https://canoe-main.github.io/canoe-residential/)
 
 The residential sector model aggregates data from several key industrial and governmental sources:
 

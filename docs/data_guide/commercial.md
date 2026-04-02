@@ -2,6 +2,9 @@
 
 This page details the end-to-end data flow for the CANOE Commercial Sector model, from raw external sources through processing and assumptions to the final aggregated dataset.
 
+For in-depth details about the commercial sector: [Detailed Commercial](https://canoe-main.github.io/canoe-commercial/)
+
+
 ## Data Sources
 
 The model aggregates data from several primary and auxiliary sources:
