@@ -15,4 +15,7 @@ The CANOE project consists of several interconnected repositories:
 - **[canoe-fuels](https://github.com/CANOE-main/canoe-fuels.git)**: Fuels sector data processing and input generation.
 - **[canoe-agriculture](https://github.com/CANOE-main/canoe-agriculture.git)**: Agriculture sector data processing and input generation.
 - **[canoe-cef](https://github.com/CANOE-main/canoe-cef.git)**: CEF (Canada's Energy Futures) sector data and constraints structure.
+- **[canoe-dataset-merge](https://github.com/CANOE-main/canoe-dataset-merge)**: A script to enable aggregation of all the sectors into a single model.
+- **[pyam-dashboard](https://github.com/CANOE-main/pyam-dashboard)**: A preliminary dashboard to be explore results from the pyam files
+- **[canoe-pair-programmer](https://github.com/CANOE-main/canoe-pair-programmer)**: A pair programmer to ask questions relating to the code and how to extract data from the model. Also has a [docker](https://hub.docker.com/repository/docker/dturnbull21/canoe-pair-programmer/general)
 

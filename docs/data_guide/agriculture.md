@@ -37,3 +37,4 @@ The pipeline generates an SQLite output database containing:
 - `Efficiency` and `LimitTechInputSplitAnnual`: Derived conversion efficiencies and fractional input requirements.
 - `CostInvest`: Seeded placeholder cost values for tracking investments.
 - `DataSet` & `DataSource`: Specific metadata rows establishing data provenance (e.g., `[A1]` NRCan, `[A2]` CER).
+
