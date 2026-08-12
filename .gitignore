@@ -1,0 +1,8 @@
+# mkdocs build output (deployed to gh-pages via CI, not committed to main)
+site/
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/

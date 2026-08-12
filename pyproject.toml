@@ -1,0 +1,17 @@
+[project]
+name = "canoe"
+version = "4.0.0"
+description = "The Canadian Open Energy Model (CANOE)"
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.12"
+
+[project.optional-dependencies]
+docs = [
+    "mkdocs-material>=9.5",
+    "mkdocs-git-revision-date-localized-plugin>=1.2",
+]
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
