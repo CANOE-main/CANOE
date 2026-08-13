@@ -60,6 +60,6 @@ Jump straight to the setup instructions.
  
 <small>
 Dataset updated annually, released before end of summer &nbsp;·&nbsp;
-[Changelog](changelog.md) &nbsp;·&nbsp;
+<!--[Changelog](changelog.md) &nbsp;·&nbsp;-->
 [License](license.md)
 </small>

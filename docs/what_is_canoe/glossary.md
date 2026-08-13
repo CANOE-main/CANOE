@@ -47,8 +47,7 @@ Plain-language definitions for terms used throughout these docs.
   evolving across time periods.
 
 **Region**
-: The geographic unit CANOE models at (see [Design Assumptions](design_assumptions.md#regions)
-  for specifics once documented).
+: The geographic unit CANOE models.
 
 **Representative periods**
 : The step that reduces a dataset's fine-grained temporal resolution down to a manageable set of
