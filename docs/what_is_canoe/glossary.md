@@ -9,7 +9,7 @@ Plain-language definitions for terms used throughout these docs.
 
 **CEF (Canada's Energy Future)**
 : The source of the low-resolution alternative demand projections stored alongside each sector's
-  high-resolution module output in the [master database](#master-database). See [Model
+  high-resolution module output in the master database. See [Model
   Architecture](model_architecture.md#from-sectors-to-a-master-database).
 
 **Commodity**
@@ -21,7 +21,7 @@ Plain-language definitions for terms used throughout these docs.
   energy system while satisfying demand and any constraints in place.
 
 **Filtering interface**
-: The tool that narrows the [master database](#master-database) down to a specific case of interest —
+: The tool that narrows the master database down to a specific case of interest —
   a region, a scenario, and which resolution track (high-res or low-res) to use per sector. See [Model
   Architecture](model_architecture.md#filtering-and-representative-periods).
 
