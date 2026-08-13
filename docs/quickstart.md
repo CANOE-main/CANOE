@@ -9,7 +9,7 @@ This walks through running CANOE from the published master database to a solved 
 four stages: **download the data → filter it → apply representative periods → run TEMOA.**
 
 For the concepts behind each stage, see [Model
-Architecture](../what_is_canoe/model_architecture.md).
+Architecture](what_is_canoe/model_architecture.md).
 
 ## Step 1: Get the master database
 
@@ -18,7 +18,7 @@ Download the CANOE 3.1 master database from
 
 This database contains both the high-resolution module output and the low-resolution CEF
 alternative for every sector, across all scenarios and regions (see [Model
-Architecture](../what_is_canoe/model_architecture.md#from-sectors-to-a-master-database))
+Architecture](what_is_canoe/model_architecture.md#from-sectors-to-a-master-database))
 
 ## Step 2: Filter to your case of interest
 
@@ -112,7 +112,7 @@ Output lands in a time-stamped folder under `output_files/`, including logs and 
 
 ## Next steps
 
-- Read [Model Architecture](../what_is_canoe/model_architecture.md) to understand what each stage
+- Read [Model Architecture](what_is_canoe/model_architecture.md) to understand what each stage
   above actually did.
-- See the [Data Guide](../data_guide/index.md) for sector-specific data details.
+- See the [Data Guide](data_guide/index.md) for sector-specific data details.
 - Hit an issue? Check [Contributing](contributing.md) for the issue template.

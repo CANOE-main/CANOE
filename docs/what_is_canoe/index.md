@@ -94,4 +94,4 @@ Architecture](model_architecture.md) page goes into how these sectors connect to
 
 </div>
 
-Ready to run it yourself instead? Head to [Get Started](../get_started/index.md).
+Ready to run it yourself instead? Head to [Get Started](../get_started.md).

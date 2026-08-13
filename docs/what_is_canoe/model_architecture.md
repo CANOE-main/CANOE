@@ -77,7 +77,7 @@ flowchart TD
 
 Both steps are necessary today because TEMOA can't optimize efficiently against the full master
 database directly. They're called out separately here because they show up as distinct stages
-throughout the docs (and as distinct tools/repos) — the [Get Started](../get_started/index.md) guide
+throughout the docs (and as distinct tools/repos) — the [Get Started](../get_started.md) guide
 covers how to actually run them.
 
 ## Where to go next

@@ -9,7 +9,7 @@ Plain-language definitions for terms used throughout these docs.
 
 **CEF (Canada's Energy Future)**
 : The source of the low-resolution alternative demand projections stored alongside each sector's
-  high-resolution module output in the [master database](#master-database). See [Model
+  high-resolution module output in the master database. See [Model
   Architecture](model_architecture.md#from-sectors-to-a-master-database).
 
 **Commodity**
@@ -21,14 +21,14 @@ Plain-language definitions for terms used throughout these docs.
   energy system while satisfying demand and any constraints in place.
 
 **Filtering interface**
-: The tool that narrows the [master database](#master-database) down to a specific case of interest —
+: The tool that narrows the master database down to a specific case of interest —
   a region, a scenario, and which resolution track (high-res or low-res) to use per sector. See [Model
   Architecture](model_architecture.md#filtering-and-representative-periods).
 
 **High resolution / Low resolution**
 : The two parallel versions of each sector's demand data stored in the master database: high
   resolution is the sector modules' own bottom-up output; low resolution is the coarser, top-down
-  [CEF](#cef-canadas-energy-future)-based alternative. See [Model
+  CEF-based alternative. See [Model
   Architecture](model_architecture.md#from-sectors-to-a-master-database).
 
 **Linker module**
@@ -47,8 +47,7 @@ Plain-language definitions for terms used throughout these docs.
   evolving across time periods.
 
 **Region**
-: The geographic unit CANOE models at (see [Design Assumptions](design_assumptions.md#regions)
-  for specifics once documented).
+: The geographic unit CANOE models.
 
 **Representative periods**
 : The step that reduces a dataset's fine-grained temporal resolution down to a manageable set of
