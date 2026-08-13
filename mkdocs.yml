@@ -55,7 +55,7 @@ nav:
   # - Publications: publications.md
   # - FAQs: faqs.md
   # - Miscellaneous: miscellaneous.md
-  # - Contact: contact.md
+  - Contact: contact.md
   - License: license.md
 
 markdown_extensions:
