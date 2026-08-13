@@ -28,7 +28,7 @@ Plain-language definitions for terms used throughout these docs.
 **High resolution / Low resolution**
 : The two parallel versions of each sector's demand data stored in the master database: high
   resolution is the sector modules' own bottom-up output; low resolution is the coarser, top-down
-  [CEF](#cef-canadas-energy-future)-based alternative. See [Model
+  CEF-based alternative. See [Model
   Architecture](model_architecture.md#from-sectors-to-a-master-database).
 
 **Linker module**
