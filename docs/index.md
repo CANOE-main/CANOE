@@ -1,27 +1,65 @@
-# Welcome to CANOE
+---
+title: CANOE Documentation
+description: Documentation for the Canadian Open Energy Model (CANOE)
+---
+ 
+<p align="center">
+  <img src="assets/logo.png" alt="CANOE logo" width="180">
+</p>
+<h1 align="center">CANOE</h1>
+<p align="center"><em>The Canadian Open Energy Model</em></p>
+CANOE is a capacity expansion model for the Canadian energy system: given projected energy
+demand, it finds the lowest-cost mix of technologies to build and operate to meet it. It's built as
+an instance of [TEMOA](https://temoacloud.com/), populated with open Canadian data across the
+electricity, transportation, industry, residential, commercial, and fuels sectors.
+ 
+---
+ 
+## New here?
+ 
+Start with **What is CANOE**, a short conceptual overview that assumes no prior experience
+with energy systems modeling.
+ 
+[:material-book-open-variant: What is CANOE](what_is_canoe/index.md){ .md-button .md-button--primary }
+ 
+## Ready to run it?
+ 
+Jump straight to the setup instructions.
+ 
+[:material-lightning-bolt: Quickstart (minimal)](quickstart.md){ .md-button }
+[:material-rocket-launch: Get Started](get_started.md){ .md-button }
+ 
+---
+ 
+<div class="grid cards" markdown>
+-   :material-database:{ .lg .middle } **Data Guide**
+    ---
+ 
+    Sector-by-sector reference for data sources and assumptions.
+    [:octicons-arrow-right-24: Browse sectors](data_guide/index.md)
+    
+-   :material-account-group:{ .lg .middle } **Contributing**
+    ---
+ 
+    Branching, PR workflow, and issue templates for the dev team and external users.
+    [:octicons-arrow-right-24: Read the guide](contributing.md)
 
-**CANOE** (Canadian Open Energy Model) is an energy systems model built of the temoa framework. It is designed for Canada. CANOE is currently in its early-stages, however we plan to update the dataset and model over the upcoming years.  
+<!---   :material-file-document-multiple:{ .lg .middle } **Publications**
+    ---
+ 
+    Papers, reports, and projects that have used CANOE.
+    [:octicons-arrow-right-24: See publications](publications.md)-->
 
-## What is CANOE?
-
-CANOE provides a detailed representation of the Canadian energy system, including electricity, transportation, industry, residential, commercial, and fuel sectors. It allows users to simulate various energy scenarios and analyze the impacts of policy and technology changes.
-
-## What can it do?
-
-- **Scenario Analysis**: Model different future energy pathways.
-- **Sectoral Detail**: Dive deep into specific sectors like electricity generation or transportation fleets.
-- **Regional Granularity**: Analyze energy systems at the provincial or regional level.
-
-## Why should you use it?
-
-- **Open Source**: Transparent and extensible.
-- **Data-Driven**: Built on robust datasets and validated assumptions.
-- **Flexible**: Adaptable to new questions and regional contexts.
-
-## How often is the dataset updated?
-
-The dataset is updated on an annual basis and is released before the end of Summer. Around this time we also review github admins who review data issues and address pull requests. 
-
-## Getting Started
-
-Check out the [Quickstart](quickstart.md) guide to get up and running.
+-   :material-email:{ .lg .middle } **Contact**
+    ---
+ 
+    Reach the dev team and PIs, or report an issue.
+    [:octicons-arrow-right-24: Get in touch](contact.md)
+</div>
+---
+ 
+<small>
+Dataset updated annually, released before end of summer &nbsp;·&nbsp;
+[Changelog](changelog.md) &nbsp;·&nbsp;
+[License](license.md)
+</small>
