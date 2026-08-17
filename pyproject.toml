@@ -3,15 +3,31 @@ name = "canoe"
 version = "4.0.0"
 description = "The Canadian Open Energy Model (CANOE)"
 readme = "README.md"
-license = { file = "LICENSE" }
+license-files = ["LICENSE*"]
 requires-python = ">=3.12"
+dependencies = [
+  "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git",
+  "loguru",
+  "typer",
+]
 
 [project.optional-dependencies]
+dev = []
 docs = [
     "mkdocs-material>=9.5",
     "mkdocs-git-revision-date-localized-plugin>=1.2",
     "mike"
 ]
+all = ["canoe[dev]", "canoe[docs]"]
+
+[project.scripts]
+canoe-compiler = "canoe.cli:main"
+
+[tool.basedpyright]
+reportUnusedCallResult = false
+
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [build-system]
 requires = ["setuptools>=68"]

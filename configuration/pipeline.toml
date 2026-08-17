@@ -1,0 +1,8 @@
+[base]
+schema_version = "4.0"
+db_output_dir = "ouput/canoe.sqlite"
+existing_periods = [2005, 2010, 2015, 2020, 2024, 2022]
+future_periods = [2025, 2030, 2035, 2040, 2045, 2050]
+provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
+global_discount_rate = 0.03
+# global_cost_of_co2 = 0.1  # USD per kton
