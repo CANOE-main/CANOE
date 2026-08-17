@@ -60,6 +60,7 @@ nav:
 
 markdown_extensions:
   - attr_list        # enables { .md-button } styling
+  - def_list
   - md_in_html        # enables <div class="grid cards" markdown> blocks
   - admonition
   - codehilite
@@ -76,3 +77,7 @@ markdown_extensions:
   - pymdownx.emoji:
       emoji_index: !!python/name:material.extensions.emoji.twemoji
       emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+extra:
+  version:
+    provider: mike
