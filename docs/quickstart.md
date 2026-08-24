@@ -6,15 +6,15 @@ description: Run CANOE end-to-end, from the master database to a solved TEMOA mo
 # Quickstart
 
 This walks through running CANOE from the published master database to a solved TEMOA model, in
-four stages: **download the data → filter it → apply representative periods → run TEMOA.**
+four stages: **download the data → filter it and apply representative periods → run TEMOA.**
 
 For the concepts behind each stage, see [Model
 Architecture](what_is_canoe/model_architecture.md).
 
 ## Step 1: Get the master database
 
-Download the CANOE 3.1 master database from
-[Google Drive](https://drive.google.com/drive/folders/1FIWK6YTJIK5gEhJ4o5742rgYE99fkaQU).
+Download the CANOE 4.0 master database (2025 data) from
+[Google Drive](https://drive.google.com/drive/folders/17uI4YDZ2yF6qLUXOayUlqe2v34sL4FKJ?usp=sharing).
 
 This database contains both the high-resolution module output and the low-resolution CEF
 alternative for every sector, across all scenarios and regions (see [Model
@@ -37,6 +37,7 @@ cd canoe_interface
 python -m venv .venv
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
+#move the timeseriesaggregation.py file from the representative_periods sub-folder to the virtual environment tsam package venv\Lib\site-packages\tsam
 python main.py
 ```
 
@@ -45,9 +46,11 @@ In the app:
 1. Point it at the master database you downloaded in Step 1.
 2. Select the region, sector, and scenario configuration you want — this determines the
    resolution (high-res module output vs. low-res CEF) and scope of the output.
-3. Submit to process. The filtered database is written to your chosen output location.
+3. You can either hit submit to create the filtered dataset or continue to the representative periods tab.
+4. Customize the configuration and hit initialize to set the app up (only needed on the first run), then hit run to the filtering and representative periods. 
+5. The filtered database is written to your chosen output location.
 
-## Step 3: Apply representative periods
+## Step 2.5: Apply representative periods if you only filtered the dataset
 
 The filtered database still has finer temporal resolution than TEMOA can practically optimize
 over. [`representative_periods`](https://github.com/CANOE-main/representative_periods) reduces it
@@ -56,8 +59,8 @@ to a manageable set of representative time periods via clustering.
 ```bash
 git clone https://github.com/CANOE-main/representative_periods.git
 cd representative_periods
-conda env create -f environment.yml
-conda activate canoe-backend
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 ```
 
 !!! danger "Required: patch the `tsam` library"
@@ -88,20 +91,41 @@ Then:
 
 ## Step 4: Run TEMOA
 
-Clone the CANOE fork of TEMOA:
+**Option 1: Pip install Temoa**
+
+Use pip installation to download the Temoa package (this is a new option for v4).
 
 ```bash
-git clone https://github.com/CANOE-main/temoa.git
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install temoa
+pip install pyomo==3.9.5 #this fixes a solver issue, without this runs will be artificially long
+temoa tutorial
+temoa run tutorial_config.toml
+
+```
+**Option 2: Clone the Temoa repo**
+Clone the TEMOA:
+
+```bash
+git clone https://github.com/TemoaProject/temoa.git
 cd temoa
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-pip install -r requirements.txt
+# Setup development environment with uv
+uv sync --all-extras --dev
+# Install pre-commit hooks
+uv run pre-commit install
+# Run tests
+uv run pytest
+# Run type checking
+uv run mypy
 ```
 
-Copy `data_files/my_configs/config_sample.toml` and point it at your database from Step 3, then run:
-
+Moving over to anaconda prompt:
 ```bash
-python main.py --config data_files/my_configs/config_sample.toml
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install pyomo==3.9.5 #this fixes a solver issue, without this runs will be artificially long
+temoa tutorial
+temoa run tutorial_config.toml
 ```
 
 Output lands in a time-stamped folder under `output_files/`, including logs and result tables.
@@ -109,6 +133,7 @@ Output lands in a time-stamped folder under `output_files/`, including logs and 
 !!! info "Solver required"
     TEMOA needs a solver (e.g. Gurobi, CPLEX, or the free `cbc`) available on your system. Solver
     setup isn't covered in this quickstart yet — see the environment setup page once it's written.
+
 
 ## Next steps
 
