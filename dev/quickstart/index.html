@@ -351,10 +351,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-apply-representative-periods" class="md-nav__link">
+  <a href="#step-25-apply-representative-periods-if-you-only-filtered-the-dataset" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Apply representative periods
+        Step 2.5: Apply representative periods if you only filtered the dataset
       
     </span>
   </a>
@@ -1020,10 +1020,10 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#step-3-apply-representative-periods" class="md-nav__link">
+  <a href="#step-25-apply-representative-periods-if-you-only-filtered-the-dataset" class="md-nav__link">
     <span class="md-ellipsis">
       
-        Step 3: Apply representative periods
+        Step 2.5: Apply representative periods if you only filtered the dataset
       
     </span>
   </a>
@@ -1071,12 +1071,12 @@
 
 <h1 id="quickstart">Quickstart<a class="headerlink" href="#quickstart" title="Permanent link">&para;</a></h1>
 <p>This walks through running CANOE from the published master database to a solved TEMOA model, in
-four stages: <strong>download the data → filter it → apply representative periods → run TEMOA.</strong></p>
+four stages: <strong>download the data → filter it and apply representative periods → run TEMOA.</strong></p>
 <p>For the concepts behind each stage, see <a href="../what_is_canoe/model_architecture/">Model
 Architecture</a>.</p>
 <h2 id="step-1-get-the-master-database">Step 1: Get the master database<a class="headerlink" href="#step-1-get-the-master-database" title="Permanent link">&para;</a></h2>
-<p>Download the CANOE 3.1 master database from
-<a href="https://drive.google.com/drive/folders/1FIWK6YTJIK5gEhJ4o5742rgYE99fkaQU">Google Drive</a>.</p>
+<p>Download the CANOE 4.0 master database (2025 data) from
+<a href="https://drive.google.com/drive/folders/17uI4YDZ2yF6qLUXOayUlqe2v34sL4FKJ?usp=sharing">Google Drive</a>.</p>
 <p>This database contains both the high-resolution module output and the low-resolution CEF
 alternative for every sector, across all scenarios and regions (see <a href="../what_is_canoe/model_architecture/#from-sectors-to-a-master-database">Model
 Architecture</a>)</p>
@@ -1092,6 +1092,7 @@ Windows executable.</p>
 python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
 <span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">   </span><span class="c1"># Windows: .venv\Scripts\activate</span>
 pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="c1">#move the timeseriesaggregation.py file from the representative_periods sub-folder to the virtual environment tsam package venv\Lib\site-packages\tsam</span>
 python<span class="w"> </span>main.py
 </code></pre></div>
 <p>In the app:</p>
@@ -1099,16 +1100,18 @@ python<span class="w"> </span>main.py
 <li>Point it at the master database you downloaded in Step 1.</li>
 <li>Select the region, sector, and scenario configuration you want — this determines the
    resolution (high-res module output vs. low-res CEF) and scope of the output.</li>
-<li>Submit to process. The filtered database is written to your chosen output location.</li>
+<li>You can either hit submit to create the filtered dataset or continue to the representative periods tab.</li>
+<li>Customize the configuration and hit initialize to set the app up (only needed on the first run), then hit run to the filtering and representative periods. </li>
+<li>The filtered database is written to your chosen output location.</li>
 </ol>
-<h2 id="step-3-apply-representative-periods">Step 3: Apply representative periods<a class="headerlink" href="#step-3-apply-representative-periods" title="Permanent link">&para;</a></h2>
+<h2 id="step-25-apply-representative-periods-if-you-only-filtered-the-dataset">Step 2.5: Apply representative periods if you only filtered the dataset<a class="headerlink" href="#step-25-apply-representative-periods-if-you-only-filtered-the-dataset" title="Permanent link">&para;</a></h2>
 <p>The filtered database still has finer temporal resolution than TEMOA can practically optimize
 over. <a href="https://github.com/CANOE-main/representative_periods"><code>representative_periods</code></a> reduces it
 to a manageable set of representative time periods via clustering.</p>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/CANOE-main/representative_periods.git
 <span class="nb">cd</span><span class="w"> </span>representative_periods
-conda<span class="w"> </span>env<span class="w"> </span>create<span class="w"> </span>-f<span class="w"> </span>environment.yml
-conda<span class="w"> </span>activate<span class="w"> </span>canoe-backend
+python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">   </span><span class="c1"># Windows: .venv\Scripts\activate</span>
 </code></pre></div>
 <div class="admonition danger">
 <p class="admonition-title">Required: patch the <code>tsam</code> library</p>
@@ -1134,16 +1137,34 @@ it won't work correctly otherwise. Find your <code>tsam</code> install path with
 </li>
 </ol>
 <h2 id="step-4-run-temoa">Step 4: Run TEMOA<a class="headerlink" href="#step-4-run-temoa" title="Permanent link">&para;</a></h2>
-<p>Clone the CANOE fork of TEMOA:</p>
-<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/CANOE-main/temoa.git
+<p><strong>Option 1: Pip install Temoa</strong></p>
+<p>Use pip installation to download the Temoa package (this is a new option for v4).</p>
+<p><div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">   </span><span class="c1"># Windows: .venv\Scripts\activate</span>
+pip<span class="w"> </span>install<span class="w"> </span>temoa
+pip<span class="w"> </span>install<span class="w"> </span><span class="nv">pyomo</span><span class="o">==</span><span class="m">3</span>.9.5<span class="w"> </span><span class="c1">#this fixes a solver issue, without this runs will be artificially long</span>
+temoa<span class="w"> </span>tutorial
+temoa<span class="w"> </span>run<span class="w"> </span>tutorial_config.toml
+</code></pre></div>
+<strong>Option 2: Clone the Temoa repo</strong>
+Clone the TEMOA:</p>
+<div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/TemoaProject/temoa.git
 <span class="nb">cd</span><span class="w"> </span>temoa
-python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
-<span class="nb">source</span><span class="w"> </span>venv/bin/activate<span class="w">   </span><span class="c1"># Windows: venv\Scripts\activate</span>
-pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<span class="c1"># Setup development environment with uv</span>
+uv<span class="w"> </span>sync<span class="w"> </span>--all-extras<span class="w"> </span>--dev
+<span class="c1"># Install pre-commit hooks</span>
+uv<span class="w"> </span>run<span class="w"> </span>pre-commit<span class="w"> </span>install
+<span class="c1"># Run tests</span>
+uv<span class="w"> </span>run<span class="w"> </span>pytest
+<span class="c1"># Run type checking</span>
+uv<span class="w"> </span>run<span class="w"> </span>mypy
 </code></pre></div>
-<p>Copy <code>data_files/my_configs/config_sample.toml</code> and point it at your database from Step 3, then run:</p>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>main.py<span class="w"> </span>--config<span class="w"> </span>data_files/my_configs/config_sample.toml
-</code></pre></div>
+<p>Moving over to anaconda prompt:
+<div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">   </span><span class="c1"># Windows: .venv\Scripts\activate</span>
+pip<span class="w"> </span>install<span class="w"> </span><span class="nv">pyomo</span><span class="o">==</span><span class="m">3</span>.9.5<span class="w"> </span><span class="c1">#this fixes a solver issue, without this runs will be artificially long</span>
+temoa<span class="w"> </span>tutorial
+temoa<span class="w"> </span>run<span class="w"> </span>tutorial_config.toml
+</code></pre></div></p>
 <p>Output lands in a time-stamped folder under <code>output_files/</code>, including logs and result tables.</p>
 <div class="admonition info">
 <p class="admonition-title">Solver required</p>
@@ -1179,7 +1200,7 @@ setup isn't covered in this quickstart yet — see the environment setup page on
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 13, 2026 18:06:46 UTC">August 13, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 24, 2026 17:12:48 UTC">August 24, 2026</span>
   </span>
 
     
