@@ -14,7 +14,7 @@ Architecture](what_is_canoe/model_architecture.md).
 ## Step 1: Get the master database
 
 Download the CANOE 4.0 master database (2025 data) from
-[Google Drive](https://drive.google.com/drive/folders/17uI4YDZ2yF6qLUXOayUlqe2v34sL4FKJ?usp=sharing).
+[Google Drive](https://drive.google.com/drive/folders/17uI4YDZ2yF6qLUXOayUlqe2v34sL4FKJ?usp=sharing). Then uncompress it, you should have a `canoe-v4-master.sqlite` file. This is the input to the filtering interface.
 
 This database contains both the high-resolution module output and the low-resolution CEF
 alternative for every sector, across all scenarios and regions (see [Model
@@ -47,7 +47,7 @@ In the app:
 2. Select the region, sector, and scenario configuration you want — this determines the
    resolution (high-res module output vs. low-res CEF) and scope of the output.
 3. You can either hit submit to create the filtered dataset or continue to the representative periods tab.
-4. Customize the configuration and hit initialize to set the app up (only needed on the first run), then hit run to the filtering and representative periods. 
+4. Customize the configuration and hit initialize to set the app up (only needed on the first run), then hit run to the filtering and representative periods.
 5. The filtered database is written to your chosen output location.
 
 ## Step 2.5: Apply representative periods if you only filtered the dataset
@@ -64,8 +64,8 @@ source .venv/bin/activate   # Windows: .venv\Scripts\activate
 ```
 
 !!! danger "Required: patch the `tsam` library"
-    This tool needs a modified `timeseriesaggregation.py` inside your installed `tsam` package —
-    it won't work correctly otherwise. Find your `tsam` install path with:
+This tool needs a modified `timeseriesaggregation.py` inside your installed `tsam` package —
+it won't work correctly otherwise. Find your `tsam` install path with:
 
     ```bash
     python -c "import tsam, os; print(os.path.dirname(tsam.__file__))"
@@ -104,6 +104,7 @@ temoa tutorial
 temoa run tutorial_config.toml
 
 ```
+
 **Option 2: Clone the Temoa repo**
 Clone the TEMOA:
 
@@ -121,6 +122,7 @@ uv run mypy
 ```
 
 Moving over to anaconda prompt:
+
 ```bash
 source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install pyomo==3.9.5 #this fixes a solver issue, without this runs will be artificially long
@@ -131,9 +133,8 @@ temoa run tutorial_config.toml
 Output lands in a time-stamped folder under `output_files/`, including logs and result tables.
 
 !!! info "Solver required"
-    TEMOA needs a solver (e.g. Gurobi, CPLEX, or the free `cbc`) available on your system. Solver
-    setup isn't covered in this quickstart yet — see the environment setup page once it's written.
-
+TEMOA needs a solver (e.g. Gurobi, CPLEX, or the free `cbc`) available on your system. Solver
+setup isn't covered in this quickstart yet — see the environment setup page once it's written.
 
 ## Next steps
 
