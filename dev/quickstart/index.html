@@ -1076,7 +1076,7 @@ four stages: <strong>download the data → filter it and apply representative pe
 Architecture</a>.</p>
 <h2 id="step-1-get-the-master-database">Step 1: Get the master database<a class="headerlink" href="#step-1-get-the-master-database" title="Permanent link">&para;</a></h2>
 <p>Download the CANOE 4.0 master database (2025 data) from
-<a href="https://drive.google.com/drive/folders/17uI4YDZ2yF6qLUXOayUlqe2v34sL4FKJ?usp=sharing">Google Drive</a>.</p>
+<a href="https://drive.google.com/drive/folders/17uI4YDZ2yF6qLUXOayUlqe2v34sL4FKJ?usp=sharing">Google Drive</a>. Then uncompress it, you should have a <code>canoe-v4-master.sqlite</code> file. This is the input to the filtering interface.</p>
 <p>This database contains both the high-resolution module output and the low-resolution CEF
 alternative for every sector, across all scenarios and regions (see <a href="../what_is_canoe/model_architecture/#from-sectors-to-a-master-database">Model
 Architecture</a>)</p>
@@ -1101,7 +1101,7 @@ python<span class="w"> </span>main.py
 <li>Select the region, sector, and scenario configuration you want — this determines the
    resolution (high-res module output vs. low-res CEF) and scope of the output.</li>
 <li>You can either hit submit to create the filtered dataset or continue to the representative periods tab.</li>
-<li>Customize the configuration and hit initialize to set the app up (only needed on the first run), then hit run to the filtering and representative periods. </li>
+<li>Customize the configuration and hit initialize to set the app up (only needed on the first run), then hit run to the filtering and representative periods.</li>
 <li>The filtered database is written to your chosen output location.</li>
 </ol>
 <h2 id="step-25-apply-representative-periods-if-you-only-filtered-the-dataset">Step 2.5: Apply representative periods if you only filtered the dataset<a class="headerlink" href="#step-25-apply-representative-periods-if-you-only-filtered-the-dataset" title="Permanent link">&para;</a></h2>
@@ -1115,14 +1115,20 @@ python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </s
 </code></pre></div>
 <div class="admonition danger">
 <p class="admonition-title">Required: patch the <code>tsam</code> library</p>
+</div>
 <p>This tool needs a modified <code>timeseriesaggregation.py</code> inside your installed <code>tsam</code> package —
 it won't work correctly otherwise. Find your <code>tsam</code> install path with:</p>
-<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import tsam, os; print(os.path.dirname(tsam.__file__))"</span>
+<div class="codehilite"><pre><span></span><code><span class="err">```</span><span class="n">bash</span>
+<span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">"import tsam, os; print(os.path.dirname(tsam.__file__))"</span>
+<span class="err">```</span>
+
+<span class="n">Then</span> <span class="n">replace</span> <span class="n">that</span> <span class="n">file</span> <span class="k">with</span> <span class="n">the</span> <span class="n">one</span> <span class="ow">in</span> <span class="n">the</span> <span class="n">repo</span> <span class="n">root</span> <span class="p">(</span><span class="n">macOS</span><span class="o">/</span><span class="n">Linux</span><span class="p">,</span> <span class="k">with</span> <span class="n">the</span> <span class="n">conda</span> <span class="n">env</span> <span class="n">active</span><span class="p">):</span>
+
+<span class="err">```</span><span class="n">bash</span>
+<span class="n">cp</span> <span class="o">./</span><span class="n">timeseriesaggregation</span><span class="o">.</span><span class="n">py</span> <span class="err">$</span><span class="p">(</span><span class="n">python</span> <span class="o">-</span><span class="n">c</span> <span class="s2">"import tsam, os; print(os.path.dirname(tsam.__file__))"</span><span class="p">)</span><span class="o">/</span>
+<span class="err">```</span>
 </code></pre></div>
-<p>Then replace that file with the one in the repo root (macOS/Linux, with the conda env active):</p>
-<div class="highlight"><pre><span></span><code>cp<span class="w"> </span>./timeseriesaggregation.py<span class="w"> </span><span class="k">$(</span>python<span class="w"> </span>-c<span class="w"> </span><span class="s2">"import tsam, os; print(os.path.dirname(tsam.__file__))"</span><span class="k">)</span>/
-</code></pre></div>
-</div>
+
 <p>Then:</p>
 <ol>
 <li>Place your filtered database from Step 2 into <code>input_sqlite/</code>.</li>
@@ -1139,14 +1145,14 @@ it won't work correctly otherwise. Find your <code>tsam</code> install path with
 <h2 id="step-4-run-temoa">Step 4: Run TEMOA<a class="headerlink" href="#step-4-run-temoa" title="Permanent link">&para;</a></h2>
 <p><strong>Option 1: Pip install Temoa</strong></p>
 <p>Use pip installation to download the Temoa package (this is a new option for v4).</p>
-<p><div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
+<div class="highlight"><pre><span></span><code>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>.venv
 <span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">   </span><span class="c1"># Windows: .venv\Scripts\activate</span>
 pip<span class="w"> </span>install<span class="w"> </span>temoa
 pip<span class="w"> </span>install<span class="w"> </span><span class="nv">pyomo</span><span class="o">==</span><span class="m">3</span>.9.5<span class="w"> </span><span class="c1">#this fixes a solver issue, without this runs will be artificially long</span>
 temoa<span class="w"> </span>tutorial
 temoa<span class="w"> </span>run<span class="w"> </span>tutorial_config.toml
 </code></pre></div>
-<strong>Option 2: Clone the Temoa repo</strong>
+<p><strong>Option 2: Clone the Temoa repo</strong>
 Clone the TEMOA:</p>
 <div class="highlight"><pre><span></span><code>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/TemoaProject/temoa.git
 <span class="nb">cd</span><span class="w"> </span>temoa
@@ -1159,18 +1165,18 @@ uv<span class="w"> </span>run<span class="w"> </span>pytest
 <span class="c1"># Run type checking</span>
 uv<span class="w"> </span>run<span class="w"> </span>mypy
 </code></pre></div>
-<p>Moving over to anaconda prompt:
+<p>Moving over to anaconda prompt:</p>
 <div class="highlight"><pre><span></span><code><span class="nb">source</span><span class="w"> </span>.venv/bin/activate<span class="w">   </span><span class="c1"># Windows: .venv\Scripts\activate</span>
 pip<span class="w"> </span>install<span class="w"> </span><span class="nv">pyomo</span><span class="o">==</span><span class="m">3</span>.9.5<span class="w"> </span><span class="c1">#this fixes a solver issue, without this runs will be artificially long</span>
 temoa<span class="w"> </span>tutorial
 temoa<span class="w"> </span>run<span class="w"> </span>tutorial_config.toml
-</code></pre></div></p>
+</code></pre></div>
 <p>Output lands in a time-stamped folder under <code>output_files/</code>, including logs and result tables.</p>
 <div class="admonition info">
 <p class="admonition-title">Solver required</p>
+</div>
 <p>TEMOA needs a solver (e.g. Gurobi, CPLEX, or the free <code>cbc</code>) available on your system. Solver
 setup isn't covered in this quickstart yet — see the environment setup page once it's written.</p>
-</div>
 <h2 id="next-steps">Next steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
 <ul>
 <li>Read <a href="../what_is_canoe/model_architecture/">Model Architecture</a> to understand what each stage
@@ -1200,7 +1206,7 @@ setup isn't covered in this quickstart yet — see the environment setup page on
     <span class="md-icon" title="Last update">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M21 13.1c-.1 0-.3.1-.4.2l-1 1 2.1 2.1 1-1c.2-.2.2-.6 0-.8l-1.3-1.3c-.1-.1-.2-.2-.4-.2m-1.9 1.8-6.1 6V23h2.1l6.1-6.1zM12.5 7v5.2l4 2.4-1 1L11 13V7zM11 21.9c-5.1-.5-9-4.8-9-9.9C2 6.5 6.5 2 12 2c5.3 0 9.6 4.1 10 9.3-.3-.1-.6-.2-1-.2s-.7.1-1 .2C19.6 7.2 16.2 4 12 4c-4.4 0-8 3.6-8 8 0 4.1 3.1 7.5 7.1 7.9l-.1.2z"/></svg>
     </span>
-    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 24, 2026 17:12:48 UTC">August 24, 2026</span>
+    <span class="git-revision-date-localized-plugin git-revision-date-localized-plugin-date" title="August 25, 2026 15:45:46 UTC">August 25, 2026</span>
   </span>
 
     
