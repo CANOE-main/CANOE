@@ -1,4 +1,5 @@
 from enum import StrEnum
+from typing import override
 
 
 class CANOEProvince(StrEnum):
@@ -13,8 +14,9 @@ class CANOEProvince(StrEnum):
     QUEBEC = "Quebec"
     SASKATCHEWAN = "Saskatchewan"
 
+    @override
     @classmethod
-    def _missing_(cls, value):
+    def _missing_(cls, value: object):
         _ALIASES = {
             "AB": cls.ALBERTA,
             "Alberta": cls.ALBERTA,
@@ -53,3 +55,11 @@ class CANOEProvince(StrEnum):
             CANOEProvince.SASKATCHEWAN: "SK",
         }
         return SHORT[self]
+
+    def is_atlantic(self) -> bool:
+        return self in [
+            CANOEProvince.PRINCE_EDWARD_ISLAND,
+            CANOEProvince.NEW_BRUNSWICK,
+            CANOEProvince.NOVA_SCOTIA,
+            CANOEProvince.NEWFOUNDLAND_AND_LABRADOR,
+        ]
