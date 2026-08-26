@@ -1,5 +1,5 @@
 from enum import StrEnum
-from typing import override
+from typing import Any, override
 
 
 class CANOESector(StrEnum):
@@ -11,7 +11,7 @@ class CANOESector(StrEnum):
 
     @classmethod
     @override
-    def _missing_(cls, value):  # pyright: ignore[reportMissingParameterType]
+    def _missing_(cls, value: Any):
         if isinstance(value, str) and value in cls.__members__:
             return cls.__members__[value]
         for member in cls:
@@ -28,3 +28,7 @@ class CANOESector(StrEnum):
             "AGR": "A",
         }
         return _TAGS[self.value]
+
+    @override
+    def __str__(self):
+        return str(self.name)

@@ -3,32 +3,45 @@ name = "canoe"
 version = "4.0.0"
 description = "The Canadian Open Energy Model (CANOE)"
 readme = "README.md"
-license-files = ["LICENSE*"]
 requires-python = ">=3.12"
+license-files = ["LICENSE*"]
 dependencies = [
   "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git",
-  "loguru",
-  "typer",
-]
+  "loguru==0.7.3",
+  "numpy",
+  "pandas==3.0.5",
+  "pydantic==2.13.4",
+  "typer==0.27.1",
 
-[project.optional-dependencies]
-dev = []
-docs = [
-    "mkdocs-material>=9.5",
-    "mkdocs-git-revision-date-localized-plugin>=1.2",
-    "mike"
+  "fastparquet",
+  # Gold connector dependencies
+  "gdown"
 ]
-all = ["canoe[dev]", "canoe[docs]"]
 
 [project.scripts]
 canoe-compiler = "canoe.cli:main"
 
-[tool.basedpyright]
-reportUnusedCallResult = false
-
-[tool.setuptools.packages.find]
-where = ["src"]
+[project.optional-dependencies]
+all = ["canoe[dev]", "canoe[docs]"]
+dev = ["ruff"]
+docs = ["mkdocs-material>=9.5", "mkdocs-git-revision-date-localized-plugin>=1.2", "mike"]
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.basedpyright]
+reportUnusedCallResult = false
+reportAny = false
+reportExplicitAny = false
+reportMissingTypeStubs = false  # Eventually change
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+
+[tool.hatch.envs.dev]
+dependencies = [
+  "pandas-stubs",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]

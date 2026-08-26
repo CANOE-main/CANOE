@@ -11,11 +11,11 @@ import sqlite3
 import tomllib
 from pathlib import Path
 
-from canoe_schema.sql import get_sql_schema  # pyright: ignore[reportMissingTypeStubs]
-from canoe_schema.v4_0.enums import (  # pyright: ignore[reportMissingTypeStubs]
+from canoe_schema.sql import get_sql_schema
+from canoe_schema.v4_0.enums import (
     TimePeriodTypeCode,
 )
-from canoe_schema.v4_0.models import (  # pyright: ignore[reportMissingTypeStubs]
+from canoe_schema.v4_0.models import (
     CostEmission,
     MetadataReal,
     Region,
@@ -26,7 +26,7 @@ from canoe_schema.v4_0.models import (  # pyright: ignore[reportMissingTypeStubs
 from loguru import logger
 from pydantic import BaseModel, field_validator
 
-from .common import CANOEProvince
+from .common import CANOEProvince, GoldConnectorConfig
 
 
 class EmissionsConfig(BaseModel):
@@ -44,7 +44,9 @@ class CANOEBaseConfig(BaseModel):
     provinces: list[CANOEProvince]
     # This is used for global_discount_rate and for default_loan_rate
     global_discount_rate: float = 0.03
+    # TODO: Move to the module output section
     emissions: EmissionsConfig | None = None
+    data_cache_config: GoldConnectorConfig
 
     @classmethod
     def validate_from_toml(cls, toml_dir: str):
@@ -55,7 +57,6 @@ class CANOEBaseConfig(BaseModel):
     @classmethod
     def expand_path(cls, v: Path) -> Path:
         return v.expanduser()
-
 
 
 def time_related_values(config: CANOEBaseConfig, db_cursor: sqlite3.Cursor):
@@ -175,9 +176,7 @@ def run(config: CANOEBaseConfig) -> None:
     NOTE: Hard-coded to schema version 4.0.
     """
     # Create empty database
-    db_path = prepare_database(
-        config.db_output_dir, get_sql_schema("4.0")
-    )
+    db_path = prepare_database(config.db_output_dir, get_sql_schema("4.0"))
     db_conn = sqlite3.connect(db_path)
     db_cursor = db_conn.cursor()
 

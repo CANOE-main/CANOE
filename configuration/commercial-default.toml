@@ -1,0 +1,48 @@
+module_name = "commercial"
+data_version = "003"
+# future_periods = [2025, 2030, 2035, 2040, 2045]
+# province_list = ["ON", "AB", "BC", "QC", "MB", "SK", "NLLAB", "PEI", "NS", "NB"]
+base_year = 2022
+end_uses = ["space heating", "space cooling", "other"]
+
+# period_step = 5
+# timezone = "EST"
+
+# DSD Parameters
+include_dsd = true
+dsd_time_slices = { kind = "all_year" }
+
+# EPA
+EPA_emission_commodity = "co2e"
+
+[comstock_config]
+building_types = [
+  "fullservicerestaurant",
+  "hospital",
+  "largehotel",
+  "largeoffice",
+  "mediumoffice",
+  "outpatient",
+  "primaryschool",
+  "quickservicerestaurant",
+  "retailstandalone",
+  "retailstripmall",
+  "secondaryschool",
+  "smallhotel",
+  "smalloffice",
+  "warehouse",
+]
+
+# Arbitrary mapping from US states to Canadian provinces
+# to use with comstock data
+[comstock_config.us_map]
+ON = "MI"
+AB = "MT"
+BC = "WA"
+QC = "ME"
+MB = "ND"
+SK = "ND"
+NLLAB = "ME"
+PEI = "ME"
+NS = "ME"
+NB = "ME"
