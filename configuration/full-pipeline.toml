@@ -1,16 +1,23 @@
-[base]
+[compiler.base]
 schema_version = "4.0"
 db_output_dir = "output/canoe.sqlite"
 existing_periods = [2005, 2010, 2015, 2020, 2024, 2022]
 future_periods = [2025, 2030, 2035, 2040, 2045, 2050]
-provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
+# provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
+provinces = ["NLLAB"]
 global_discount_rate = 0.03
 # global_cost_of_co2 = 0.1  # USD per kton
 
-[base.data_cache_config]
+[compiler.base.data_cache_config]
 cache_dir = ".cache"
 cache_date = "2026-08-10"
 force_sync = false
 
-[sectors]
+[compiler.sectors]
 commercial = "configuration/commercial-default.toml"
+
+[temoa_config]
+solver_name = "gurobi"
+scenario_mode = "perfect_foresight"
+silent = false
+save_duals = true

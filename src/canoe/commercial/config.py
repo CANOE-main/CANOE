@@ -3,7 +3,6 @@ from enum import StrEnum
 from pathlib import Path
 from typing import Any, ClassVar, Literal, override
 
-# import pandas as pd
 from pydantic import BaseModel, ConfigDict
 
 from canoe.commercial.build import build_commercial
@@ -19,11 +18,6 @@ from canoe.common.time_slices import AllTimeSlices, CANOETimeSliceSet
 
 from ..common.module_inheritance import InheritsFromBase, inherit
 from ..initializer import CANOEBaseConfig
-
-
-class ComstockConfig(BaseModel):
-    building_types: list[str]
-    us_map: dict[CANOEProvince, str]
 
 
 class CommercialEndUse(StrEnum):
@@ -54,6 +48,17 @@ class CommercialEndUse(StrEnum):
         return str(self.name)
 
 
+class ComstockConfig(BaseModel):
+    building_types: list[str]
+    us_map: dict[CANOEProvince, str]
+    apply_weather_mapping: dict[CommercialEndUse, bool]
+
+
+class CEUDConfig(BaseModel):
+    base_year: int
+    space_cooling_tolerance: float = 0.05
+
+
 class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)  # pyright: ignore[reportUnannotatedClassAttribute]
     module_name: Literal["commercial"]
@@ -65,15 +70,9 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     }
 
     # Identity
-    # schema_version: str
-    # version: str
-    # sector_abv: str = "COM"
-    # sector_longname: str = "commercial"
-    # data_id_prefix: str
     data_version: str = inherit()
 
     # File paths
-    # db_dir: Path
     database_file: Path = inherit()
     data_cache_config: GoldConnectorConfig = inherit()
     # excel_template: str
@@ -109,8 +108,9 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     EPA_emission_commodity: str = ""
     # emission_activity_units: str
 
-    # Comstock mapping
+    # Data sources
     comstock_config: ComstockConfig
+    ceud_config: CEUDConfig
 
     # # Parameters
     # sec_tolerance: float

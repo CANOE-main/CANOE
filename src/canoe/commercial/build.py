@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from canoe.commercial.comstock_processing import load_and_process_comstock
+from canoe.commercial.existing_capacity import compute_existing_capacity
 from canoe.common import CANOEFuelImport, CANOEModuleOutput, atomic_transaction
 
 from .validation import validate_db_against_config
@@ -28,7 +29,11 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
     with atomic_transaction(cfg.database_file) as db_conn:
         # Validate canoe-base DB structure against module config
         validate_db_against_config(cfg, db_conn)
-        load_and_process_comstock(cfg)
+
+        # Load and pre-process data sources
+        # Estimated from Cosmtock
+        province_dsd = load_and_process_comstock(cfg)
+        existing_capacity = compute_existing_capacity(cfg)
 
         # Per province:
         # DSD

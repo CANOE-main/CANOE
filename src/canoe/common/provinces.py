@@ -63,3 +63,10 @@ class CANOEProvince(StrEnum):
             CANOEProvince.NOVA_SCOTIA,
             CANOEProvince.NEWFOUNDLAND_AND_LABRADOR,
         ]
+
+    def get_nrcan_code(self) -> str:
+        if self.is_atlantic():
+            return "ATL"
+        if self == CANOEProvince.BRITISH_COLUMBIA:
+            return "BC"  # The real one is BCT but for accessing the cache this is what we need
+        return self.short()

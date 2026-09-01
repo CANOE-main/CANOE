@@ -1,0 +1,113 @@
+# Configuration for CANOE representative period aggregation
+
+# Root directory containing timeseries/ (input) and where output/, periods.csv
+# and sequence.csv are written
+data_dir = "assets/rep_periods_data"
+
+# Can switch off plotting if not needed
+show_plots = false
+
+# Can use this to do e.g. representative day-pairs (2) or representative weeks (7)
+days_per_period = 1
+
+# If this is set to true, representative e.g. weeks will each just be seven representative days in a row
+# MUST BE TRUE as some Temoa constraints (e.g. StorageEnergy) implicitly assume time_of_day time slices
+# represent slices of a single day. Can set to false if those constraints are edited
+disaggregate_multiday = true
+
+# Should we preserve hourly demand values or annual totals in absolute terms?
+# The clustering reduces the number of days and renormalises DSDs so can't preserve both
+# "hourly" or "annual"
+demand_preservation = "hourly"
+
+# This bottom percentile of DSDs is set to zero. Nice robust way to remove
+# all tiny DSDs while ensuring that error is small. If preserving hourly
+# demands, the annual total demand will be reduced by this factor.
+dsd_threshold = 0.01
+
+# Final number of representative periods to apply to the database
+final_periods = 64
+
+# Number of representative days to test and visualise. Should be several
+# Only one (selected above) will be applied to the database
+test_periods = [64]
+
+# Principal component analysis
+use_pca = true
+
+# Translation between 1-indexed days (e.g. D007) and in-timeseries days
+# Initially, going from 1-indexing to 0-indexing and omitting Jan 1 so -2
+day_to_index = -1
+
+# Which clustering algorithm to use. Default to hierarchical
+# averaging, k_means, k_medoids, k_maxoids, hierarchical, adjacent_periods
+clustering_method = "hierarchical"
+
+model_years = [2025, 2030, 2035, 2040, 2045]
+
+# force_days, extreme_periods and custom_features are all unset in config.yaml
+# (nothing forced/selected) so they are left at their defaults here too.
+
+[[pca_groups]]
+name = "weather"
+n_components = 6
+columns = [
+  "ab_wind_speed",
+  "bc_wind_speed",
+  "mb_wind_speed",
+  "sk_wind_speed",
+  "ab_irradiance_surface",
+  "bc_irradiance_surface",
+  "mb_irradiance_surface",
+  "sk_irradiance_surface",
+  "ab_humidity",
+  "bc_humidity",
+  "mb_humidity",
+  "sk_humidity",
+  "ab_temperature",
+  "bc_temperature",
+  "mb_temperature",
+  "sk_temperature",
+  "nb_wind_speed",
+  "nllab_wind_speed",
+  "ns_wind_speed",
+  "on_wind_speed",
+  "pei_wind_speed",
+  "qc_wind_speed",
+  "nb_irradiance_surface",
+  "nllab_irradiance_surface",
+  "ns_irradiance_surface",
+  "on_irradiance_surface",
+  "pei_irradiance_surface",
+  "qc_irradiance_surface",
+  "nb_humidity",
+  "nllab_humidity",
+  "ns_humidity",
+  "on_humidity",
+  "pei_humidity",
+  "qc_humidity",
+  "nb_temperature",
+  "nllab_temperature",
+  "ns_temperature",
+  "on_temperature",
+  "pei_temperature",
+  "qc_temperature",
+]
+
+# Which timeseries data vectors to cluster over. NOTE! COLUMN NAME IN CSV MUST MATCH FILENAME
+[timeseries]
+ab = ["ab_irradiance_surface", "ab_humidity", "ab_temperature", "ab_wind_speed"]
+bc = ["bc_irradiance_surface", "bc_humidity", "bc_temperature", "bc_wind_speed"]
+mb = ["mb_irradiance_surface", "mb_humidity", "mb_temperature", "mb_wind_speed"]
+nb = ["nb_irradiance_surface", "nb_humidity", "nb_temperature", "nb_wind_speed"]
+nllab = ["nllab_irradiance_surface", "nllab_humidity", "nllab_temperature", "nllab_wind_speed"]
+ns = ["ns_irradiance_surface", "ns_humidity", "ns_temperature", "ns_wind_speed"]
+on = ["on_irradiance_surface", "on_humidity", "on_temperature", "on_wind_speed"]
+pei = ["pei_irradiance_surface", "pei_humidity", "pei_temperature", "pei_wind_speed"]
+qc = ["qc_irradiance_surface", "qc_humidity", "qc_temperature", "qc_wind_speed"]
+sk = ["sk_irradiance_surface", "sk_humidity", "sk_temperature", "sk_wind_speed"]
+# all are population-weighted
+ontario = ["ldv_charging"]
+# TOML has no null literal (config.yaml leaves this as `temoa-canada:` with nothing
+# selected); an empty list is the equivalent no-columns-selected value.
+"temoa-canada" = []
