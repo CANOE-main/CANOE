@@ -9,3 +9,4 @@ epa_reference = "US EPA. (2025, January). GHG Emission Factors Hub [Overviews an
 ```
 
 - NREL Comstock
+  Used for estimating DSD (Demand Specific Distribution) for space heating, cooling and other energy uses.

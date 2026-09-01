@@ -9,12 +9,15 @@ dependencies = [
   "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git",
   "loguru==0.7.3",
   "numpy",
-  "pandas==3.0.5",
+  "pandas==3.0.1",
   "pydantic==2.13.4",
   "typer==0.27.1",
+  "temoa @ git+https://github.com/TemoaProject/temoa.git@4db1eaf52fef24697fa748e9228e97244ac56a38",
+  "tsam @ git+https://github.com/CANOE-main/tsam.git@v3.2-patch",
+  "matplotlib",
 
-  "fastparquet",
   # Gold connector dependencies
+  "fastparquet",
   "gdown"
 ]
 
@@ -22,8 +25,9 @@ dependencies = [
 canoe-compiler = "canoe.cli:main"
 
 [project.optional-dependencies]
-all = ["canoe[dev]", "canoe[docs]"]
-dev = ["ruff"]
+all = ["canoe[dev]", "canoe[docs]", "canoe[solvers]"]
+dev = ["ruff", "matplotlib"]
+solvers = ["gurobipy"]
 docs = ["mkdocs-material>=9.5", "mkdocs-git-revision-date-localized-plugin>=1.2", "mike"]
 
 [build-system]

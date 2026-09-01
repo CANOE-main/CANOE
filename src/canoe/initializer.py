@@ -162,7 +162,7 @@ def prepare_database(db_path: Path, schema_sql: str) -> Path:
         conn.executescript(schema_sql)
         tables = [
             r[0]
-            for r in conn.execute(  # pyright: ignore[reportAny]
+            for r in conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table';"
             ).fetchall()
         ]
@@ -209,7 +209,7 @@ def main(argv: list[str] | None = None) -> None:
     args = parser.parse_args(argv)
 
     # Parse config
-    config = CANOEBaseConfig.validate_from_toml(args.cfg)  # pyright: ignore[reportAny]
+    config = CANOEBaseConfig.validate_from_toml(args.cfg)
     run(config)
 
 

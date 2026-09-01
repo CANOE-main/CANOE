@@ -15,6 +15,10 @@ dsd_time_slices = { kind = "all_year" }
 # EPA
 EPA_emission_commodity = "co2e"
 
+[ceud_config]
+# This is used to inform existing capacity
+base_year = 2022
+
 [comstock_config]
 building_types = [
   "fullservicerestaurant",
@@ -46,3 +50,8 @@ NLLAB = "ME"
 PEI = "ME"
 NS = "ME"
 NB = "ME"
+
+[comstock_config.apply_weather_mapping]
+"space heating" = true
+"space cooling" = true
+"other" = false

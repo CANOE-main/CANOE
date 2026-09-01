@@ -1,0 +1,77 @@
+input_database = "canoe-pwd/canoe-v4-all-high.sqlite"
+
+[temoa_config]
+solver_name = "gurobi"
+scenario_mode = "perfect_foresight"
+silent = false
+save_duals = true
+
+[representative_periods_config]
+data_dir = "assets/rep_periods_data"
+final_periods = 64
+test_periods = [64]
+model_years = [2025, 2030, 2035, 2040, 2045]
+
+[[representative_periods_config.pca_groups]]
+name = "weather"
+n_components = 6
+columns = [
+  "ab_wind_speed",
+  "bc_wind_speed",
+  "mb_wind_speed",
+  "sk_wind_speed",
+  "ab_irradiance_surface",
+  "bc_irradiance_surface",
+  "mb_irradiance_surface",
+  "sk_irradiance_surface",
+  "ab_humidity",
+  "bc_humidity",
+  "mb_humidity",
+  "sk_humidity",
+  "ab_temperature",
+  "bc_temperature",
+  "mb_temperature",
+  "sk_temperature",
+  "nb_wind_speed",
+  "nllab_wind_speed",
+  "ns_wind_speed",
+  "on_wind_speed",
+  "pei_wind_speed",
+  "qc_wind_speed",
+  "nb_irradiance_surface",
+  "nllab_irradiance_surface",
+  "ns_irradiance_surface",
+  "on_irradiance_surface",
+  "pei_irradiance_surface",
+  "qc_irradiance_surface",
+  "nb_humidity",
+  "nllab_humidity",
+  "ns_humidity",
+  "on_humidity",
+  "pei_humidity",
+  "qc_humidity",
+  "nb_temperature",
+  "nllab_temperature",
+  "ns_temperature",
+  "on_temperature",
+  "pei_temperature",
+  "qc_temperature",
+]
+
+# Which timeseries data vectors to cluster over. NOTE! COLUMN NAME IN CSV MUST MATCH FILENAME
+[representative_periods_config.timeseries]
+ab = ["ab_irradiance_surface", "ab_humidity", "ab_temperature", "ab_wind_speed"]
+bc = ["bc_irradiance_surface", "bc_humidity", "bc_temperature", "bc_wind_speed"]
+mb = ["mb_irradiance_surface", "mb_humidity", "mb_temperature", "mb_wind_speed"]
+nb = ["nb_irradiance_surface", "nb_humidity", "nb_temperature", "nb_wind_speed"]
+nllab = ["nllab_irradiance_surface", "nllab_humidity", "nllab_temperature", "nllab_wind_speed"]
+ns = ["ns_irradiance_surface", "ns_humidity", "ns_temperature", "ns_wind_speed"]
+on = ["on_irradiance_surface", "on_humidity", "on_temperature", "on_wind_speed"]
+pei = ["pei_irradiance_surface", "pei_humidity", "pei_temperature", "pei_wind_speed"]
+qc = ["qc_irradiance_surface", "qc_humidity", "qc_temperature", "qc_wind_speed"]
+sk = ["sk_irradiance_surface", "sk_humidity", "sk_temperature", "sk_wind_speed"]
+# all are population-weighted
+ontario = ["ldv_charging"]
+# TOML has no null literal (config.yaml leaves this as `temoa-canada:` with nothing
+# selected); an empty list is the equivalent no-columns-selected value.
+"temoa-canada" = []
