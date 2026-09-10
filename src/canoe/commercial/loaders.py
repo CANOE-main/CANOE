@@ -1,6 +1,5 @@
 from importlib.resources import files
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
@@ -8,15 +7,29 @@ from loguru import logger
 
 from canoe.common import CANOEProvince, GoldConnectorConfig
 
-if TYPE_CHECKING:
-    from .config import CANOECommercialConfig
-
 
 def get_comstock_map() -> pd.DataFrame:
     """Map from Comstock columns to end-use demands"""
     csv_resource = files("canoe.commercial").joinpath("config/comstock_map.csv")
     with csv_resource.open("rb") as f:
         return pd.read_csv(f)
+
+
+def get_aeo_data() -> pd.DataFrame:
+    """Map from Comstock columns to end-use demands"""
+    ktek_resource = files("canoe.commercial").joinpath("config/ktekx.xlsx")
+    cdm_resource = files("canoe.commercial").joinpath("config/aeo_cdm_indexing.csv")
+    with ktek_resource.open("rb") as f:
+        ktek_df = pd.read_excel(
+            f, sheet_name="ktek", skiprows=68, index_col=False
+        ).iloc[1:, 0:27]
+    with cdm_resource.open("rb") as f:
+        cdm_idx = pd.read_csv(f, index_col=0)
+        for col in ktek_df.columns:
+            if col in cdm_idx.columns:
+                ktek_df[col] = ktek_df[col].map(lambda n: cdm_idx.loc[n, col])  # pyright: ignore[reportUnknownLambdaType]  # noqa: B023
+        ktek_df["techname"] = ktek_df["techname"].str.lower()
+    return ktek_df
 
 
 def get_comstock_table(
@@ -82,7 +95,9 @@ def get_ceud_table(
     return df
 
 
-def get_statcan_atlantic_fractions_table(cfg: "CANOECommercialConfig") -> pd.Series:
+def get_statcan_atlantic_fractions_table(
+    data_cache_config: GoldConnectorConfig,
+) -> pd.Series:
     """
     For the comprehensive energy use database in commercial, the atlantic provinces are all aggregated.
     To slice them up, we use energy proportions from Statcan data. The system scope of the Statcan
@@ -90,21 +105,19 @@ def get_statcan_atlantic_fractions_table(cfg: "CANOECommercialConfig") -> pd.Ser
     """
 
     cache_path = (
-        cfg.data_cache_config.cache_dir
-        / Path("silver")
-        / cfg.data_cache_config.cache_date
+        data_cache_config.cache_dir / Path("silver") / data_cache_config.cache_date
     )
     file_path = (
         cache_path
         / Path("statcan_25100029")
-        / Path(f"statcan_25100029_{cfg.data_cache_config.cache_date}.csv")
+        / Path(f"statcan_25100029_{data_cache_config.cache_date}.csv")
     )
 
     df = pd.read_csv(file_path).fillna(0)
 
     df["region"] = df["GEO"].str.lower()
     df["fuel"] = df["Fuel type"].map(
-        {
+        {  # pyright: ignore[reportArgumentType]
             "Primary electricity, hydro and nuclear": "electricity",
             "Total refined petroleum products": "oil",
             "Natural gas": "natural gas",
@@ -113,7 +126,31 @@ def get_statcan_atlantic_fractions_table(cfg: "CANOECommercialConfig") -> pd.Ser
     df_fuel = df.groupby(["fuel"])["VALUE"].sum()
 
     for idx, row in df.iterrows():
-        df.loc[idx, "fraction"] = row["VALUE"] / df_fuel.loc[row["fuel"]]
+        df.loc[idx, "fraction"] = row["VALUE"] / df_fuel.loc[row["fuel"]]  # pyright: ignore[reportAttributeAccessIssue]
 
     df = df.set_index(["region", "fuel"])["fraction"]
-    return df
+    return df  # pyright: ignore[reportReturnType]
+
+
+def get_cer_gdp(
+    cache_config: GoldConnectorConfig,
+    base_year: int = 2022,
+    scenario: str = "Global Net-zero",
+) -> pd.DataFrame:
+    cache_path = cache_config.cache_dir / Path("silver") / cache_config.cache_date
+    file_folder = cache_path / "cer_macro"
+    file_path = file_folder / f"cer_macro_{cache_config.cache_date}.parquet"
+    logger.debug(
+        f"Loading cached gdp projections base_year={base_year} scenario={scenario}"
+    )
+    df = pd.read_parquet(file_path)
+    df_gdp = (
+        df[
+            (df.Scenario == scenario)
+            & (df.Variable == "Real Gross Domestic Product ($2012 Millions)")
+        ][["Year", "Value"]]
+        .rename({"Year": "year", "Value": "gdp"}, axis="columns")  # pyright: ignore[reportAttributeAccessIssue]
+        .set_index("year")
+    )
+
+    return df_gdp / df_gdp.loc[base_year]

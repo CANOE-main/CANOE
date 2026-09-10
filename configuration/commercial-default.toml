@@ -1,7 +1,5 @@
 module_name = "commercial"
 data_version = "003"
-# future_periods = [2025, 2030, 2035, 2040, 2045]
-# province_list = ["ON", "AB", "BC", "QC", "MB", "SK", "NLLAB", "PEI", "NS", "NB"]
 base_year = 2022
 end_uses = ["space heating", "space cooling", "other"]
 
@@ -55,3 +53,15 @@ NB = "ME"
 "space heating" = true
 "space cooling" = true
 "other" = false
+
+[aeo_config.us_census_mapping]
+ON = "east north central"
+AB = "mountain"
+BC = "pacific"
+QC = "new england"
+MB = "mountain"
+SK = "mountain"
+NLLAB = "new england"
+PEI = "new england"
+NS = "new england"
+NB = "new england"

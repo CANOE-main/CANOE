@@ -24,7 +24,7 @@ def load_and_process_comstock(
 
     province_dsd: dict[CANOEProvince, pd.DataFrame] = {}
     for province, comstock_df in province_comstock.items():
-        province_df = pd.DataFrame()
+        province_df = comstock_df.copy()
         for end_use in cfg.end_uses:
             # All columns that match "{end_use} fuel"
             relevant_cols = [
@@ -57,7 +57,7 @@ def load_and_process_comstock(
 
 def _apply_weather_mapping(
     province: CANOEProvince,
-    comstock_df: pd.Series,
+    comstock_df: pd.Series | pd.DataFrame,
     weather_maps: dict[CANOEProvince, pd.DataFrame],
 ) -> pd.DataFrame:
     """
@@ -76,6 +76,9 @@ def _load_all_weather_maps(
     provinces: list[CANOEProvince],
     cache_config: "GoldConnectorConfig",
 ) -> dict[CANOEProvince, pd.DataFrame]:
+    """
+    Weather maps from US matched to canadian provinces
+    """
     weather_maps: dict[CANOEProvince, pd.DataFrame] = {}
     for province in provinces:
         weather_map = get_usca_weather_map(cache_config, province)
@@ -137,6 +140,6 @@ def _load_provinces_comstock(
         )  # index: com_col, values: euf_col
 
         # sum columns that map to the same euf_col
-        grouped = comstock_province_df[mapping.index].T.groupby(mapping).sum().T
-        province_comstock_dfs[province] = grouped
+        grouped = comstock_province_df[mapping.index].T.groupby(mapping).sum().T  # pyright: ignore[reportAttributeAccessIssue]
+        province_comstock_dfs[province] = grouped  # pyright: ignore[reportArgumentType]
     return province_comstock_dfs

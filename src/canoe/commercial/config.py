@@ -43,6 +43,14 @@ class CommercialEndUse(StrEnum):
         }
         return _NAMES[self.value]
 
+    def get_short_name(self):
+        _NAMES = {
+            "heating": "sph",
+            "cooling": "spc",
+            "other": "oth",
+        }
+        return _NAMES[self.value]
+
     @override
     def __str__(self):
         return str(self.name)
@@ -57,6 +65,10 @@ class ComstockConfig(BaseModel):
 class CEUDConfig(BaseModel):
     base_year: int
     space_cooling_tolerance: float = 0.05
+
+
+class AEOConfig(BaseModel):
+    us_census_mapping: dict[CANOEProvince, str]
 
 
 class CANOECommercialConfig(InheritsFromBase, CANOEModule):
@@ -133,6 +145,7 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     # # AEO
     # aeo_installed_year: int
     # aeo_reference: str
+    aeo_config: AEOConfig
 
     # # NRCan
     # nrcan_url: str

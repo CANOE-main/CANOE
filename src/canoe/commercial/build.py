@@ -2,27 +2,69 @@
 
 from typing import TYPE_CHECKING
 
+import numpy as np
+import pandas as pd
+from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
+from canoe.canoe_objects.demand import (
+    DemandEntity,
+    DemandSeriesArray,
+    DemandSpecificDistributionArray,
+)
 from canoe.commercial.comstock_processing import load_and_process_comstock
-from canoe.commercial.existing_capacity import compute_existing_capacity
-from canoe.common import CANOEFuelImport, CANOEModuleOutput, atomic_transaction
+from canoe.commercial.existing_capacity import (
+    compute_existing_tech_life_params,
+)
+from canoe.commercial.loaders import get_cer_gdp
+from canoe.common import (
+    CANOEFuelImport,
+    CANOEModuleOutput,
+    CANOEProvince,
+    CANOESector,
+    DataQualityProfile,
+    atomic_transaction,
+)
+from canoe.common.db_tools import write_label
+from canoe.common.naming import (
+    get_commodity_name,
+    get_dataset_code,
+    hour_str,
+    season_str,
+)
 
 from .validation import validate_db_against_config
 
 if TYPE_CHECKING:
-    from .config import CANOECommercialConfig
+    from .config import CANOECommercialConfig, CommercialEndUse
 
 
 def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
     """
     Main function of the CANOE commercial sector.
+
+    Units hard-coded to PJ because that is the unit of the data.
+
+    TODO:
+        - data_ids separated by province
+        - data sources (require label)
     """
     logger.info(
         f"Running COMMERCIAL (high-resolution) sector on {cfg.database_file}...\n"
     )
 
+    # Per province:
+    # DSD
+    # Existing Capacity
+    # New Capacity
+    # Emissions
+
     # Accumulators
+    sector_data_id = get_dataset_code(
+        sector=CANOESector.Commercial,
+        resolution_str="HR",
+        version_code=cfg.data_version,
+    )
     fuel_imports: list[CANOEFuelImport] = []
 
     # Wrap everything in an atomic transaction
@@ -30,85 +72,176 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         # Validate canoe-base DB structure against module config
         validate_db_against_config(cfg, db_conn)
 
+        # Write data_id label (first because it impacts everything)
+        sql, params = DataSet.to_insert_or_ignore_sql(
+            DataSet(data_id=sector_data_id), include_nulls=True
+        )
+        db_conn.execute(sql, params)
+
         # Load and pre-process data sources
         # Estimated from Cosmtock
         province_dsd = load_and_process_comstock(cfg)
-        existing_capacity = compute_existing_capacity(cfg)
+        # Estimated from CEUD and AEO: Several parameters (avg_life, avg_eff, dem, etc) by region, end_use, fuel
+        existing_techs = compute_existing_tech_life_params(
+            cfg.provinces, cfg.ceud_config, cfg.data_cache_config, cfg.aeo_config
+        )
+        gdp_projections_index = get_cer_gdp(cfg.data_cache_config, base_year=2022)
 
-        # Per province:
-        # DSD
+        # Compute parameters
+        # - Demand series (demand projections)
+        #   Adjust by gdp projections and reshape as end_use, region, period, demand
+        demand_df = _compute_end_use_demand(
+            existing_techs, gdp_projections_index, cfg.provinces
+        )
+
+        # - Demand specific distribution
+        #   Reorganize data in long-form region, end_use, season, tod, value
+        dsd_df = _compute_dsd_frame(province_dsd, cfg.end_uses)
+
+        # - Annual Capacity Factor => mean(DSD) / max(DSD) for the region, end_use, fuel series
+        existing_techs["acf"] = _compute_annual_capacity_factor(
+            existing_techs, province_dsd
+        )
+
+        # - Existing capacities
+        #
+
+        # Process time-slices sets (for convenience only)
+        time_slices = cfg.dsd_time_slices.as_list()
+        seasons = list({t.season for t in time_slices})
+        tods = list({t.tod for t in time_slices})
+
+        # Demand objects
+        for end_use in cfg.end_uses:
+            from .config import CommercialEndUse
+
+            if end_use == CommercialEndUse.Other:
+                continue
+
+            demand = DemandEntity(
+                name=get_commodity_name(
+                    CANOESector.Commercial, end_use.get_short_name(), is_demand=True
+                ),
+                commodity_description=f"demand for commercial `{end_use.get_full_name()}` energy",
+                unit="PJ",
+                data_id=sector_data_id,
+            )
+
+            # Demand values
+            # -------------
+            demand_note = (
+                f"Efficiency (AEO, {2012}) times secondary energy consumption (NRCan, {2022}) "
+                f"indexed to projected provincial gdp growth by (CER, {2023})"
+            )
+            demand_series = DemandSeriesArray(
+                region=cfg.provinces, period=cfg.future_periods, fill=0.0
+            ).fill_from_df(
+                demand_df.loc[end_use.get_full_name()],
+                dims=["region", "period"],
+                value_col="dem",
+            )
+            demand = demand.with_demand_series(
+                demand_series,
+                notes=demand_note,
+                # reference_code="COM-DEMAND",
+                data_quality=DataQualityProfile(
+                    cred=1, geog=2, struc=2, tech=2, time=3
+                ),
+            )
+
+            if cfg.include_dsd:
+                # DSD
+                # -------------
+                dsd_series = DemandSpecificDistributionArray(
+                    region=cfg.provinces,
+                    period=cfg.future_periods,
+                    season=seasons,
+                    tod=tods,
+                ).fill_from_df(
+                    dsd_df[dsd_df.end_use == end_use.get_full_name()],
+                    dims=["region", "season", "tod"],
+                    value_col="dsd",
+                )  # If we leave period out, it is broadcasted
+
+                demand = demand.with_dsd(
+                    dsd_series,
+                    notes="Comstock hourly consumption for lighting and equipment summed over all building types and normalised",
+                    # reference_code="COM-COMSTOCK",
+                    data_quality=DataQualityProfile(
+                        cred=1, geog=2, struc=1, tech=2, time=3
+                    ),
+                )
+
+            # Write to demand atabase
+            # -------------
+            logger.debug("Writing demand entities to database")
+            demand.build(db_conn)
+
         # Existing Capacity
-        # New Capacity
-        # Emissions
 
     return CANOEModuleOutput(fuel_imports=fuel_imports)
 
-    # TODO This is data pre-processing that we will come back to
-    #
-    # Step 1: Data is already loaded onto cfg by validate_from_toml → _load_data()
-    # aeo_data = cfg.aeo_cdm
-    # gdp_index = cfg.gdp_index
 
-    # emis_factors = None
-    # if cfg.include_emissions:
-    #     raw_emis = data_scraper.fetch_emission_factors(
-    #         url=cfg.epa_url,
-    #         cache_dir=cfg.cache_dir,
-    #         force_download=cfg.force_download,
-    #     )
-    #     emis_factors = emission_activity.prepare_emission_factors(raw_emis, cfg)
-
-    # Step 2: Write module-specific commodity rows
-    # techcom.write_commodities(cfg, db_conn)
-
-    # # Step 3: Per-region subsector processing
-    # for region in cfg.province_list:
-    #     print(f"Aggregating {region}...\n")
-
-    #     df_dsd = comstock_dsd.calculate_dsds(region, cfg)
-    #     df_exs = existing_capacity.aggregate_region(
-    #         region, df_dsd, aeo_data, gdp_index, cfg, db_conn
-    #     )
-    #     new_capacity.aggregate_region(region, df_exs, aeo_data, cfg, db_conn)
-
-    #     if cfg.include_emissions:
-    #         emission_activity.aggregate_region(region, emis_factors, cfg, db_conn)
-
-    #     print(f"Aggregated {region}.\n")
-
-    # # Step 4: Register data sources and datasets
-    # post_processing.write_data_registry(cfg, db_conn)
-
-    # db_conn.close()
-
-    # if cfg.clone_to_xlsx:
-    #     utils.database_converter().clone_sqlite_to_excel(
-    #         from_sqlite_file=cfg.database_file,
-    #         to_excel_file=cfg.excel_target_file,
-    #         excel_template_file=cfg.excel_template_file,
-    #     )
-
-    # print(f"Commercial sector aggregated into {os.path.basename(cfg.database_file)}\n")
-
-    # if cfg.show_plots:
-    #     save_plots()
+def _compute_end_use_demand(
+    existing_capacity: pd.DataFrame,
+    gdp_projections_index: pd.DataFrame,
+    provinces: list[CANOEProvince],
+) -> pd.DataFrame:
+    """
+    Compute end-use demand for each end-use and region over the projection period.
+    Adjust by gdp projections and reshape as end_use, region, period, demand
+    """
+    n_end_uses = len(existing_capacity.end_use.unique())
+    demand_df = (
+        existing_capacity[["end_use", "province", "dem"]]
+        .reset_index()
+        .rename({"province": "region"}, axis=1)
+        .groupby(["end_use", "region"])
+        .dem.sum()
+    )  # end_use, region => 2022 demand
+    demand_df = pd.concat(
+        [demand_df * gdp_factor for gdp_factor in gdp_projections_index.values]
+    ).reset_index()
+    demand_df["period"] = np.repeat(
+        gdp_projections_index.index, n_end_uses * len(provinces)
+    )
+    return demand_df.set_index("end_use")
 
 
-# def save_plots(output_dir="output_plots"):
-#     os.makedirs(output_dir, exist_ok=True)
-#     print("Finished and saving plots.")
-#     for fig_num in pp.get_fignums():
-#         fig = pp.figure(fig_num)
-#         # Try suptitle first, then first axes title, then fall back to figure number
-#         title = fig.get_suptitle()
-#         if not title and fig.axes:
-#             title = fig.axes[0].get_title()
-#         filename = title if title else f"figure_{fig_num}"
-#         # Sanitize filename: replace characters that are invalid in Windows filenames
-#         filename = re.sub(r'[\\/:*?"<>|\x00-\x1f .,]', "_", filename)
-#         filepath = os.path.join(output_dir, f"{filename}.pdf")
-#         fig.savefig(filepath, bbox_inches="tight")
-#         print(f"Saved {filepath}")
+def _compute_annual_capacity_factor(
+    existing_techs: pd.DataFrame,
+    province_dsd: dict[CANOEProvince, pd.DataFrame],
+) -> pd.Series:
+    """ACF = mean(DSD) / max(DSD)"""
+
+    acfs = {
+        province: (dsd_df.mean(axis=0) / dsd_df.max(axis=0))
+        for province, dsd_df in province_dsd.items()
+    }
+
+    return pd.Series(
+        existing_techs.apply(
+            lambda r: acfs[r.province][f"{r.end_use} {r.fuel}"],  # pyright: ignore[reportUnknownLambdaType]
+            axis=1,
+        ),
+        name="acf",
+    )
+
+
+def _compute_dsd_frame(
+    province_dsd: dict[CANOEProvince, pd.DataFrame], end_uses: list["CommercialEndUse"]
+):
+    frames = []
+    for province, df in province_dsd.items():
+        tmp = df[[eu.get_full_name() for eu in end_uses]].reset_index(names="hour")  # pyright: ignore[reportCallIssue]
+        long = tmp.melt(id_vars="hour", var_name="end_use", value_name="dsd")
+        long.insert(0, "region", province)
+        long["tod"] = ((long["hour"] % 24) + 1).apply(hour_str)
+        long["season"] = ((long["hour"] // 24) + 1).apply(season_str)
+        frames.append(long)
+    df_out = pd.concat(frames, ignore_index=True)
+
+    return df_out
 
 
 if __name__ == "__main__":

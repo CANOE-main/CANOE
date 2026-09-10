@@ -32,12 +32,12 @@ class CANOETemoaConfig(BaseModel):
     solver_name: str
     neos: bool = False
     save_excel: bool = False
-    save_duals: bool = False
+    save_duals: bool = True
     save_storage_levels: bool = False
     save_lp_file: bool = False
-    time_sequencing: str | None = None
+    time_sequencing: str | None = "seasonal_timeslices"
     days_per_period: int = 365
-    reserve_margin: str | None = None
+    reserve_margin: str | None = "dynamic"
     MGA: dict[str, object] | None = None
     SVMGA: dict[str, object] | None = None
     myopic: dict[str, object] | None = None
@@ -54,10 +54,10 @@ class CANOETemoaConfig(BaseModel):
     graphviz_output: bool = False
     cycle_count_limit: int = 100
     cycle_length_limit: int = 3
-    output_threshold_capacity: float | None = None
-    output_threshold_activity: float | None = None
-    output_threshold_emission: float | None = None
-    output_threshold_cost: float | None = None
+    output_threshold_capacity: float | None = 0.001
+    output_threshold_activity: float | None = 0.001
+    output_threshold_emission: float | None = 0.001
+    output_threshold_cost: float | None = 0.01
     sqlite: dict[str, object] | None = None
     extensions: list[str] | tuple[str, ...] | None = None
 
@@ -75,6 +75,9 @@ class CANOETemoaConfig(BaseModel):
         )
         self.output_path.mkdir(parents=True, exist_ok=True)
         _check_temoa_solver(self.solver_name, self.save_duals)
+
+        if self.sqlite is None:
+            self.sqlite
 
         config_data: dict[str, Any] = {
             **self.model_dump(),

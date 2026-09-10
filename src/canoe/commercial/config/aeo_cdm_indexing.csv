@@ -1,0 +1,12 @@
+﻿n,reg,serv,fuel
+1,new england,space heating,electricity
+2,middle atlantic,space cooling,natural gas
+3,east north central,water heating,oil
+4,west north central,ventilation,
+5,south atlantic,cooling,
+6,east south central,ventilation,
+7,west south central,cooking,
+8,mountain,lighting,
+9,pacific,refrigeration,
+10,all,,
+11,all,,

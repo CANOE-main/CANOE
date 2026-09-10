@@ -2,6 +2,14 @@ import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
 
+from canoe_schema.v4_0 import (
+    Commodity,
+    CommodityLabel,
+    DataSource,
+    Technology,
+    TechnologyLabel,
+)
+
 
 @contextmanager
 def atomic_transaction(db_path: Path, force_foreign_keys: bool = True):
@@ -80,3 +88,21 @@ def atomic_transaction(db_path: Path, force_foreign_keys: bool = True):
         raise
     finally:
         conn.close()
+
+
+def write_label(
+    conn: sqlite3.Connection, entity: Commodity | Technology | DataSource
+) -> None:
+    """
+    Writes a label for the given entity to the database.
+    """
+    if isinstance(entity, Commodity):
+        label = CommodityLabel(commodity=entity.name)
+        sql, params = CommodityLabel.to_insert_or_ignore_sql(label)
+        conn.execute(sql, params)
+    elif isinstance(entity, Technology):
+        label = TechnologyLabel(tech=entity.tech)
+        sql, params = TechnologyLabel.to_insert_or_ignore_sql(label)
+        conn.execute(sql, params)
+    else:
+        raise TypeError(f"Unsupported entity type: {type(entity)}")
