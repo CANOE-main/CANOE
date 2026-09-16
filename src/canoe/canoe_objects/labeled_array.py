@@ -100,13 +100,15 @@ class LabeledArray:
     def get(self, **coord_kwargs: Any) -> np.ndarray:
         return self.data[self._index_tuple(coord_kwargs, allow_partial=True)]
 
-    def to_records(self) -> list[dict[str, Any]]:
+    def to_records(self, skip_nan: bool = True) -> list[dict[str, Any]]:
         """Flatten to a list of dicts: one dict per dim value combination."""
         records: list[dict[str, Any]] = []
         for combo in product(*(self.coords[d] for d in self.dims)):
             idx = tuple(self._idx[d][v] for d, v in zip(self.dims, combo))
             rec = dict(zip(self.dims, combo))
             rec["value"] = self.data[idx]
+            if skip_nan and np.isnan(rec["value"]):
+                continue
             records.append(rec)
         return records
 

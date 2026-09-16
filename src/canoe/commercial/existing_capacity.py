@@ -4,7 +4,7 @@ if TYPE_CHECKING:
     from canoe.commercial.config import AEOConfig, CEUDConfig
 import pandas as pd
 
-from canoe.common import CANOEProvince, GoldConnectorConfig
+from canoe.common import CANOEFuel, CANOEProvince, GoldConnectorConfig
 
 from .loaders import get_aeo_data, get_ceud_table, get_statcan_atlantic_fractions_table
 
@@ -42,7 +42,9 @@ def compute_existing_tech_life_params(
         df_exs.reset_index(inplace=True)
         # df_dem = df_exs["dem"].groupby("end_use").sum()
         exs_dfs.append(df_exs)
-    return pd.concat(exs_dfs).reset_index()
+    out_df = pd.concat(exs_dfs).reset_index(drop=True)
+    out_df["fuel"] = out_df["fuel"].map(CANOEFuel.from_str)
+    return out_df
 
 
 def _load_all_ceud_tables(

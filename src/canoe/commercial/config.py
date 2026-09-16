@@ -7,6 +7,7 @@ from pydantic import BaseModel, ConfigDict
 
 from canoe.commercial.build import build_commercial
 from canoe.common import (
+    CANOEFuel,
     CANOEModule,
     CANOEModuleOutput,
     CANOEProvince,
@@ -97,11 +98,16 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     provinces: list[CANOEProvince] = inherit()
     base_year: int
     end_uses: list[CommercialEndUse]
+    existing_technologies_fuels: dict[CommercialEndUse, list[CANOEFuel]]
     # period_step: int
     # timezone: str
 
+    # Filter out secondary energy consumption below this fraction of total
+    capacity_min_tolerance: float
+
     # Runtime switches
     validation_behavior: Literal["error", "warning"] = "error"
+    missing_data_behavior: Literal["error", "warning"] = "error"
 
     # DSD parameters
     include_dsd: bool = True

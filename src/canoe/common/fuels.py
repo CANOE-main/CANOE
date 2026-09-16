@@ -3,6 +3,7 @@ from typing import Any, override
 
 
 class CANOEFuel(StrEnum):
+    Electricity = "ELC"  # Not sure this belongs here but it's a good start
     Coal = "COAL"
     Oil = "OIL"
     Diesel = "DSL"
@@ -35,13 +36,11 @@ class CANOEFuel(StrEnum):
     def _missing_(cls, value: Any):
         if isinstance(value, str) and value in cls.__members__:
             return cls.__members__[value]
-        # for member in cls:
-        #     if value == member.get_tag():
-        #         return member
         return None
 
     def get_desc_name(self) -> str:
         CANOE_FUEL_TO_NAME = {
+            CANOEFuel.Electricity: "electricity",
             CANOEFuel.Coal: "coal",
             CANOEFuel.Oil: "oil",
             CANOEFuel.Diesel: "diesel",
@@ -89,6 +88,26 @@ class CANOEFuel(StrEnum):
         }
         return CANOE_FUEL_PRICE_OVERRIDES.get(self, self)
 
+    @classmethod
+    def from_str(cls, name: str) -> "CANOEFuel":
+        # Try direct value match first (e.g. "ELC", "DSL")
+        try:
+            return cls(name)
+        except ValueError:
+            pass
+
+        # Normalize to a lowercase, space-free string for name matching
+        normalized = name.lower().replace(" ", "").replace("_", "")
+        for fuel in cls:
+            if fuel.name.lower() == normalized:
+                return fuel
+
+        raise ValueError(f"Unknown fuel: {name!r}")
+
     @override
     def __str__(self):
+        return str(self.name)
+
+    @override
+    def __repr__(self):
         return str(self.name)

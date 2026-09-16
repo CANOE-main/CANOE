@@ -11,6 +11,7 @@ from canoe_schema.v4_0 import (
 from canoe.canoe_objects.labeled_array import LabeledArray
 from canoe.common import CANOEProvince, DataQualityProfile
 from canoe.common.db_tools import write_label
+from canoe.common.naming import DatasetIdentifier
 
 
 class DemandSpecificDistributionArray(LabeledArray):
@@ -51,17 +52,19 @@ class DemandEntity:
         name: str,
         commodity_description: str,
         unit: str,
-        data_id: str,
+        data_id: DatasetIdentifier,
         notes_only_on_first: bool = True,
         reference_only_on_first: bool = True,
+        include_region_in_data_id: bool = True,
     ):
         self.name: str = name
         self.flag: CommodityTypeCode = CommodityTypeCode.D
         self.commodity_description: str = commodity_description
         self.unit: str = unit
-        self.data_id: str = data_id
+        self.data_id: DatasetIdentifier = data_id
         self.notes_only_on_first: bool = notes_only_on_first
         self.reference_only_on_first: bool = reference_only_on_first
+        self.include_region_in_data_id: bool = include_region_in_data_id
 
         self.dsd: DemandSpecificDistributionArray | None = None
         self.dsd_notes: str | None = None
@@ -113,7 +116,7 @@ class DemandEntity:
             flag=self.flag,
             description=self.commodity_description,
             units=self.unit,
-            data_id=self.data_id,
+            data_id=self.data_id.get_dataset_code(),
         )
         sql, params = Commodity.to_insert_or_ignore_sql(commodity)
         write_label(db_conn, commodity)
@@ -122,7 +125,7 @@ class DemandEntity:
         # Build Demand series
         demands = [
             Demand(
-                region=row["region"],
+                region=row["region"].short(),
                 period=row["period"],
                 commodity=self.name,
                 demand=row["value"],
@@ -133,7 +136,9 @@ class DemandEntity:
                 data_source=self.demand_reference_code
                 if i == 0 or not self.reference_only_on_first
                 else None,
-                data_id=self.data_id,
+                data_id=self.data_id.get_dataset_code(
+                    province=row["region"] if self.include_region_in_data_id else None
+                ),
                 **(
                     self.demand_data_quality.as_kwargs()
                     if self.demand_data_quality and i == 0
@@ -161,7 +166,11 @@ class DemandEntity:
                     data_source=self.dsd_reference_code
                     if i == 0 or not self.reference_only_on_first
                     else None,
-                    data_id=self.data_id,
+                    data_id=self.data_id.get_dataset_code(
+                        province=row["region"]
+                        if self.include_region_in_data_id
+                        else None
+                    ),
                     **(
                         self.dsd_data_quality.as_kwargs()
                         if self.dsd_data_quality and i == 0

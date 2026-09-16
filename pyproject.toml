@@ -6,9 +6,9 @@ readme = "README.md"
 requires-python = ">=3.12"
 license-files = ["LICENSE*"]
 dependencies = [
-  "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git",
+  "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git@0025a069cbfa31895567b59ef5722a8ab3848eed",
   "loguru==0.7.3",
-  "numpy",
+  "numpy==2.4.3",
   "pandas==3.0.1",
   "pydantic==2.13.4",
   "typer==0.27.1",
@@ -41,6 +41,7 @@ reportExplicitAny = false
 reportMissingTypeStubs = false  # Eventually change
 reportUnknownArgumentType = false
 reportUnknownVariableType = false
+reportUnknownMemberType = false
 
 [tool.hatch.envs.dev]
 dependencies = [
@@ -49,3 +50,11 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

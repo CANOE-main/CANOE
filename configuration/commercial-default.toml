@@ -2,6 +2,10 @@ module_name = "commercial"
 data_version = "003"
 base_year = 2022
 end_uses = ["space heating", "space cooling", "other"]
+existing_technologies_fuels = { "space heating" = ["NG", "OIL", "ELC"], "space cooling" = ["ELC", "NG"] }
+
+# Filter out secondary energy consumption below this fraction of total
+capacity_min_tolerance = 0.05
 
 # period_step = 5
 # timezone = "EST"
