@@ -1,103 +1,105 @@
 name: Deploy Docs
 on:
-  push:
-    branches:
-      - main
-    tags:
-      - 'v*'
-    paths:
-      - 'docs/**'
-      - 'mkdocs.yml'
-      - 'pyproject.toml'
-      - '.github/workflows/docs.yml'
-  pull_request:
-    paths:
-      - 'docs/**'
-      - 'mkdocs.yml'
-      - 'pyproject.toml'
-      - '.github/workflows/docs.yml'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version name to deploy (e.g. 1.3)'
-        required: true
-        type: string
-      alias:
-        description: 'Alias to update (e.g. latest). Leave blank for none.'
-        required: false
-        type: string
-        default: ''
+    push:
+        branches:
+            - main
+        tags:
+            - "v*"
+        paths:
+            - "docs/**"
+            - "mkdocs.yml"
+            - "pyproject.toml"
+            - ".github/workflows/docs.yml"
+    pull_request:
+        paths:
+            - "docs/**"
+            - "mkdocs.yml"
+            - "pyproject.toml"
+            - ".github/workflows/docs.yml"
+    workflow_dispatch:
+        inputs:
+            version:
+                description: "Version name to deploy (e.g. 1.3)"
+                required: true
+                type: string
+            alias:
+                description: "Alias to update (e.g. latest). Leave blank for none."
+                required: false
+                type: string
+                default: ""
 
 permissions:
-  contents: write
+    contents: write
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install -e ".[docs]"
-      - run: mkdocs build --strict
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+            - run: pip install -e ".[docs]"
+            - run: mkdocs build --strict
 
-  deploy-dev:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install -e ".[docs]"
-      - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-      - run: mike deploy --push dev
+    deploy-dev:
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+            - run: pip install -e ".[docs]"
+            - run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+            - run: mike deploy --push dev
 
-  deploy-release:
-    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install -e ".[docs]"
-      - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-      - name: Extract version
-        id: version
-        run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
-      - run: mike deploy --push --update-aliases ${{ steps.version.outputs.version }} latest
-      - run: mike set-default --push latest
+    deploy-release:
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+            - run: pip install -e ".[docs]"
+            - run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+            - name: Extract version
+              id: version
+              run: echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+            - run: mike deploy --push --update-aliases ${{ steps.version.outputs.version }} latest
+            - run: mike set-default --push latest
 
-  deploy-manual:
-    if: github.event_name == 'workflow_dispatch'
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-      - run: pip install -e ".[docs]"
-      - run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-      - name: Deploy without alias
-        if: ${{ inputs.alias == '' }}
-        run: mike deploy --push ${{ inputs.version }}
-      - name: Deploy with alias
-        if: ${{ inputs.alias != '' }}
-        run: mike deploy --push --update-aliases ${{ inputs.version }} ${{ inputs.alias }}
+    deploy-manual:
+        if: github.event_name == 'workflow_dispatch'
+        needs: build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+            - uses: actions/setup-python@v5
+              with:
+                  python-version: "3.12"
+            - run: pip install -e ".[docs]"
+            - run: |
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+            - name: Deploy without alias
+              if: ${{ inputs.alias == '' }}
+              run: mike deploy --push ${{ inputs.version }}
+            - name: Deploy with alias
+              if: ${{ inputs.alias != '' }}
+              run: mike deploy --push --update-aliases ${{ inputs.version }} ${{ inputs.alias }}
