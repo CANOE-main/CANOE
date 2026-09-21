@@ -2,82 +2,82 @@ site_name: CANOE - Documentation
 site_description: Documentation for the Canadian Open Energy Model (CANOE)
 site_url: https://CANOE-main.github.io/CANOE/
 
-
 extra_css:
-  - stylesheets/extra.css
+    - stylesheets/extra.css
 
 theme:
-  name: material
-  palette:
-    - media: "(prefers-color-scheme: light)"
-      scheme: default
-      primary: custom
-      accent: custom
-      toggle:
-        icon: material/weather-sunny
-        name: Switch to dark mode
-    - media: "(prefers-color-scheme: dark)"
-      scheme: slate
-      primary: custom
-      accent: custom
-      toggle:
-        icon: material/weather-night
-        name: Switch to light mode
+    name: material
+    palette:
+        - media: "(prefers-color-scheme: light)"
+          scheme: default
+          primary: custom
+          accent: custom
+          toggle:
+              icon: material/weather-sunny
+              name: Switch to dark mode
+        - media: "(prefers-color-scheme: dark)"
+          scheme: slate
+          primary: custom
+          accent: custom
+          toggle:
+              icon: material/weather-night
+              name: Switch to light mode
 
 plugins:
-  - search
-  - git-revision-date-localized:
-      type: date
-      enable_creation_date: true
+    - search
+    - git-revision-date-localized:
+          type: date
+          enable_creation_date: true
 
 nav:
-  - Home: index.md
-  - Quickstart: quickstart.md
-  - Get Started: get_started.md
-  - What is CANOE?:
-      - Overview: what_is_canoe/index.md
-      - CANOE and TEMOA: what_is_canoe/canoe_vs_temoa.md
-      - Model Architecture: what_is_canoe/model_architecture.md
-      - Glossary: what_is_canoe/glossary.md
-  - Data Guide:
-    - Overview: data_guide/index.md
-    - Electricity: data_guide/electricity.md
-    - Transportation: data_guide/transportation.md
-    - Industry: data_guide/industry.md
-    - Residential: data_guide/residential.md
-    - Commercial: data_guide/commercial.md
-    - Fuels: data_guide/fuels.md
-    - Agriculture: data_guide/agriculture.md
-    - CEF Data: data_guide/cef.md
-  # - Related Repos: related_repos.md
-  - Contributing: contributing.md
-  # - Changelog: changelog.md
-  # - Publications: publications.md
-  # - FAQs: faqs.md
-  # - Miscellaneous: miscellaneous.md
-  - Contact: contact.md
-  - License: license.md
+    - Home: index.md
+    - Quickstart: quickstart.md
+    - Get Started: get_started.md
+    - What is CANOE?:
+          - Overview: what_is_canoe/index.md
+          - CANOE and TEMOA: what_is_canoe/canoe_vs_temoa.md
+          - Model Architecture: what_is_canoe/model_architecture.md
+          - Glossary: what_is_canoe/glossary.md
+    - Data Guide:
+          - Overview: data_guide/index.md
+          - Electricity: data_guide/electricity.md
+          - Transportation: data_guide/transportation.md
+          - Industry: data_guide/industry.md
+          - Residential: data_guide/residential.md
+          - Commercial: data_guide/commercial.md
+          - Fuels: data_guide/fuels.md
+          - Agriculture: data_guide/agriculture.md
+          - CEF Data: data_guide/cef.md
+    # - Related Repos: related_repos.md
+    - Modeling assumption posts: model_assumption_posts.md
+    - Contributing: contributing.md
+    # - Changelog: changelog.md
+    # - Publications: publications.md
+    # - FAQs: faqs.md
+    # - Miscellaneous: miscellaneous.md
+    - Contact: contact.md
+    - License: license.md
 
 markdown_extensions:
-  - attr_list        # enables { .md-button } styling
-  - def_list
-  - md_in_html        # enables <div class="grid cards" markdown> blocks
-  - admonition
-  - codehilite
-  - pymdownx.details
-  - pymdownx.superfences:
-      custom_fences:
-        - name: mermaid
-          class: mermaid
-          format: !!python/name:pymdownx.superfences.fence_code_format
-  - pymdownx.tabbed:
-      alternate_style: true
-  - toc:
-      permalink: true
-  - pymdownx.emoji:
-      emoji_index: !!python/name:material.extensions.emoji.twemoji
-      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+    - attr_list # enables { .md-button } styling
+    - def_list
+    - md_in_html # enables <div class="grid cards" markdown> blocks
+    - admonition
+    - codehilite
+    - pymdownx.details
+    - pymdownx.superfences:
+          custom_fences:
+              - name: mermaid
+                class: mermaid
+                format: !!python/name:pymdownx.superfences.fence_code_format
+    - pymdownx.tabbed:
+          alternate_style: true
+    - toc:
+          permalink: true
+    - pymdownx.emoji:
+          emoji_index: !!python/name:material.extensions.emoji.twemoji
+          emoji_generator: !!python/name:material.extensions.emoji.to_svg
 
 extra:
-  version:
-    provider: mike
+    version:
+        provider: mike
