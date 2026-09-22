@@ -41,15 +41,15 @@ def load_and_process_comstock(
                     logger.debug(
                         f"Applying US-CA weather map for {province}, {end_use}, {column}..."
                     )
-                    comstock_df[column] = _apply_weather_mapping(
+                    province_df[column] = _apply_weather_mapping(
                         province, comstock_df[column], weather_maps
                     )
                 else:
-                    comstock_df[column] /= comstock_df[column].sum()
+                    province_df[column] /= province_df[column].sum()
 
             # Aggregate across columns and then normalize
             eu_name = end_use.get_full_name()
-            province_df[eu_name] = comstock_df[relevant_cols].sum(axis=1)
+            province_df[eu_name] = province_df[relevant_cols].sum(axis=1)
             province_df[eu_name] /= province_df[eu_name].sum()
         province_dsd[province] = province_df
     return province_dsd
@@ -58,7 +58,7 @@ def load_and_process_comstock(
 def _apply_weather_mapping(
     province: CANOEProvince,
     comstock_df: pd.Series | pd.DataFrame,
-    weather_maps: dict[CANOEProvince, pd.DataFrame],
+    weather_maps: dict[CANOEProvince, np.ndarray],
 ) -> pd.DataFrame:
     """
     Applies the US-CA weather mapping to the Comstock data for the given province.
@@ -75,14 +75,16 @@ def _apply_weather_mapping(
 def _load_all_weather_maps(
     provinces: list[CANOEProvince],
     cache_config: "GoldConnectorConfig",
-) -> dict[CANOEProvince, pd.DataFrame]:
+) -> dict[CANOEProvince, np.ndarray]:
     """
     Weather maps from US matched to canadian provinces
     """
-    weather_maps: dict[CANOEProvince, pd.DataFrame] = {}
+    weather_maps: dict[CANOEProvince, np.ndarray] = {}
     for province in provinces:
         weather_map = get_usca_weather_map(cache_config, province)
-        weather_maps[province] = weather_map
+        # TODO this is a patch for the silver layer
+        utc_aligned_to_est = np.roll(weather_map, shift=(-5, -5), axis=(0, 1))
+        weather_maps[province] = utc_aligned_to_est
     return weather_maps
 
 
@@ -115,9 +117,7 @@ def _load_provinces_comstock(
             # Transform from 15-min resolution to hourly
             # averaging over the hour
             bldg_table["hour"] = (delta.dt.total_seconds() // 3600).astype(int)
-            bldg_table = (
-                bldg_table.groupby(["hour"]).mean(numeric_only=True).reset_index()
-            )
+            bldg_table = bldg_table.groupby(["hour"]).first().reset_index()
             bldg_table.set_index("hour", inplace=True, drop=True)
 
             if (bldg_table.index != pd.RangeIndex(start=0, stop=8760)).any():

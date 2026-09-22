@@ -107,7 +107,7 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
 
     # Runtime switches
     validation_behavior: Literal["error", "warning"] = "error"
-    missing_data_behavior: Literal["error", "warning"] = "error"
+    missing_data_behavior: Literal["error", "warning"] = "warning"
 
     # DSD parameters
     include_dsd: bool = True

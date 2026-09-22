@@ -4,6 +4,7 @@ from typing import Any
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
+from canoe.distribution.fuel import CANOEFuelDistributionConfig
 from canoe.representative_periods.config import RepresentativePeriodsConfig
 from canoe.representative_periods.process_all import run_representative_periods
 
@@ -16,6 +17,7 @@ from .temoa_protocol import CANOETemoaConfig, run_temoa
 class CANOECompilerConfig(BaseModel):
     base: CANOEBaseConfig
     sectors: dict[str, SectorConfig] = Field(default_factory=dict)
+    fuel_distribution: CANOEFuelDistributionConfig
 
     @field_validator("sectors", mode="before")
     @classmethod
@@ -62,9 +64,11 @@ def run(config: CANOEPipelineConfig):
     # Compiler
     if config.compiler is not None:
         if config.compiler.base.data_cache_config.force_sync:
-            # TODO
-            ...
+            raise NotImplementedError(
+                "Forcing canoe-lake sync has not been implemented yet."
+            )
 
+        # Initialize empty database
         run_initializer(config.compiler.base)
 
         for sector_name, sector_config in config.compiler.sectors.items():

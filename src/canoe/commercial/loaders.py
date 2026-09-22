@@ -50,7 +50,7 @@ def get_comstock_table(
 
 def get_usca_weather_map(
     cache_config: GoldConnectorConfig, province: "CANOEProvince"
-) -> pd.DataFrame:
+) -> np.ndarray:
     """Loads the US-CA weather map from the cache."""
     cache_path = (
         cache_config.cache_dir

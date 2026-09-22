@@ -4,7 +4,7 @@ Utility functions to standardize naming conventions.
 
 from enum import StrEnum
 
-from canoe.common import CANOEProvince, CANOESector
+from canoe.common import CANOEFuel, CANOEProvince, CANOESector
 
 
 class TechnologyCapacityScope(StrEnum):
@@ -16,9 +16,9 @@ class DatasetIdentifier:
     def __init__(
         self, sector: CANOESector, code_description: str, version: str
     ) -> None:
-        self.sector = sector
-        self.code_description = code_description
-        self.version = version
+        self.sector: CANOESector = sector
+        self.code_description: str = code_description
+        self.version: str = version
 
     def get_dataset_code(
         self,
@@ -53,3 +53,20 @@ def get_commodity_name(
 ) -> str:
     sector_tag = sector.get_tag()
     return f"{sector_tag}_{'D_' if is_demand else ''}{short_name}"
+
+
+# def get_fuel_serving_technology_input_commodity(
+#     sector: CANOESector,
+#     short_name: str,
+#     fuel: CANOEFuel,
+#     capacity_scope: TechnologyCapacityScope | None = None,
+# ) -> str:
+#     sector_tag = sector.get_tag()
+#     return f"{sector_tag}_{short_name}_{fuel.value.upper()}" + (
+#         f"-{capacity_scope.value}" if capacity_scope is not None else ""
+#     )
+
+
+def get_fuel_commodity_in_sector(sector: CANOESector, fuel: CANOEFuel) -> str:
+    sector_tag = sector.get_tag()
+    return f"{sector_tag}_{fuel.value.lower()}"
