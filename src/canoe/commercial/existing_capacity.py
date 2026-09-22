@@ -1,4 +1,4 @@
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from canoe.commercial.config import AEOConfig, CEUDConfig
@@ -6,7 +6,12 @@ import pandas as pd
 
 from canoe.common import CANOEFuel, CANOEProvince, GoldConnectorConfig
 
-from .loaders import get_aeo_data, get_ceud_table, get_statcan_atlantic_fractions_table
+from .loaders import (
+    get_aeo_data,
+    get_ceud_table,
+    get_exchange_and_inflation_dfs,
+    get_statcan_atlantic_fractions_table,
+)
 
 
 def compute_existing_tech_life_params(
@@ -27,12 +32,16 @@ def compute_existing_tech_life_params(
         cdm_exs = province_aeo_data[province]
 
         # Add columns from AEO CDM to CEUD table
-        # All these operations work under the assumption that the dfs are REFERENCES
+        # All these operations work under the assumption that the dfs are OWNED REFERENCES
         df_exs.drop(
             [euf for euf in df_exs.index if euf not in cdm_exs.index], inplace=True
         )
         for col in ["avg_eff", "avg_life", "avg_fixed_cost"]:
             df_exs[col] = df_exs.index.map(lambda euf: cdm_exs.loc[euf, col])  # noqa: B023  # pyright: ignore[reportUnknownLambdaType]
+
+        ## Adjust units of fixed cost
+        df_exs["avg_fixed_cost"] *= 0.108198  # $/(kBtu/h) → M$/(PJ/y)
+        df_exs["avg_fixed_cost"] = _aeo_conv_curr(df_exs["avg_fixed_cost"])
 
         ## Multiply secondary energies by average efficiencies to get demanded output energies
         df_exs["dem"] = df_exs.index.map(
@@ -160,3 +169,40 @@ def _load_aeo_data(
         cdm_exs = cdm_exs.groupby(["serv", "fuel"]).sum()
         out_dict[province] = cdm_exs
     return out_dict
+
+
+def _aeo_conv_curr(
+    orig_cost: pd.DataFrame | pd.Series | float,
+    orig_year: int = 2022,  # aeo_currency_year
+    orig_curr: str = "USD",  # aeo_currency
+) -> Any:
+    """
+    Converts a cost from its original currency and year to the base currency and year
+
+    params:
+    - orig_cost: the original cost as given in the data source
+    - orig_year: the original currency year in the data source. By default, aeo_currency_year from params.toml
+    - orig_curr: the orignal currency in the data source (USD, EUR, GDP, AUD). By default, aeo_currency from params.toml
+
+    For example, if the original cost from data is $2500 USD (2010),
+    cost = conv_curr(2500, 2010, 'USD')
+    """
+
+    # Exchange rate and inflation tables
+    exchange, inflation = get_exchange_and_inflation_dfs()
+
+    # Currency and currency year for final data, converting to this
+    base_curr = "CAD"
+    base_year = 2020
+
+    # Multiplier for final currency (to normalise if not using CAD2020)
+    base_fact = (
+        exchange.loc[base_year, base_curr] * inflation.loc[base_year, "gdp_deflator"]
+    )
+
+    return (
+        orig_cost
+        * exchange.loc[orig_year, orig_curr]
+        * inflation.loc[orig_year, "gdp_deflator"]
+        / base_fact
+    )

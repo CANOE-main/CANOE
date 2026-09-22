@@ -16,7 +16,7 @@ from canoe.canoe_objects.fuel_serving_tech import (
     FuelServingTechnologyEntity,
     RegionalValuesArray,
 )
-from canoe.canoe_objects.technology import RegionVintageArray
+from canoe.canoe_objects.technology import RegionVintageArray, RegionVintagePeriodArray
 from canoe.commercial.comstock_processing import load_and_process_comstock
 from canoe.commercial.existing_capacity import (
     compute_existing_tech_life_params,
@@ -140,6 +140,26 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             existing_techs,
         )
 
+        existing_techs[["existing_vintages", "existing_vintages_weights"]] = (
+            existing_techs.apply(
+                lambda r: (  # pyright: ignore[reportUnknownLambdaType]
+                    _stock_vintages(
+                        r["avg_life"],
+                        vint_interval=5,  # TODO: Hard-coded
+                        stock_year=cfg.future_periods[0],
+                        first_period=cfg.future_periods[0],
+                    )
+                ),
+                axis=1,
+                result_type="expand",
+            )
+        )
+
+        # Tech Fixed Costs
+        tech_fixed_costs = _compute_tech_fixed_costs(
+            cfg.future_periods, cfg.provinces, existing_techs
+        )
+
         # Build TEMOA Objects
         # -------------------
         # Process time-slices sets (for convenience only)
@@ -257,6 +277,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 f"times average efficiency for installed base technologies (AEO, {2022}) "
                 f"divided by estimated annual capacity factor (NREL, {2024})"
             )
+            fixed_cost_note = f"Average maintenance cost of installed stock indexed to shares of service demand by end use and fuel (AEO, {2022})"
 
             # This builds all technologies that serve fuel (or electricity) to the demand points
             out_commodity_name = get_commodity_name(
@@ -308,12 +329,26 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                         cred=1, geog=2, struc=2, tech=2, time=1
                     ),
                 )
+                .with_fixed_costs(
+                    tech_fixed_costs[end_use.get_full_name()],
+                    notes=fixed_cost_note,
+                    units="M$/PJ",
+                    data_quality=DataQualityProfile(
+                        cred=1, geog=2, struc=1, tech=2, time=2
+                    ),
+                )
             )
 
             logger.debug(
                 f"Writing fuel serving technology entities `{end_use}` to database"
             )
             fuel_serving_technologies.build(db_conn)
+
+            # Add fuel imports declaration
+            fuel_imports += [
+                CANOEFuelImport(sector=CANOESector.Commercial, fuel=f)
+                for f in available_fuels
+            ]
 
     return CANOEModuleOutput(fuel_imports=fuel_imports)
 
@@ -496,6 +531,56 @@ def _compute_tech_efficiencies_and_capacities(
             ).fill_from_df(vint_df, value_col="capacity")
 
     return tech_efficiencies, tech_capacities
+
+
+def _compute_tech_fixed_costs(
+    periods: list[int],
+    provinces: list[CANOEProvince],
+    existing_techs: pd.DataFrame,
+) -> dict[str, dict[CANOEFuel, RegionVintagePeriodArray]]:
+    tech_fixed_costs: dict[str, dict[CANOEFuel, RegionVintagePeriodArray]] = {}
+    re_indexed_df = (
+        existing_techs.set_index(["end_use", "fuel"])
+        .rename(columns={"province": "region"})
+        .sort_index()
+        .copy()
+    )
+
+    for end_use in existing_techs["end_use"].unique():
+        fuels = existing_techs[existing_techs["end_use"] == end_use].fuel.unique()
+        tech_fixed_costs[end_use] = {}
+        for fuel in fuels:
+            vintages = np.unique(
+                re_indexed_df.loc[(end_use, fuel)]["existing_vintages"].values.reshape(
+                    -1
+                )
+            ).tolist()[0]
+            df = (
+                re_indexed_df[
+                    ["avg_fixed_cost", "existing_vintages", "region", "avg_life"]
+                ]  # pyright: ignore[reportCallIssue]
+                .explode("existing_vintages")  # pyright: ignore[reportArgumentType]
+                .rename(columns={"existing_vintages": "vintage"})
+                .assign(key=1)
+                .merge(pd.DataFrame({"period": periods, "key": 1}), on="key")
+                .drop(columns="key")
+            )
+            df = df[df.vintage <= df.period]
+            df: Any = df[df.vintage + df.avg_life > df.period]
+
+            labeled_array = RegionVintagePeriodArray(
+                region=provinces,
+                vintage=vintages,
+                period=periods,
+            ).fill_from_df(
+                df,
+                dims=["region", "vintage", "period"],
+                value_col="avg_fixed_cost",
+            )
+
+            tech_fixed_costs[end_use][fuel] = labeled_array
+
+    return tech_fixed_costs
 
 
 if __name__ == "__main__":

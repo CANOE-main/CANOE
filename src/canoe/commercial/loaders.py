@@ -15,6 +15,19 @@ def get_comstock_map() -> pd.DataFrame:
         return pd.read_csv(f)
 
 
+def get_exchange_and_inflation_dfs() -> tuple[pd.DataFrame, pd.DataFrame]:
+    exchange_resource = files("canoe.commercial").joinpath(
+        "config/currency_exchange.csv"
+    )
+    with exchange_resource.open("rb") as f:
+        exchange_df = pd.read_csv(f, index_col=0)
+
+    inflation_resource = files("canoe.commercial").joinpath("config/cad_inflation.csv")
+    with inflation_resource.open("rb") as f:
+        inflation_df = pd.read_csv(f, index_col=0)
+    return exchange_df, inflation_df
+
+
 def get_aeo_data() -> pd.DataFrame:
     """Map from Comstock columns to end-use demands"""
     ktek_resource = files("canoe.commercial").joinpath("config/ktekx.xlsx")

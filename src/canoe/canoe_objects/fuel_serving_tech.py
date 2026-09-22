@@ -6,15 +6,18 @@ from canoe_schema.v4_0 import (
     CapacityToActivity,
     Commodity,
     CommodityTypeCode,
+    CostFixed,
     Efficiency,
     ExistingCapacity,
     LifetimeTech,
+    LimitAnnualCapacityFactor,
+    OperatorCode,
     Technology,
     TechnologyTypeCode,
 )
 
 from canoe.canoe_objects.labeled_array import LabeledArray
-from canoe.canoe_objects.technology import RegionVintageArray
+from canoe.canoe_objects.technology import RegionVintageArray, RegionVintagePeriodArray
 from canoe.common import CANOEFuel, CANOEProvince, CANOESector, DataQualityProfile
 from canoe.common.db_tools import write_label
 from canoe.common.naming import (
@@ -76,24 +79,47 @@ class FuelServingTechnologyEntity:
 
         self.annual: int = 0
 
+        # Set-able parameters
+        # -------------------
+        # Lifetimes
         self.lifetimes: dict[CANOEFuel, RegionalValuesArray] | None = None
         self.lifetimes_data_quality: DataQualityProfile | None = None
         self.lifetime_notes: str | None = None
         self.lifetime_reference_code: str | None = None
 
+        # Efficiencies
         self.efficiencies: dict[CANOEFuel, RegionVintageArray] | None = None
         self.efficiency_notes: str | None = None
         self.efficiency_reference_code: str | None = None
         self.efficiency_data_quality: DataQualityProfile | None = None
 
+        # Existing capacities
         self.existing_capacities: dict[CANOEFuel, RegionVintageArray] | None = None
         self.exs_cap_notes: str | None = None
         self.exs_cap_reference_code: str | None = None
         self.exs_cap_data_quality: DataQualityProfile | None = None
         self.exs_cap_units: str | None = None
 
+        # Capacity to activity
         self.capacity_to_activity: dict[CANOEFuel, RegionalValuesArray] | None = None
         self.c2a_units: str | None = None
+
+        # Fixed costs
+        self.fixed_costs: dict[CANOEFuel, RegionVintagePeriodArray] | None = None
+        self.fixed_costs_notes: str | None = None
+        self.fixed_costs_reference_code: str | None = None
+        self.fixed_costs_data_quality: DataQualityProfile | None = None
+        self.fixed_costs_units: str | None = None
+
+        # Capacity factors
+        self.limit_annual_capacity_factors: (
+            dict[CANOEFuel, RegionVintageArray] | None
+        ) = None
+        self.lacf_operator: OperatorCode | None = None
+        self.limit_acf_notes: str | None = None
+        self.limit_acf_data_quality: DataQualityProfile | None = None
+        self.limit_acf_reference_code: str | None = None
+        self.limit_acf_units: str | None = None
 
     def set_annual(self, annual: int = 1):
         self.annual = annual
@@ -138,6 +164,38 @@ class FuelServingTechnologyEntity:
         self.exs_cap_data_quality = data_quality
         self.exs_cap_reference_code = reference_code
         self.exs_cap_units = units
+        return self
+
+    def with_fixed_costs(
+        self,
+        fixed_costs: dict[CANOEFuel, RegionVintagePeriodArray],
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        self.fixed_costs = fixed_costs
+        self.fixed_costs_notes = notes
+        self.fixed_costs_data_quality = data_quality
+        self.fixed_costs_reference_code = reference_code
+        self.fixed_costs_units = units
+        return self
+
+    def with_limit_annual_capacity_factor(
+        self,
+        capacity_factors: dict[CANOEFuel, RegionVintageArray],
+        operator: OperatorCode,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        self.limit_annual_capacity_factors = capacity_factors
+        self.lacf_operator = operator
+        self.limit_acf_notes = notes
+        self.limit_acf_data_quality = data_quality
+        self.limit_acf_reference_code = reference_code
+        self.limit_acf_units = units
         return self
 
     def with_capacity_to_activity(
@@ -299,6 +357,76 @@ class FuelServingTechnologyEntity:
                     for i, row in pd.DataFrame(records).iterrows()
                 ]
                 sql, params = ExistingCapacity.bulk_insert_or_ignore_sql(
+                    efficiencies, include_nulls=True
+                )
+                db_conn.executemany(sql, params)
+
+            # Fixed costs
+            if self.fixed_costs:
+                records = self.fixed_costs[fuel].to_records()
+                fixed_costs = [
+                    CostFixed(
+                        region=row.region.short(),
+                        period=row.period,
+                        tech=tech_name,
+                        vintage=row.vintage,
+                        cost=row.value,
+                        units=self.fixed_costs_units,
+                        data_id=self.data_id.get_dataset_code(
+                            province=row.region
+                            if self.include_region_in_data_id
+                            else None
+                        ),
+                        notes=self.fixed_costs_notes
+                        if i == 0 or not self.notes_only_on_first
+                        else None,
+                        data_source=self.fixed_costs_reference_code
+                        if i == 0 or not self.reference_only_on_first
+                        else None,
+                        **(
+                            self.fixed_costs_data_quality.as_kwargs()
+                            if self.fixed_costs_data_quality and i == 0
+                            else {}
+                        ),
+                    )
+                    for i, row in pd.DataFrame(records).iterrows()
+                ]
+                sql, params = CostFixed.bulk_insert_or_ignore_sql(
+                    fixed_costs, include_nulls=True
+                )
+                db_conn.executemany(sql, params)
+
+            # Existing capacities
+            if self.limit_annual_capacity_factors:
+                records = self.limit_annual_capacity_factors[fuel].to_records()
+                efficiencies = [
+                    LimitAnnualCapacityFactor(
+                        region=row.region.short(),
+                        tech_or_group=tech_name,
+                        vintage=row.vintage,
+                        operator=self.lacf_operator or OperatorCode.LE,
+                        output_comm=self.output_commodity_name,
+                        factor=row.value,
+                        data_id=self.data_id.get_dataset_code(
+                            province=row.region
+                            if self.include_region_in_data_id
+                            else None
+                        ),
+                        notes=self.limit_acf_notes
+                        if i == 0 or not self.notes_only_on_first
+                        else None,
+                        data_source=self.limit_acf_reference_code
+                        if i == 0 or not self.reference_only_on_first
+                        else None,
+                        **(
+                            self.limit_acf_data_quality.as_kwargs()
+                            if self.limit_acf_data_quality and i == 0
+                            else {}
+                        ),
+                    )
+                    for i, row in pd.DataFrame(records).iterrows()
+                ]
+                sql, params = LimitAnnualCapacityFactor.bulk_insert_or_ignore_sql(
                     efficiencies, include_nulls=True
                 )
                 db_conn.executemany(sql, params)
