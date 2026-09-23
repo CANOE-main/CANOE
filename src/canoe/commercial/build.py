@@ -116,8 +116,8 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         # -------------------
         # Process time-slices sets (for convenience only)
         time_slices = cfg.dsd_time_slices.as_list()
-        seasons = list({t.season for t in time_slices})
-        tods = list({t.tod for t in time_slices})
+        seasons = sorted({t.season for t in time_slices})
+        tods = sorted({t.tod for t in time_slices})
 
         # Demand objects
         for end_use in cfg.end_uses:

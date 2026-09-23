@@ -14,7 +14,6 @@ with C2A = 1 (capacity in PJ/y, activity in PJ), so CAP = DEM / ACF.
 
 from typing import TYPE_CHECKING, Any, Literal
 
-import numpy as np
 import pandas as pd
 from canoe_schema.v4_0 import CommodityTypeCode
 from loguru import logger
@@ -372,15 +371,11 @@ def _compute_tech_fixed_costs(
         fuels = existing_techs[existing_techs["end_use"] == end_use].fuel.unique()
         tech_fixed_costs[end_use] = {}
         for fuel in fuels:
-            vintages = np.unique(
-                re_indexed_df.loc[(end_use, fuel)]["existing_vintages"].values.reshape(
-                    -1
-                )
-            ).tolist()[0]
+            tech_df = re_indexed_df.loc[(end_use, fuel)]
+            # Union of the existing vintages across all regions
+            vintages = sorted(set().union(*tech_df["existing_vintages"]))
             df = (
-                re_indexed_df[
-                    ["avg_fixed_cost", "existing_vintages", "region", "avg_life"]
-                ]  # pyright: ignore[reportCallIssue]
+                tech_df[["avg_fixed_cost", "existing_vintages", "region", "avg_life"]]  # pyright: ignore[reportCallIssue]
                 .explode("existing_vintages")  # pyright: ignore[reportArgumentType]
                 .rename(columns={"existing_vintages": "vintage"})
                 .assign(key=1)
