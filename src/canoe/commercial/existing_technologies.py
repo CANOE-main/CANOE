@@ -61,26 +61,31 @@ def build_existing_technologies(
     - capacity_min_tolerance: existing capacity is dropped for rows whose share of their
       province's total existing-stock demand is below this fraction
 
-    End uses with no available fuels are left out of the returned dict.
+    End uses with no available fuels are left out of the returned dict. A technology
+    gets no rows at all in the provinces where its existing capacity is zero (below
+    `capacity_min_tolerance`), as in the previous version.
     """
     existing_techs = existing_techs.assign(
         capacity=_compute_existing_capacity(existing_techs, capacity_min_tolerance)
     )
+    # Only (province, end_use, fuel) with existing capacity get parameters
+    stock: Any = existing_techs[existing_techs["capacity"] > 0]
     first_period = model_periods[0]
 
     # end_use -> { fuel -> labeled array }
-    tech_lifetimes = _compute_tech_lifetimes(provinces, existing_techs)
+    tech_lifetimes = _compute_tech_lifetimes(provinces, stock)
+    tech_capacity_to_activity = _compute_tech_capacity_to_activity(provinces, stock)
     tech_efficiencies, tech_capacities, tech_capacity_factors = (
         _compute_tech_vintage_params(
             provinces,
             tech_lifetimes,
             first_period,
             first_period,
-            existing_techs,
+            stock,
         )
     )
     tech_fixed_costs = _compute_tech_fixed_costs(
-        model_periods, first_period, provinces, existing_techs
+        model_periods, first_period, provinces, stock
     )
 
     entities: dict[CommercialEndUse, FuelServingTechnologyEntity] = {}
@@ -95,9 +100,9 @@ def build_existing_technologies(
         entities[end_use] = _existing_fuel_serving_technology(
             end_use,
             available_fuels,
-            provinces,
             data_id,
             lifetimes=tech_lifetimes[eu_name],
+            capacity_to_activity=tech_capacity_to_activity[eu_name],
             efficiencies=tech_efficiencies[eu_name],
             capacities=tech_capacities[eu_name],
             capacity_factors=tech_capacity_factors[eu_name],
@@ -165,9 +170,9 @@ def _resolve_available_fuels(
 def _existing_fuel_serving_technology(
     end_use: "CommercialEndUse",
     fuels: set[CANOEFuel],
-    provinces: list[CANOEProvince],
     data_id: DatasetIdentifier,
     lifetimes: dict[CANOEFuel, RegionalValuesArray],
+    capacity_to_activity: dict[CANOEFuel, RegionalValuesArray],
     efficiencies: dict[CANOEFuel, RegionVintageArray],
     capacities: dict[CANOEFuel, RegionVintageArray],
     capacity_factors: dict[CANOEFuel, RegionVintageArray],
@@ -213,7 +218,7 @@ def _existing_fuel_serving_technology(
             data_quality=DataQualityProfile(cred=1, geog=2, struc=2, tech=2, time=3),
         )
         .with_capacity_to_activity(
-            {f: RegionalValuesArray(region=provinces, fill=1) for f in fuels},
+            capacity_to_activity,
             units="1",  # Equal input and output units
         )
         .with_efficiencies(
@@ -261,11 +266,32 @@ def _compute_tech_lifetimes(
             tech_lifetimes[end_use][fuel] = RegionalValuesArray(
                 region=provinces
             ).fill_from_df(
-                re_indexed_df.loc[(end_use, fuel)][["region", "avg_life"]],
+                re_indexed_df.loc[[(end_use, fuel)]][["region", "avg_life"]],
                 value_col="avg_life",
             )
 
     return tech_lifetimes
+
+
+def _compute_tech_capacity_to_activity(
+    provinces: list[CANOEProvince],
+    existing_techs: pd.DataFrame,
+) -> dict[str, dict[CANOEFuel, RegionalValuesArray]]:
+    """1 (capacity in PJ/y, activity in PJ) for every (region, end use, fuel) row"""
+    tech_c2a: dict[str, dict[CANOEFuel, RegionalValuesArray]] = {}
+    rows = existing_techs.rename(columns={"province": "region"}).assign(c2a=1.0)
+
+    for end_use in existing_techs["end_use"].unique():
+        eu_rows = rows[rows["end_use"] == end_use]
+        tech_c2a[end_use] = {
+            fuel: RegionalValuesArray(region=provinces).fill_from_df(
+                eu_rows[eu_rows["fuel"].isin([fuel])],  # pyright: ignore[reportArgumentType, reportAttributeAccessIssue]
+                value_col="c2a",
+            )
+            for fuel in eu_rows["fuel"].unique()  # pyright: ignore[reportAttributeAccessIssue]
+        }
+
+    return tech_c2a
 
 
 def _stock_vintages(
@@ -333,7 +359,7 @@ def _compute_tech_vintage_params(
             tech_params = (
                 existing_techs.set_index(["end_use", "fuel"])
                 .sort_index()
-                .loc[end_use, fuel]
+                .loc[[(end_use, fuel)]]
                 .reset_index()
                 .set_index("province")
             )
@@ -401,7 +427,7 @@ def _compute_tech_fixed_costs(
         fuels = existing_techs[existing_techs["end_use"] == end_use].fuel.unique()
         tech_fixed_costs[end_use] = {}
         for fuel in fuels:
-            tech_df = re_indexed_df.loc[(end_use, fuel)]
+            tech_df = re_indexed_df.loc[[(end_use, fuel)]]
             # Union of the existing vintages across all regions
             vintages = sorted(set().union(*tech_df["existing_vintages"]))
             df = (

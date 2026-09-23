@@ -1,6 +1,6 @@
 import numpy as np
 
-from canoe.canoe_objects.demand import LabeledArray
+from canoe.canoe_objects.labeled_array import LabeledArray
 from canoe.common import CANOEProvince
 
 

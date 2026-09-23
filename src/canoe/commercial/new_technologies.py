@@ -135,9 +135,9 @@ def _new_technology(
         ["province", "end_use", "acf"]
     ]
     served: Any = params.assign(
-        end_use_name=params["end_use"].map(lambda eu: eu.get_full_name())
+        end_use_name=params["end_use"].map(lambda eu: eu.get_full_name())  # pyright: ignore[reportUnknownLambdaType]
     ).merge(
-        acf.rename(columns={"end_use": "end_use_name"}),  # pyright: ignore[reportCallIssue]
+        acf.rename(columns={"end_use": "end_use_name"}),  # pyright: ignore[reportCallIssue, reportAttributeAccessIssue]
         on=["province", "end_use_name"],
     )
     if served.empty:
@@ -246,11 +246,11 @@ def _warn_on_disagreeing_end_uses(
     """Warn where end uses of the same technology have different lifetimes or costs"""
     for column in ["life", "investment_cost", "fixed_cost"]:
         spread = served.groupby("region")[column].agg(["min", "max"])
-        disagreeing = spread[~spread["min"].round(9).eq(spread["max"].round(9))]
-        if not disagreeing.empty:
+        disagreeing = spread[~spread["min"].round(9).eq(spread["max"].round(9))]  # pyright: ignore[reportAttributeAccessIssue]
+        if not disagreeing.empty:  # pyright: ignore[reportAttributeAccessIssue]
             logger.warning(
                 f"New technology `{technology.value}`: end uses disagree on `{column}` in "
-                + f"{[r.short() for r in disagreeing.index]}; using the space heating value"
+                + f"{[r.short() for r in disagreeing.index]}; using the space heating value"  # pyright: ignore[reportAttributeAccessIssue]
             )
 
 

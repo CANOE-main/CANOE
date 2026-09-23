@@ -16,11 +16,11 @@ from typing import TYPE_CHECKING
 import pandas as pd
 from canoe_schema.v4_0 import CommodityTypeCode
 
+from canoe.canoe_objects.array_types import RegionPeriodArray, RegionVintageArray
 from canoe.canoe_objects.fuel_serving_tech import (
     FuelGrouping,
     FuelServingTechnologyEntity,
 )
-from canoe.canoe_objects.technology import RegionPeriodArray, RegionVintageArray
 from canoe.common import CANOEFuel, CANOEProvince, CANOESector, DataQualityProfile
 from canoe.common.naming import DatasetIdentifier, get_commodity_name
 
@@ -56,7 +56,7 @@ def build_other_technology(
     # Efficiency 1 for every fuel a province uses, available from the first period
     efficiencies = {
         fuel: RegionVintageArray(region=provinces, vintage=[first_period]).fill_from_df(
-            other_sec[other_sec["fuel"].isin([fuel])]
+            other_sec[other_sec["fuel"].isin([fuel])]  # pyright: ignore[reportCallIssue]
             .rename(columns={"province": "region"})
             .assign(vintage=first_period, efficiency=1.0),
             value_col="efficiency",
@@ -133,7 +133,7 @@ def _compute_input_splits(
     Returns region, fuel, period, split
     """
     shares = other_sec.rename(columns={"province": "region"}).assign(
-        share=lambda df: df["sec"] / df.groupby("region")["sec"].transform("sum")
+        share=lambda df: df["sec"] / df.groupby("region")["sec"].transform("sum")  # pyright: ignore[reportUnknownLambdaType]
     )
     periods = pd.DataFrame(
         {"period": list(period_end_years), "end_year": list(period_end_years.values())}
@@ -141,7 +141,7 @@ def _compute_input_splits(
     splits = shares.merge(periods, how="cross")
 
     if electrification is None:
-        return splits.assign(split=splits["share"])[
+        return splits.assign(split=splits["share"])[  # pyright: ignore[reportReturnType]
             ["region", "fuel", "period", "split"]
         ]
 
@@ -153,4 +153,4 @@ def _compute_input_splits(
         factor + splits["share"] * (1 - factor),
     )
     splits["split"] = splits["share"] + (target - splits["share"]) * progress
-    return splits[["region", "fuel", "period", "split"]]
+    return splits[["region", "fuel", "period", "split"]]  # pyright: ignore[reportReturnType]

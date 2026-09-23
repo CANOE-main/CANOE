@@ -7,10 +7,10 @@ from pydantic import ValidationError
 
 from canoe.canoe_objects.fuel_serving_tech import FuelGrouping
 from canoe.commercial.config import (
-    CommercialEndUse,
     EndUsesConfig,
     SpaceConditioningEndUseConfig,
 )
+from canoe.commercial.end_uses import CommercialEndUse
 from canoe.commercial.technology_catalog import (
     NEW_TECHNOLOGIES,
     NewTechnology,
