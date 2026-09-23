@@ -2,7 +2,16 @@
 site/
 
 # Python
-__pycache__/
+**/__pycache__/
 *.pyc
 *.egg-info/
 .venv/
+
+# Project folders
+.cache/
+output/
+
+# Representative periods data
+assets/rep_periods_data/clustering_output_data/*/
+periods.csv
+sequence.csv

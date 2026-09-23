@@ -1,0 +1,135 @@
+module_name = "commercial"
+# data_version is inherited from [compiler.base]; set it here to override
+base_year = 2022
+
+# Filter out secondary energy consumption below this fraction of total
+capacity_min_tolerance = 0.05
+
+# period_step = 5
+# timezone = "EST"
+
+# DSD Parameters
+include_dsd = true
+dsd_time_slices = { kind = "all_year" }
+
+# Emissions: CO2, CH4 and N2O of the fuels burned (EPA emission factors).
+# CO2-equivalents are added by the central emissions step ([compiler.base.emissions]).
+include_emissions = false  # Should stay false, this is now handled by fuels
+
+# ----------------------------------------------------------
+#                        END USES
+# ----------------------------------------------------------
+# One table per end use: [end_uses."<end use name>"].
+# An end use runs if and only if its table is present; delete or comment out
+# the whole table (header included) to skip it.
+# Valid names: "space heating", "space cooling", "other".
+#
+# Space heating / cooling: one existing-capacity technology per fuel, plus the new
+# technologies that can be built
+#   apply_weather_mapping : map the US Comstock hourly profiles to Canadian weather (DSD)
+#   existing_fuels        : fuels we expect existing stock for (NG, OIL, ELC, ...)
+#   new_technologies      : technologies that can be built for the end use (optional).
+#                           One listed under both space heating and space cooling is a
+#                           single technology serving both demands (e.g. a heat pump).
+#     space heating and space cooling:
+#       "air-source heat pump", "ground-source heat pump",
+#       "gas engine-driven heat pump", "residential-type gas heat pump"
+#     space heating only:
+#       "electric boiler", "electric resistance heater", "gas furnace", "gas boiler",
+#       "oil furnace", "oil boiler"
+#     space cooling only:
+#       "rooftop air conditioner", "wall/window air conditioner",
+#       "residential-type central air conditioner"
+#
+# Other (everything else: lighting, equipment, water heating, ...)
+#   Demand = CEUD secondary energy use minus space heating and cooling, served with
+#   efficiency 1 by technologies with unlimited capacity.
+#   apply_weather_mapping : as above
+#   fuels                 : fuels that serve the demand; energy use of other fuels is left out
+#   min_fuel_share        : drop fuels below this share of a province's `other` energy use
+#   technology_grouping   : "shared"   -> one technology, fuel mix fixed by input splits
+#                           "per_fuel" -> one technology per fuel, fuel mix left to the model
+#   input_split_operator  : "le", "ge" or "e" (shared only)
+#   [end_uses.other.electrification] (optional, shared only; leave out for constant shares)
+#     factor : fraction of non-electric energy switched 1:1 to electricity by the
+#              end of the last period, changing linearly from the CEUD base year
+#     notes  : appended to the input split notes
+
+[end_uses."space heating"]
+apply_weather_mapping = true
+existing_fuels = ["NG", "OIL", "ELC"]
+new_technologies = [
+  "air-source heat pump",
+  "ground-source heat pump",
+  "electric boiler",
+  "electric resistance heater",
+  "gas furnace",
+]
+
+[end_uses."space cooling"]
+apply_weather_mapping = true
+existing_fuels = ["ELC", "NG"]
+new_technologies = [
+  "air-source heat pump",
+  "ground-source heat pump",
+  "rooftop air conditioner",
+]
+
+[end_uses.other]
+apply_weather_mapping = false
+fuels = ["ELC", "NG", "OIL"]
+min_fuel_share = 0.05
+technology_grouping = "shared"
+input_split_operator = "le"
+
+[end_uses.other.electrification]
+factor = 0.62
+notes = "Assumed that 62% of non-electric fuel consumption is 1:1 switched for electricity by 2050, changing linearly (CER, 2023)"
+
+[ceud_config]
+# This is used to inform existing capacity
+base_year = 2022
+
+[comstock_config]
+building_types = [
+  "fullservicerestaurant",
+  "hospital",
+  "largehotel",
+  "largeoffice",
+  "mediumoffice",
+  "outpatient",
+  "primaryschool",
+  "quickservicerestaurant",
+  "retailstandalone",
+  "retailstripmall",
+  "secondaryschool",
+  "smallhotel",
+  "smalloffice",
+  "warehouse",
+]
+
+# Arbitrary mapping from US states to Canadian provinces
+# to use with comstock data
+[comstock_config.us_map]
+ON = "MI"
+AB = "MT"
+BC = "WA"
+QC = "ME"
+MB = "ND"
+SK = "ND"
+NLLAB = "ME"
+PEI = "ME"
+NS = "ME"
+NB = "ME"
+
+[aeo_config.us_census_mapping]
+ON = "east north central"
+AB = "mountain"
+BC = "pacific"
+QC = "new england"
+MB = "mountain"
+SK = "mountain"
+NLLAB = "new england"
+PEI = "new england"
+NS = "new england"
+NB = "new england"

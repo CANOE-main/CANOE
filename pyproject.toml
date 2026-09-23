@@ -3,16 +3,68 @@ name = "canoe"
 version = "4.0.0"
 description = "The Canadian Open Energy Model (CANOE)"
 readme = "README.md"
-license = { file = "LICENSE" }
 requires-python = ">=3.12"
+license-files = ["LICENSE*"]
+dependencies = [
+  "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git@0025a069cbfa31895567b59ef5722a8ab3848eed",
+  "loguru==0.7.3",
+  "matplotlib",
+  "numpy==2.4.3",
+  "pandas==3.0.1",
+  "pydantic==2.13.4",
+  "temoa @ git+https://github.com/TemoaProject/temoa.git@4db1eaf52fef24697fa748e9228e97244ac56a38",
+  "tsam @ git+https://github.com/CANOE-main/tsam.git@v3.2-patch",
+  "typer==0.27.1",
+
+  # Gold connector dependencies
+  "fastparquet",
+  "gdown"
+]
+
+[project.scripts]
+canoe-compiler = "canoe.cli:main"
 
 [project.optional-dependencies]
-docs = [
-    "mkdocs-material>=9.5",
-    "mkdocs-git-revision-date-localized-plugin>=1.2",
-    "mike"
+all = ["canoe[dev]", "canoe[docs]", "canoe[solvers]"]
+dev = ["ruff", "matplotlib", "marimo", "plotly"]
+docs = ["mkdocs-material>=9.5", "mkdocs-git-revision-date-localized-plugin>=1.2", "mike"]
+solvers = ["gurobipy"]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.1.1",
 ]
 
 [build-system]
 requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
+
+[tool.basedpyright]
+reportUnusedCallResult = false
+reportAny = false
+reportExplicitAny = false
+reportMissingTypeStubs = false  # Eventually change
+reportUnknownArgumentType = false
+reportUnknownVariableType = false
+reportUnknownMemberType = false
+
+[tool.hatch.envs.dev]
+dependencies = [
+  "pandas-stubs",
+]
+
+[tool.pytest.ini_options]
+# Doctests are collected from canoe_objects (see src/canoe/canoe_objects/conftest.py),
+# the commercial configuration and the emissions modules
+testpaths = [
+  "tests",
+  "src/canoe/canoe_objects",
+  "src/canoe/commercial/config.py",
+  "src/canoe/common/emissions.py",
+  "src/canoe/common/naming.py",
+  "src/canoe/emissions",
+]
+addopts = "--doctest-modules"
+
+[tool.setuptools.packages.find]
+where = ["src"]

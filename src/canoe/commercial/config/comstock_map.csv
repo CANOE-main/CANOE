@@ -1,0 +1,17 @@
+﻿comstock_col,end_use,fuel
+out.district_cooling.cooling.energy_consumption.kwh,space cooling,district
+out.district_heating.heating.energy_consumption.kwh,space heating,district
+out.electricity.cooling.energy_consumption.kwh,space cooling,natural gas
+out.electricity.cooling.energy_consumption.kwh,space cooling,electricity
+out.electricity.heating.energy_consumption.kwh,space heating,electricity
+out.natural_gas.heating.energy_consumption.kwh,space heating,natural gas
+out.other_fuel.heating.energy_consumption.kwh,space heating,oil
+out.electricity.exterior_lighting.energy_consumption.kwh,other,all
+out.electricity.fans.energy_consumption.kwh,other,all
+out.electricity.interior_equipment.energy_consumption.kwh,other,all
+out.electricity.interior_lighting.energy_consumption.kwh,other,all
+out.electricity.pumps.energy_consumption.kwh,other,all
+out.electricity.refrigeration.energy_consumption.kwh,other,all
+out.electricity.water_systems.energy_consumption.kwh,other,all
+out.natural_gas.interior_equipment.energy_consumption.kwh,other,all
+out.natural_gas.water_systems.energy_consumption.kwh,other,all

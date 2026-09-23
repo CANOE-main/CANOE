@@ -1,0 +1,32 @@
+compiler.fuel_distribution = {}
+
+[compiler.base]
+schema_version = "4.0"
+db_output_dir = "canoe-pwd/canoe.sqlite"
+# Version in the data set codes (e.g. COMHR003), inherited by the sectors
+data_version = "003"
+existing_periods = [2005, 2010, 2015, 2020, 2024, 2022]
+future_periods = [2025, 2030, 2035, 2040, 2045, 2050]
+provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
+# provinces = ["ON", "AB"]
+global_discount_rate = 0.03
+
+# Emission commodities (CO2, CH4, N2O and CO2e) are always registered
+# [compiler.base.emissions]
+# gwp = "AR5-100"          # weights of the gases in the CO2e rows
+# cost_of_co2e = 0.1       # cost of CO2e emissions in every region and model period
+# cost_units = "M$/ktCO2e"
+
+[compiler.base.data_cache_config]
+cache_dir = ".cache"
+cache_date = "2026-08-10"
+force_sync = false
+
+[compiler.sectors]
+commercial = "configuration/commercial-default.toml"
+
+# [temoa_config]
+# solver_name = "gurobi"
+# scenario_mode = "perfect_foresight"
+# silent = false
+# save_duals = true
