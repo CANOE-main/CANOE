@@ -19,11 +19,11 @@ from pydantic import BaseModel, Field
 
 
 def hour_to_tod(hour: int) -> str:
-    return f"H{(hour%24)+1:02d}"
+    return f"H{(hour % 24) + 1:02d}"
 
 
 def hour_to_day(hour: int) -> str:
-    return f"D{(hour//24)+1:03d}"
+    return f"D{(hour // 24) + 1:03d}"
 
 
 class TimeSlice(BaseModel):
@@ -35,7 +35,10 @@ class TimeSlice(BaseModel):
 
     @classmethod
     def all_year(cls) -> list["TimeSlice"]:
-        return [cls(hour=h, season=hour_to_day(h), tod=hour_to_tod(h)) for h in range(cls.HOURS_PER_YEAR)]
+        return [
+            cls(hour=h, season=hour_to_day(h), tod=hour_to_tod(h))
+            for h in range(cls.HOURS_PER_YEAR)
+        ]
 
 
 class TimeSliceSetVariant(BaseModel, ABC):  # pyright: ignore[reportUnsafeMultipleInheritance]

@@ -4,7 +4,10 @@ from typing import Any
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
+from canoe.common import CANOEModuleOutput, CANOESector, atomic_transaction
+from canoe.common.naming import DatasetIdentifier
 from canoe.distribution.fuel import CANOEFuelDistributionConfig
+from canoe.emissions import processing as emissions_processing
 from canoe.representative_periods.config import RepresentativePeriodsConfig
 from canoe.representative_periods.process_all import run_representative_periods
 
@@ -68,16 +71,45 @@ def run(config: CANOEPipelineConfig):
                 "Forcing canoe-lake sync has not been implemented yet."
             )
 
-        # Initialize empty database
-        run_initializer(config.compiler.base)
+        base = config.compiler.base
 
+        # Initialize empty database
+        run_initializer(base)
+
+        with atomic_transaction(base.db_output_dir) as db_conn:
+            # Emission commodities, before the sectors write emission activities.
+            # The last future period is the end of the horizon, not a model period.
+            emissions_processing.init(
+                db_conn,
+                base.emissions,
+                base.provinces,
+                base.future_periods[:-1],
+                DatasetIdentifier(
+                    sector=CANOESector.Electricity,
+                    code_description="HR",
+                    version=base.data_version,
+                ),
+            )
+
+        # Run each sector
+        sector_outputs: list[CANOEModuleOutput] = []
         for sector_name, sector_config in config.compiler.sectors.items():
             logger.info(f"Running sector: {sector_name}")
             sector_output = sector_config.run()
             logger.info(f"Sector {sector_name} output: {sector_output}")
+            sector_outputs.append(sector_output)
 
         # Fuel imports
         # sector_output.fuel_imports
+
+        logger.info("Processing emissions...")
+        with atomic_transaction(base.db_output_dir) as db_conn:
+            # Emissions: check declarations and derive CO2-equivalents
+            emissions_processing.finalize(
+                db_conn,
+                base.emissions,
+                [d for output in sector_outputs for d in output.emissions],
+            )
 
     # Representative periods
     if config.representative_periods_config is not None:

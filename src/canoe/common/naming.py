@@ -5,6 +5,7 @@ Utility functions to standardize naming conventions.
 from enum import StrEnum
 
 from canoe.common import CANOEFuel, CANOEProvince, CANOESector
+from canoe.common.emissions import CANOEEmission
 
 
 class TechnologyCapacityScope(StrEnum):
@@ -70,3 +71,20 @@ def get_commodity_name(
 def get_fuel_commodity_in_sector(sector: CANOESector, fuel: CANOEFuel) -> str:
     sector_tag = sector.get_tag()
     return f"{sector_tag}_{fuel.value.lower()}"
+
+
+def get_emission_commodity_name(emission: CANOEEmission) -> str:
+    """
+    Emission commodities are shared by all sectors.
+
+    Examples
+    --------
+    >>> get_emission_commodity_name(CANOEEmission.CH4)
+    'ch4'
+    """
+    return emission.value.lower()
+
+
+def get_co2_equivalent_commodity_name() -> str:
+    """CO2-equivalent commodity, derived from the gases by the central emissions step"""
+    return "co2e"

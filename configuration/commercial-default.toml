@@ -1,5 +1,5 @@
 module_name = "commercial"
-data_version = "003"
+# data_version is inherited from [compiler.base]; set it here to override
 base_year = 2022
 
 # Filter out secondary energy consumption below this fraction of total
@@ -12,8 +12,9 @@ capacity_min_tolerance = 0.05
 include_dsd = true
 dsd_time_slices = { kind = "all_year" }
 
-# EPA
-EPA_emission_commodity = "co2e"
+# Emissions: CO2, CH4 and N2O of the fuels burned (EPA emission factors).
+# CO2-equivalents are added by the central emissions step ([compiler.base.emissions]).
+include_emissions = false  # Should stay false, this is now handled by fuels
 
 # ----------------------------------------------------------
 #                        END USES

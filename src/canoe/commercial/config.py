@@ -267,13 +267,9 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     # clone_to_xlsx: bool = False
     # force_generate_weather_maps: bool = False
 
-    # # EPA emissions
+    # Combustion emissions (CO2, CH4, N2O) of the fuels, from EPA emission factors.
+    # CO2-equivalents are added by the central emissions step.
     include_emissions: bool = False
-    # epa_year: int
-    # epa_url: str
-    # epa_reference: str
-    EPA_emission_commodity: str = ""
-    # emission_activity_units: str
 
     # Data sources
     comstock_config: ComstockConfig

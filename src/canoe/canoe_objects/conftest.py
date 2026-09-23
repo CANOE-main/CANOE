@@ -9,8 +9,10 @@ the rows the examples rely on, the way canoe-base would have seeded them.
 - regions: ON, QC
 - periods: 2020 (existing), 2025, 2030, 2035 (future)
 - time slices: season D001, times of day H01 and H02
-- commodity labels: `C_elc`, `C_ng` (fuels) and `C_D_DOC`, `C_D_SPH`, `C_D_SPC`
-  (demands), so technologies can reference them without building the commodities first
+- commodity labels: `C_elc`, `C_ng` (fuels), `C_D_DOC`, `C_D_SPH`, `C_D_SPC`
+  (demands) and `co2`, `ch4`, `n2o` (emissions, registered by the central emissions
+  step in a pipeline run), so technologies can reference them without building the
+  commodities first
 """
 
 import sqlite3
@@ -40,7 +42,16 @@ def _example_database() -> sqlite3.Connection:
     )
     db.executemany(
         "INSERT INTO commodity_label (commodity) VALUES (?)",
-        [("C_elc",), ("C_ng",), ("C_D_DOC",), ("C_D_SPH",), ("C_D_SPC",)],
+        [
+            ("C_elc",),
+            ("C_ng",),
+            ("C_D_DOC",),
+            ("C_D_SPH",),
+            ("C_D_SPC",),
+            ("co2",),
+            ("ch4",),
+            ("n2o",),
+        ],
     )
     return db
 

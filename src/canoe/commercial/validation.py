@@ -19,7 +19,8 @@ from canoe_schema.v4_0.models import (
 )
 from loguru import logger
 
-from canoe.common import CANOEProvince
+from canoe.common import CANOEEmission, CANOEProvince
+from canoe.common.naming import get_emission_commodity_name
 from canoe.common.time_slices import CANOETimeSliceSet
 
 if TYPE_CHECKING:
@@ -40,7 +41,7 @@ def validate_db_against_config(config: "CANOECommercialConfig", db_conn: Connect
         check_missing_time_slices(db_conn, config.dsd_time_slices, behavior)
 
     if config.include_emissions:
-        check_emission_commodity(db_conn, config.EPA_emission_commodity, behavior)
+        check_emission_commodities(db_conn, behavior)
 
 
 def check_missing_periods(
@@ -136,25 +137,32 @@ def check_missing_time_slices(
         )
 
 
-def check_emission_commodity(
+def check_emission_commodities(
     db_conn: Connection,
-    EPA_emission_commodity: str,
     behavior: Literal["error", "warning"] = "error",
 ):
     """
-    Checks that the emission commodity (e.g. CO2eq) exists in the commodity table.
+    Checks that the emission commodities of every gas exist in the commodity table.
 
-    This commodity spans all sectors and is seeded by canoe-base. See DECISIONS.md — decision 2.
+    These commodities span all sectors and are registered by the central emissions
+    step (`canoe.emissions.processing.init`) before the modules run.
     """
     cursor = db_conn.cursor()
-    row = cursor.execute(
-        f"SELECT name FROM {Commodity.__table_name__} WHERE name = ?",
-        (EPA_emission_commodity,),
-    ).fetchone()
-    if row is None:
+    db_commodities = {
+        row[0]
+        for row in cursor.execute(
+            f"SELECT name FROM {Commodity.__table_name__}"
+        ).fetchall()
+    }
+    missing = [
+        get_emission_commodity_name(emission)
+        for emission in CANOEEmission
+        if get_emission_commodity_name(emission) not in db_commodities
+    ]
+    if missing:
         _handle(
-            f"Emission commodity '{EPA_emission_commodity}' is absent from the commodity table. "
-            + "canoe-base must seed this cross-sector commodity. See DECISIONS.md — decision 2.",
+            f"Emission commodities {missing} are absent from the commodity table. "
+            + "The central emissions step must register them before this module runs.",
             behavior,
         )
 

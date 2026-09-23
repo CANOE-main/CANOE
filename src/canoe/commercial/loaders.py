@@ -145,6 +145,18 @@ def get_statcan_atlantic_fractions_table(
     return df  # pyright: ignore[reportReturnType]
 
 
+def get_epa_emission_factors_table(cache_config: GoldConnectorConfig) -> pd.DataFrame:
+    """
+    US EPA GHG Emission Factors Hub, stationary combustion table, as cached: one row per
+    fuel (`Fuel Type`) with `CO2 Factor` (kg/mmBtu), `CH4 Factor` and `N2O Factor`
+    (g/mmBtu), plus section and unit header rows.
+    """
+    cache_path = cache_config.cache_dir / Path("silver") / cache_config.cache_date
+    file_path = cache_path / "epa" / f"epa_{cache_config.cache_date}.parquet"
+    logger.debug("Loading cached EPA emission factors")
+    return pd.read_parquet(file_path)
+
+
 def get_cer_gdp(
     cache_config: GoldConnectorConfig,
     base_year: int = 2022,

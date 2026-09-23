@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 
+from .emissions import CANOEEmission
 from .fuels import CANOEFuel
 from .sectors import CANOESector
 
@@ -11,6 +12,17 @@ class CANOEFuelImport:
     fuel: CANOEFuel
 
 
+@dataclass(frozen=True)
+class CANOEEmissionDeclaration:
+    """
+    A gas a sector accounts for: it wrote emission activities for it. The central
+    emissions step checks declarations against the rows in the database.
+    """
+
+    sector: CANOESector
+    emission: CANOEEmission
+
+
 class CANOEModuleOutput:
     """
     This is the interface for a module to communicate to the CANOE engine
@@ -18,9 +30,15 @@ class CANOEModuleOutput:
     """
 
     fuel_imports: list[CANOEFuelImport]
+    emissions: list[CANOEEmissionDeclaration]
 
-    def __init__(self, fuel_imports: list[CANOEFuelImport]) -> None:
+    def __init__(
+        self,
+        fuel_imports: list[CANOEFuelImport],
+        emissions: list[CANOEEmissionDeclaration] | None = None,
+    ) -> None:
         self.fuel_imports = fuel_imports
+        self.emissions = emissions or []
 
 
 class CANOEModule(ABC):

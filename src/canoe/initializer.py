@@ -16,7 +16,6 @@ from canoe_schema.v4_0.enums import (
     TimePeriodTypeCode,
 )
 from canoe_schema.v4_0.models import (
-    CostEmission,
     MetadataReal,
     Region,
     TimeOfDay,
@@ -24,28 +23,24 @@ from canoe_schema.v4_0.models import (
     TimeSeason,
 )
 from loguru import logger
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 from .common import CANOEProvince, GoldConnectorConfig
-
-
-class EmissionsConfig(BaseModel):
-    # Cost of CO2 in USD per ktCO2
-    global_cost_of_co2: float = 0
-    co2_commodity_name: str = "co2"
-    emissions_units: str = "ktCO2"
+from .emissions import EmissionsConfig
 
 
 class CANOEBaseConfig(BaseModel):
     # TODO currently schema import for pydantic objects is hard-coded
     db_output_dir: Path
+    # Version in the data set codes (e.g. COMHR003), inherited by the modules
+    data_version: str
     existing_periods: list[int]
     future_periods: list[int]
     provinces: list[CANOEProvince]
     # This is used for global_discount_rate and for default_loan_rate
     global_discount_rate: float = 0.03
-    # TODO: Move to the module output section
-    emissions: EmissionsConfig | None = None
+    # Emission commodities, GWPs and costs, see `canoe.emissions`
+    emissions: EmissionsConfig = Field(default_factory=EmissionsConfig)
     data_cache_config: GoldConnectorConfig
 
     @classmethod
@@ -116,7 +111,8 @@ def global_parameters(config: CANOEBaseConfig, db_cursor: sqlite3.Cursor):
     """
     Apply global parameters to an existing database
 
-    Writes global_discount_rate, default_loan_rate, and CostEmission (if provided).
+    Writes global_discount_rate and default_loan_rate. (Emission costs are written by
+    the central emissions step, `canoe.emissions.processing.init`.)
     """
     db_cursor.execute(
         *MetadataReal(  # pyright: ignore[reportArgumentType]
@@ -129,22 +125,6 @@ def global_parameters(config: CANOEBaseConfig, db_cursor: sqlite3.Cursor):
             element="default_loan_rate", value=config.global_discount_rate
         ).to_update_sql()
     )
-
-    if config.emissions is not None:
-        # Global cost of CO2
-        cost_emissions: list[CostEmission] = []
-        for province, period in zip(config.provinces, config.future_periods):
-            cost_emissions.append(
-                CostEmission(
-                    region=province.short(),
-                    period=period,
-                    emis_comm=config.emissions.co2_commodity_name,
-                    cost=config.emissions.global_cost_of_co2,
-                    units="ktCO2",
-                    data_id="CANOEHR003",  # TODO: This needs to be handled dynamically
-                )
-            )
-        _ = db_cursor.executemany(*CostEmission.to_bulk_insert_sql(cost_emissions))  # pyright: ignore[reportArgumentType]
 
 
 def prepare_database(db_path: Path, schema_sql: str) -> Path:

@@ -21,6 +21,7 @@ from canoe_schema.v4_0 import (
     CostFixed,
     CostInvest,
     Efficiency,
+    EmissionActivity,
     ExistingCapacity,
     LifetimeTech,
     LimitAnnualCapacityFactor,
@@ -81,6 +82,23 @@ class CapacityFactorLimit:
     operator: OperatorCode
 
 
+@dataclass(frozen=True)
+class InputEmissionFactor:
+    """
+    Emissions per unit of one input commodity (e.g. kt CO2 per PJ of natural gas).
+
+    Parameters
+    ----------
+    values : float or RegionVintageArray
+        One factor for every region and vintage, or a factor by region and vintage.
+    metadata : ParameterMetadata
+        Notes, data source, data quality and units of the written emission activities.
+    """
+
+    values: float | RegionVintageArray
+    metadata: ParameterMetadata
+
+
 class TechnologyEntity:
     """
     A single technology: one row in `technology`, with any number of input and output
@@ -106,6 +124,8 @@ class TechnologyEntity:
       efficiency
     - fixed costs for periods before the vintage or after the end of its lifetime
     - capacity factor limits for commodities that are not outputs
+    - emission factors for commodities that are not inputs, or for a (region, vintage)
+      without efficiency for that input
 
     Parameters
     ----------
@@ -211,6 +231,8 @@ class TechnologyEntity:
         self.fixed_cost: Parameter[RegionVintagePeriodArray] | None = None
         # output commodity -> capacity factor limit
         self.capacity_factor_limits: dict[str, CapacityFactorLimit] = {}
+        # (emission commodity, input commodity) -> emission factor
+        self.input_emission_factors: dict[tuple[str, str], InputEmissionFactor] = {}
 
     @property
     def inputs(self) -> list[str]:
@@ -550,6 +572,65 @@ class TechnologyEntity:
         )
         return self
 
+    def with_input_emission_factor(
+        self,
+        emission_commodity: str,
+        input_commodity: str,
+        factor: float | RegionVintageArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        """
+        Emit `emission_commodity` per unit of `input_commodity` consumed, e.g. the
+        combustion emissions of a fuel.
+
+        Writes `emission_activity`: Temoa emission activities are per unit of output, so
+        one row is written per efficiency row of `input_commodity` (every output and
+        vintage) with `activity = factor / efficiency`. Calling it again with the same
+        emission and input replaces the factor.
+
+        Parameters
+        ----------
+        emission_commodity : str
+            Emission commodity, see `get_emission_commodity_name`.
+        input_commodity : str
+            Input whose consumption emits. Must be an input (see `with_efficiency`).
+        factor : float or RegionVintageArray
+            Emissions per unit of input: one value for every efficiency row, or by
+            region and vintage (cells without a value are not written).
+        units : str, optional
+            Units of the written activities (emissions per unit of output), e.g. "kt/PJ".
+
+        Examples
+        --------
+        A gas furnace emitting 50 kt of CO2 per PJ of gas burned; with efficiency 0.8,
+        that is 62.5 kt per PJ of heat delivered:
+
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> furnace = (
+        ...     TechnologyEntity(
+        ...         "C_NG_FRN", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025, 2030], fill=0.8))
+        ...     .with_input_emission_factor("co2", "C_ng", 50.0, units="kt/PJ")
+        ... )
+        >>> furnace.build(db)
+        >>> db.execute(
+        ...     "SELECT region, emis_comm, input_comm, vintage, output_comm, activity, units"
+        ...     " FROM emission_activity"
+        ... ).fetchall()
+        [('ON', 'co2', 'C_ng', 2025, 'C_D_DOC', 62.5, 'kt/PJ'), ('ON', 'co2', 'C_ng', 2030, 'C_D_DOC', 62.5, 'kt/PJ')]
+        """
+        self.input_emission_factors[(emission_commodity, input_commodity)] = (
+            InputEmissionFactor(
+                factor, ParameterMetadata(notes, reference_code, data_quality, units)
+            )
+        )
+        return self
+
     def validate(self) -> None:
         """
         Check the parameters are consistent before writing them (called by `build`).
@@ -627,6 +708,37 @@ class TechnologyEntity:
             raise ValueError(
                 f"Technology {self.name}: capacity factor limits for commodities that are not outputs: {not_outputs}"
             )
+
+        # Emission factors
+        for (emission, input_commodity), factor in self.input_emission_factors.items():
+            if input_commodity not in self.inputs:
+                raise ValueError(
+                    f"Technology {self.name}: {emission} emission factor for "
+                    + f"{input_commodity}, which is not an input"
+                )
+            if isinstance(factor.values, float | int):
+                continue
+            input_cells = {
+                (record["region"], record["vintage"])
+                for (i, _), efficiency in self.efficiencies.items()
+                if i == input_commodity
+                for record in efficiency.values.to_records()
+            }
+            factor_cells = [
+                (record["region"], record["vintage"])
+                for record in factor.values.to_records()
+            ]
+            if not factor_cells:
+                raise ValueError(
+                    f"Technology {self.name}: {emission} emission factor for "
+                    + f"{input_commodity} was set but has no values"
+                )
+            for region, vintage in factor_cells:
+                if (region, vintage) not in input_cells:
+                    raise ValueError(
+                        f"Technology {self.name}: {emission} emission factor for "
+                        + f"{input_commodity} without efficiency at {region}, {vintage}"
+                    )
 
         # Input splits
         not_inputs = set(self.input_splits) - set(self.inputs)
@@ -908,5 +1020,56 @@ class TechnologyEntity:
             ]
             sql, params = split_model.bulk_insert_or_ignore_sql(
                 input_splits, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Emission activities (one set of rows per emission and input), per unit of
+        # output: factor per unit of input divided by the efficiency of each flow
+        for (emission, input_commodity), factor in self.input_emission_factors.items():
+            meta = factor.metadata
+            factor_by_cell: dict[tuple[CANOEProvince, int], float] | None = (
+                None
+                if isinstance(factor.values, float | int)
+                else {
+                    (r["region"], r["vintage"]): r["value"]
+                    for r in factor.values.to_records()
+                }
+            )
+            # (output commodity, efficiency record, factor) for every efficiency row
+            # of the input that has a factor
+            flows = [
+                (
+                    output_commodity,
+                    record,
+                    factor.values
+                    if factor_by_cell is None
+                    else factor_by_cell.get((record["region"], record["vintage"])),
+                )
+                for (i, output_commodity), efficiency in self.efficiencies.items()
+                if i == input_commodity
+                for record in efficiency.values.to_records()
+            ]
+            flows = [flow for flow in flows if flow[2] is not None]
+            emission_activities = [
+                EmissionActivity(
+                    region=record["region"].short(),
+                    emis_comm=emission,
+                    input_comm=input_commodity,
+                    tech=self.name,
+                    vintage=record["vintage"],
+                    output_comm=output_commodity,
+                    activity=value / record["value"],
+                    units=meta.units,
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(record["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, (output_commodity, record, value) in enumerate(flows)
+            ]
+            if not emission_activities:
+                continue
+            sql, params = EmissionActivity.bulk_insert_or_ignore_sql(
+                emission_activities, include_nulls=True
             )
             db_conn.executemany(sql, params)

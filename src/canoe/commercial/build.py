@@ -11,7 +11,13 @@ from canoe.canoe_objects.demand import (
     DemandSeriesArray,
     DemandSpecificDistributionArray,
 )
+from canoe.canoe_objects.fuel_serving_tech import FuelServingTechnologyEntity
+from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.commercial.comstock_processing import load_and_process_comstock
+from canoe.commercial.emission_factors import (
+    describe_epa_fuels,
+    load_combustion_emission_factors,
+)
 from canoe.commercial.end_uses import CommercialEndUse
 from canoe.commercial.existing_capacity import (
     compute_existing_tech_life_params,
@@ -26,6 +32,8 @@ from canoe.commercial.new_technologies import (
 )
 from canoe.commercial.other_end_use import build_other_technology
 from canoe.common import (
+    CANOEEmission,
+    CANOEEmissionDeclaration,
     CANOEFuel,
     CANOEFuelImport,
     CANOEModuleOutput,
@@ -37,6 +45,8 @@ from canoe.common import (
 from canoe.common.naming import (
     DatasetIdentifier,
     get_commodity_name,
+    get_emission_commodity_name,
+    get_fuel_commodity_in_sector,
     hour_str,
     season_str,
 )
@@ -102,6 +112,12 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             cfg.aeo_config,
         )
         gdp_projections_index = get_cer_gdp(cfg.data_cache_config, base_year=2022)
+        # Estimated from EPA: kt of each gas per PJ of fuel burned (none if disabled)
+        emission_factors: dict[CANOEEmission, dict[CANOEFuel, float]] = (
+            load_combustion_emission_factors(cfg.data_cache_config)
+            if cfg.include_emissions
+            else {}
+        )
 
         # Compute parameters
         # ------------------
@@ -243,6 +259,9 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             logger.debug(
                 f"Writing fuel serving technology entities `{end_use}` to database"
             )
+            fuel_serving_technologies = _with_fuel_emissions(
+                fuel_serving_technologies, emission_factors
+            )
             fuel_serving_technologies.build(db_conn)
 
             # Add fuel imports declaration
@@ -276,6 +295,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 sector_data_id,
             ):
                 logger.debug(f"Writing new technology `{technology.name}` to database")
+                technology = _with_technology_emissions(technology, emission_factors)
                 technology.build(db_conn)
 
         # Other
@@ -290,6 +310,9 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 sector_data_id,
             )
             logger.debug("Writing fuel serving technology entities `Other` to database")
+            other_technologies = _with_fuel_emissions(
+                other_technologies, emission_factors
+            )
             other_technologies.build(db_conn)
 
             fuel_imports += [
@@ -297,7 +320,62 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 for f in other_technologies.fuels
             ]
 
-    return CANOEModuleOutput(fuel_imports=fuel_imports)
+    return CANOEModuleOutput(
+        fuel_imports=fuel_imports,
+        emissions=[
+            CANOEEmissionDeclaration(sector=CANOESector.Commercial, emission=emission)
+            for emission in emission_factors
+        ],
+    )
+
+
+def _with_fuel_emissions(
+    entity: FuelServingTechnologyEntity,
+    emission_factors: dict[CANOEEmission, dict[CANOEFuel, float]],
+) -> FuelServingTechnologyEntity:
+    """Combustion emissions of the entity's fuels (unchanged without factors)"""
+    for emission, factors in emission_factors.items():
+        fuel_factors = {fuel: f for fuel, f in factors.items() if fuel in entity.fuels}
+        if fuel_factors:
+            entity = entity.with_input_emission_factors(
+                get_emission_commodity_name(emission),
+                fuel_factors,  # pyright: ignore[reportArgumentType]
+                notes=_EMISSION_NOTES,
+                units="kt/PJ",
+                data_quality=_EMISSION_DATA_QUALITY,
+            )
+    return entity
+
+
+def _with_technology_emissions(
+    technology: TechnologyEntity,
+    emission_factors: dict[CANOEEmission, dict[CANOEFuel, float]],
+) -> TechnologyEntity:
+    """Combustion emissions of the technology's fuel inputs (unchanged without factors)"""
+    fuel_by_input = {
+        get_fuel_commodity_in_sector(CANOESector.Commercial, fuel): fuel
+        for fuel in CANOEFuel
+    }
+    for emission, factors in emission_factors.items():
+        for input_commodity in technology.inputs:
+            fuel = fuel_by_input.get(input_commodity)
+            if fuel in factors:
+                technology = technology.with_input_emission_factor(
+                    get_emission_commodity_name(emission),
+                    input_commodity,
+                    factors[fuel],  # pyright: ignore[reportArgumentType]
+                    notes=_EMISSION_NOTES,
+                    units="kt/PJ",
+                    data_quality=_EMISSION_DATA_QUALITY,
+                )
+    return technology
+
+
+_EMISSION_NOTES = (
+    f"Stationary combustion emission factor (EPA, {2025}) using {describe_epa_fuels()}, "
+    "divided by efficiency as emissions are per output unit energy"
+)
+_EMISSION_DATA_QUALITY = DataQualityProfile(cred=1, geog=2, struc=3, tech=3, time=2)
 
 
 def _compute_other_secondary_energy(

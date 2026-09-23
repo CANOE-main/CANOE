@@ -30,7 +30,7 @@ from canoe.canoe_objects.array_types import (
 from canoe.canoe_objects.commodity import FuelCommodityEntity
 from canoe.canoe_objects.labeled_array import LabeledArray
 from canoe.canoe_objects.parameter import ParameterMetadata
-from canoe.canoe_objects.technology import TechnologyEntity
+from canoe.canoe_objects.technology import InputEmissionFactor, TechnologyEntity
 from canoe.common import CANOEFuel, CANOESector, DataQualityProfile
 from canoe.common.naming import (
     DatasetIdentifier,
@@ -250,6 +250,10 @@ class FuelServingTechnologyEntity:
             TechnologyParameter[RegionVintageArray] | None
         ) = None
         self.lacf_operator: OperatorCode = OperatorCode.LE
+        # emission commodity -> fuel -> emission factor
+        self.input_emission_factors: dict[
+            str, dict[CANOEFuel, InputEmissionFactor]
+        ] = {}
 
     def set_annual(self, annual: int = 1):
         """Mark all technologies as annual, see `TechnologyEntity.set_annual`"""
@@ -488,6 +492,65 @@ class FuelServingTechnologyEntity:
         )
         return self
 
+    def with_input_emission_factors(
+        self,
+        emission_commodity: str,
+        factors: dict[CANOEFuel, float | RegionVintageArray],
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        """
+        Emit `emission_commodity` per unit of each fuel consumed (`emission_activity`),
+        see `TechnologyEntity.with_input_emission_factor`. Call once per emission.
+
+        Parameters
+        ----------
+        emission_commodity : str
+            Emission commodity, see `get_emission_commodity_name`.
+        factors : dict[CANOEFuel, float or RegionVintageArray]
+            Emissions per unit of fuel; fuels left out (e.g. electricity) do not emit.
+
+        Examples
+        --------
+        >>> from canoe.canoe_objects.array_types import RegionVintageArray
+        >>> from canoe.common import CANOEProvince
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> fuels = [CANOEFuel.Electricity, CANOEFuel.NaturalGas]
+        >>> heating = (
+        ...     FuelServingTechnologyEntity(
+        ...         sector=CANOESector.Commercial,
+        ...         short_desc="DOC",
+        ...         fuels=fuels,
+        ...         fuel_import_flag={
+        ...             CANOEFuel.Electricity: CommodityTypeCode.P,
+        ...             CANOEFuel.NaturalGas: CommodityTypeCode.A,
+        ...         },
+        ...         output_commodity_name="C_D_DOC",
+        ...         data_id=DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+        ...     )
+        ...     .with_efficiencies(
+        ...         {fuel: RegionVintageArray(regions, [2025], fill=0.8) for fuel in fuels}
+        ...     )
+        ...     .with_input_emission_factors("co2", {CANOEFuel.NaturalGas: 50.0}, units="kt/PJ")
+        ... )
+        >>> heating.build(db)
+        >>> db.execute("SELECT tech, emis_comm, activity FROM emission_activity").fetchall()
+        [('C_DOC_NG', 'co2', 62.5)]
+        """
+        not_fuels = set(factors) - set(self.fuels)
+        if not_fuels:
+            raise ValueError(
+                f"{emission_commodity} emission factors for fuels that are not inputs: {not_fuels}"
+            )
+        metadata = ParameterMetadata(notes, reference_code, data_quality, units)
+        self.input_emission_factors[emission_commodity] = {
+            fuel: InputEmissionFactor(factor, metadata)
+            for fuel, factor in factors.items()
+        }
+        return self
+
     def to_technology_entities(self) -> list[TechnologyEntity]:
         """
         The technologies this entity builds, one per fuel or a single shared one.
@@ -596,6 +659,14 @@ class FuelServingTechnologyEntity:
                     data_quality=meta.data_quality,
                     reference_code=meta.reference_code,
                 )
+            for emission, factors in self.input_emission_factors.items():
+                if fuel in factors:
+                    technology.with_input_emission_factor(
+                        emission,
+                        input_commodity,
+                        factors[fuel].values,
+                        **_metadata_kwargs(factors[fuel].metadata),
+                    )
 
         if self.lifetimes:
             technology.with_lifetime(

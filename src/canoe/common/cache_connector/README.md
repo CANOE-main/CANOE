@@ -64,8 +64,8 @@ commercial_bc_df = nrcan["nrcan_com_BC_32"]
 # ---------------------------------------------------------
 # 5. Macro Indicators & Other Data
 # ---------------------------------------------------------
-macro = connector.get_macro_indicators() # CER and StatCan
-ieso = connector.get_ieso_generation()   # IESO hourly/monthly
+macro = connector.get_macro_indicators()  # CER and StatCan
+ieso = connector.get_ieso_generation()  # IESO hourly/monthly
 others = connector.get_other_datasets()  # ATB, EPA, Renewables Ninja
 ```
 
