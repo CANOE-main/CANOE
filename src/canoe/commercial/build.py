@@ -1,10 +1,10 @@
 # pyright: reportImportCycles=false
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import pandas as pd
-from canoe_schema.v4_0 import CommodityTypeCode, DataSet
+from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
 from canoe.canoe_objects.demand import (
@@ -12,18 +12,13 @@ from canoe.canoe_objects.demand import (
     DemandSeriesArray,
     DemandSpecificDistributionArray,
 )
-from canoe.canoe_objects.fuel_serving_tech import (
-    FuelServingTechnologyEntity,
-    RegionalValuesArray,
-)
-from canoe.canoe_objects.technology import RegionVintageArray, RegionVintagePeriodArray
 from canoe.commercial.comstock_processing import load_and_process_comstock
 from canoe.commercial.existing_capacity import (
     compute_existing_tech_life_params,
 )
+from canoe.commercial.existing_technologies import build_existing_technologies
 from canoe.commercial.loaders import get_cer_gdp
 from canoe.common import (
-    CANOEFuel,
     CANOEFuelImport,
     CANOEModuleOutput,
     CANOEProvince,
@@ -33,7 +28,6 @@ from canoe.common import (
 )
 from canoe.common.naming import (
     DatasetIdentifier,
-    TechnologyCapacityScope,
     get_commodity_name,
     hour_str,
     season_str,
@@ -117,48 +111,6 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         existing_techs["acf"] = _compute_annual_capacity_factor(
             existing_techs, province_dsd
         )
-        # Estimate existing capacity and drop tiny energy consumptions
-        existing_techs["capacity"] = existing_techs["dem"] / existing_techs["acf"]
-        existing_techs["capacity"] = existing_techs["capacity"].where(
-            existing_techs["dem"] / existing_techs["dem"].sum()
-            > cfg.capacity_min_tolerance,
-            0,
-        )
-
-        # Tech Lifetimes
-        # end_use -> { fuel -> RegionalValuesArray }
-        tech_lifetimes: dict[str, dict[CANOEFuel, RegionalValuesArray]] = (
-            _compute_tech_lifetimes(cfg.provinces, existing_techs)
-        )
-
-        # Tech Efficiencies
-        tech_efficiencies, tech_capacities = _compute_tech_efficiencies_and_capacities(
-            cfg.provinces,
-            tech_lifetimes,
-            cfg.future_periods[0],
-            cfg.future_periods[0],
-            existing_techs,
-        )
-
-        existing_techs[["existing_vintages", "existing_vintages_weights"]] = (
-            existing_techs.apply(
-                lambda r: (  # pyright: ignore[reportUnknownLambdaType]
-                    _stock_vintages(
-                        r["avg_life"],
-                        vint_interval=5,  # TODO: Hard-coded
-                        stock_year=cfg.future_periods[0],
-                        first_period=cfg.future_periods[0],
-                    )
-                ),
-                axis=1,
-                result_type="expand",
-            )
-        )
-
-        # Tech Fixed Costs
-        tech_fixed_costs = _compute_tech_fixed_costs(
-            cfg.future_periods, cfg.provinces, existing_techs
-        )
 
         # Build TEMOA Objects
         # -------------------
@@ -237,108 +189,16 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             demand.build(db_conn)
 
         # Existing Capacity
-        for end_use, fuels in cfg.existing_technologies_fuels.items():
-            # Check what fuels we have information for this end use
-            eu_df = existing_techs[existing_techs["end_use"] == end_use.get_full_name()]
-            original_fuels = set(eu_df.fuel.unique())
-            eu_df: Any = eu_df[eu_df.capacity > 0]
-            df_fuels = eu_df.fuel.unique()
-            missing_fuels = set(fuels) - set(df_fuels)
-            ignored_fuels = original_fuels - set(df_fuels)
-
-            if missing_fuels:
-                if cfg.missing_data_behavior == "warning":
-                    logger.warning(
-                        f"Missing data for fuels for end use {end_use.get_full_name()}: {missing_fuels}, skipping"
-                    )
-                elif cfg.missing_data_behavior == "error":
-                    raise ValueError(
-                        f"Missing data for fuels for end use {end_use.get_full_name()}: {missing_fuels}"
-                    )
-            available_fuels = set(df_fuels) - missing_fuels
-            if len(available_fuels) == 0:
-                logger.warning(
-                    f"No available fuels for end use {end_use.get_full_name()}, skipping"
-                )
-                continue
-            if ignored_fuels:
-                logger.warning(
-                    f"Ignored fuels for end use {end_use.get_full_name()} due to low capacity: {ignored_fuels}"
-                )
-
-            efficiency_notes = (
-                "Average efficiency of installed stock estimated using shares of secondary energy consumption. "
-                f"Secondary energy consumption shares calculated from fuel share by end use (NRCan, {2022}) "
-                f"further indexed to service demand shares divided by efficiencies for installed base technologies "
-                f"of the same end use and fuel (AEO, {2022})."
-            )
-            capacity_notes = (
-                f"Secondary energy consumption shares calculated from fuel share by end use (NRCan, {2022}) "
-                f"times average efficiency for installed base technologies (AEO, {2022}) "
-                f"divided by estimated annual capacity factor (NREL, {2024})"
-            )
-            fixed_cost_note = f"Average maintenance cost of installed stock indexed to shares of service demand by end use and fuel (AEO, {2022})"
-
-            # This builds all technologies that serve fuel (or electricity) to the demand points
-            out_commodity_name = get_commodity_name(
-                CANOESector.Commercial,
-                end_use.get_short_name().upper(),
-                is_demand=True,
-            )
-            fuel_serving_technologies = (
-                FuelServingTechnologyEntity(
-                    sector=CANOESector.Commercial,
-                    short_desc=end_use.get_short_name().upper(),
-                    fuels=list(available_fuels),
-                    fuel_import_flag={
-                        f: CommodityTypeCode.P
-                        if f == CANOEFuel.Electricity
-                        else CommodityTypeCode.A
-                        for f in available_fuels
-                    },
-                    output_commodity_name=out_commodity_name,
-                    capacity_scope=TechnologyCapacityScope.Existing,
-                    data_id=sector_data_id,
-                )
-                .set_annual()
-                .with_lifetimes(
-                    tech_lifetimes[end_use.get_full_name()],
-                    data_quality=DataQualityProfile(
-                        cred=1, geog=2, struc=2, tech=2, time=3
-                    ),
-                )
-                .with_capacity_to_activity(
-                    {
-                        f: RegionalValuesArray(region=cfg.provinces, fill=1)
-                        for f in available_fuels
-                    },
-                    units="1",  # Equal input and output units
-                )
-                .with_efficiencies(
-                    tech_efficiencies[end_use.get_full_name()],
-                    data_quality=DataQualityProfile(
-                        cred=1, geog=2, struc=3, tech=2, time=2
-                    ),
-                    notes=efficiency_notes,
-                )
-                .with_existing_capacities(
-                    tech_capacities[end_use.get_full_name()],
-                    notes=capacity_notes,
-                    units="PJ",  # TODO: Double check
-                    data_quality=DataQualityProfile(
-                        cred=1, geog=2, struc=2, tech=2, time=1
-                    ),
-                )
-                .with_fixed_costs(
-                    tech_fixed_costs[end_use.get_full_name()],
-                    notes=fixed_cost_note,
-                    units="M$/PJ",
-                    data_quality=DataQualityProfile(
-                        cred=1, geog=2, struc=1, tech=2, time=2
-                    ),
-                )
-            )
-
+        existing_technologies = build_existing_technologies(
+            existing_techs,
+            cfg.existing_technologies_fuels,
+            cfg.provinces,
+            cfg.future_periods,
+            cfg.capacity_min_tolerance,
+            cfg.missing_data_behavior,
+            sector_data_id,
+        )
+        for end_use, fuel_serving_technologies in existing_technologies.items():
             logger.debug(
                 f"Writing fuel serving technology entities `{end_use}` to database"
             )
@@ -347,7 +207,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             # Add fuel imports declaration
             fuel_imports += [
                 CANOEFuelImport(sector=CANOESector.Commercial, fuel=f)
-                for f in available_fuels
+                for f in fuel_serving_technologies.fuels
             ]
 
     return CANOEModuleOutput(fuel_imports=fuel_imports)
@@ -413,174 +273,6 @@ def _compute_dsd_frame(
     df_out = pd.concat(frames, ignore_index=True)
 
     return df_out
-
-
-def _compute_tech_lifetimes(
-    provinces: list[CANOEProvince],
-    existing_techs: pd.DataFrame,
-) -> dict[str, dict[CANOEFuel, RegionalValuesArray]]:
-    tech_lifetimes: dict[str, dict[CANOEFuel, RegionalValuesArray]] = {}
-    re_indexed_df = (
-        existing_techs.set_index(["end_use", "fuel"])
-        .rename(columns={"province": "region"})
-        .sort_index()
-        .copy()
-    )
-
-    for end_use in existing_techs["end_use"].unique():
-        fuels = existing_techs[existing_techs["end_use"] == end_use].fuel.unique()
-        tech_lifetimes[end_use] = {}
-        for fuel in fuels:
-            tech_lifetimes[end_use][fuel] = RegionalValuesArray(
-                region=provinces
-            ).fill_from_df(
-                re_indexed_df.loc[(end_use, fuel)][["region", "avg_life"]],
-                value_col="avg_life",
-            )
-
-    return tech_lifetimes
-
-
-def _stock_vintages(
-    lifetime: int,
-    vint_interval: int,
-    stock_year: int,
-    first_period: int,
-) -> tuple[list[int], list[float]]:
-
-    vint_last = stock_year - stock_year % vint_interval  # first stepped back vint
-
-    # Return any stepped back vintages that are feasible
-    vints = list(range(int(vint_last), int(stock_year - lifetime), -int(vint_interval)))
-    vints.sort()
-
-    if stock_year not in vints:
-        vints.append(stock_year)
-
-    # Has to be an existing vintage but we often use e.g. 2024 to represent end of 2025
-    # because Temoa traps us into start-of-period indexing
-    if vints[-1] >= first_period:
-        vints[-1] = first_period - 1
-
-    # Only one vintage so all weight in there
-    if len(vints) == 1:
-        weights = [1.0]
-    # Stock year lands on a stepped vintage so divide evenly
-    elif stock_year == vint_last:
-        weights = [1 / len(vints)] * len(vints)
-    # Stock year is after last stepped vintage so give it a lesser weighting proportional to time interval
-    else:
-        weights = [vint_interval / (vints[-1] - vints[0])] * (len(vints) - 1) + [
-            stock_year % vint_interval / (vints[-1] - vints[0])
-        ]
-
-    return vints, weights
-
-
-def _compute_tech_efficiencies_and_capacities(
-    provinces: list[CANOEProvince],
-    tech_lifetimes: dict[str, dict[CANOEFuel, RegionalValuesArray]],
-    stock_year: int,
-    first_period: int,
-    existing_techs: pd.DataFrame,
-) -> tuple[
-    dict[str, dict[CANOEFuel, RegionVintageArray]],
-    dict[str, dict[CANOEFuel, RegionVintageArray]],
-]:
-    tech_efficiencies: dict[str, dict[CANOEFuel, RegionVintageArray]] = {}
-    tech_capacities: dict[str, dict[CANOEFuel, RegionVintageArray]] = {}
-
-    for end_use, fuel_lifetimes in tech_lifetimes.items():
-        tech_efficiencies[end_use] = {}
-        tech_capacities[end_use] = {}
-        for fuel, lifetimes in fuel_lifetimes.items():
-            lifetimes = lifetimes.to_records()
-            tech_params = (
-                existing_techs.set_index(["end_use", "fuel"])
-                .sort_index()
-                .loc[end_use, fuel]
-                .reset_index()
-                .set_index("province")
-            )
-            # re-group into region, vintage, weight df
-            vint_rows = []
-            for record in lifetimes:
-                vintages, weights = _stock_vintages(
-                    record["value"],
-                    vint_interval=5,  # TODO: Hard-coded
-                    stock_year=stock_year,
-                    first_period=first_period,
-                )
-                for vintage, weight in zip(vintages, weights):
-                    vint_rows.append((record["region"], vintage, weight))
-            vint_df = pd.DataFrame(vint_rows, columns=["region", "vintage", "weight"])
-            vint_df["efficiency"] = tech_params.loc[vint_df["region"]]["avg_eff"].values
-            vint_df["capacity"] = (
-                tech_params.loc[vint_df["region"]]["capacity"].values
-                * vint_df["weight"].values
-            )
-
-            # Put back into Region, Vintage labeled array
-            tech_efficiencies[end_use][fuel] = RegionVintageArray(
-                region=provinces, vintage=vint_df.vintage.unique()
-            ).fill_from_df(vint_df, value_col="efficiency")
-
-            # Put back into Region, Vintage labeled array
-            tech_capacities[end_use][fuel] = RegionVintageArray(
-                region=provinces, vintage=vint_df.vintage.unique()
-            ).fill_from_df(vint_df, value_col="capacity")
-
-    return tech_efficiencies, tech_capacities
-
-
-def _compute_tech_fixed_costs(
-    periods: list[int],
-    provinces: list[CANOEProvince],
-    existing_techs: pd.DataFrame,
-) -> dict[str, dict[CANOEFuel, RegionVintagePeriodArray]]:
-    tech_fixed_costs: dict[str, dict[CANOEFuel, RegionVintagePeriodArray]] = {}
-    re_indexed_df = (
-        existing_techs.set_index(["end_use", "fuel"])
-        .rename(columns={"province": "region"})
-        .sort_index()
-        .copy()
-    )
-
-    for end_use in existing_techs["end_use"].unique():
-        fuels = existing_techs[existing_techs["end_use"] == end_use].fuel.unique()
-        tech_fixed_costs[end_use] = {}
-        for fuel in fuels:
-            vintages = np.unique(
-                re_indexed_df.loc[(end_use, fuel)]["existing_vintages"].values.reshape(
-                    -1
-                )
-            ).tolist()[0]
-            df = (
-                re_indexed_df[
-                    ["avg_fixed_cost", "existing_vintages", "region", "avg_life"]
-                ]  # pyright: ignore[reportCallIssue]
-                .explode("existing_vintages")  # pyright: ignore[reportArgumentType]
-                .rename(columns={"existing_vintages": "vintage"})
-                .assign(key=1)
-                .merge(pd.DataFrame({"period": periods, "key": 1}), on="key")
-                .drop(columns="key")
-            )
-            df = df[df.vintage <= df.period]
-            df: Any = df[df.vintage + df.avg_life > df.period]
-
-            labeled_array = RegionVintagePeriodArray(
-                region=provinces,
-                vintage=vintages,
-                period=periods,
-            ).fill_from_df(
-                df,
-                dims=["region", "vintage", "period"],
-                value_col="avg_fixed_cost",
-            )
-
-            tech_fixed_costs[end_use][fuel] = labeled_array
-
-    return tech_fixed_costs
 
 
 if __name__ == "__main__":
