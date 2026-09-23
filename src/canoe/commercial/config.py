@@ -1,13 +1,14 @@
 from collections.abc import Callable
-from enum import StrEnum
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Self, override
 
 from canoe_schema.v4_0 import OperatorCode
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from canoe.canoe_objects.fuel_serving_tech import FuelGrouping
 from canoe.commercial.build import build_commercial
+from canoe.commercial.end_uses import CommercialEndUse
+from canoe.commercial.technology_catalog import NewTechnology, technologies_for
 from canoe.common import (
     CANOEFuel,
     CANOEModule,
@@ -23,51 +24,38 @@ from ..common.module_inheritance import InheritsFromBase, inherit
 from ..initializer import CANOEBaseConfig
 
 
-class CommercialEndUse(StrEnum):
-    SpaceHeating = "heating"
-    SpaceCooling = "cooling"
-    Other = "other"
-
-    @classmethod
-    @override
-    def _missing_(cls, value: Any):
-        if isinstance(value, str) and value in cls.__members__:
-            return cls.__members__[value]
-        for member in cls:
-            if value == member.get_full_name():
-                return member
-        return None
-
-    def get_full_name(self):
-        _NAMES = {
-            "heating": "space heating",
-            "cooling": "space cooling",
-            "other": "other",
-        }
-        return _NAMES[self.value]
-
-    def get_short_name(self):
-        _NAMES = {
-            "heating": "sph",
-            "cooling": "spc",
-            "other": "oth",
-        }
-        return _NAMES[self.value]
-
-    @override
-    def __str__(self):
-        return str(self.name)
-
-
 class ComstockConfig(BaseModel):
     building_types: list[str]
     us_map: dict[CANOEProvince, str]
 
 
-class ExistingStockEndUseConfig(BaseModel):
+class SpaceConditioningEndUseConfig(BaseModel):
     """
-    Space heating / space cooling: one existing-capacity technology per fuel,
-    estimated from CEUD energy use and AEO installed stock.
+    Space heating / space cooling.
+
+    - Existing stock: one existing-capacity technology per fuel, estimated from CEUD
+      energy use and AEO installed stock.
+    - New capacity: the technologies in `new_technologies`, with parameters from the AEO
+      technology menu (see `technology_catalog`). A technology listed under both space
+      heating and space cooling is a single technology serving both demands.
+
+    `new_technologies` options (`NewTechnology`), by end use they can serve:
+
+    - space heating and space cooling: "air-source heat pump", "ground-source heat
+      pump", "gas engine-driven heat pump", "residential-type gas heat pump"
+    - space heating: "electric boiler", "electric resistance heater", "gas furnace",
+      "gas boiler", "oil furnace", "oil boiler"
+    - space cooling: "rooftop air conditioner", "wall/window air conditioner",
+      "residential-type central air conditioner"
+
+    Examples
+    --------
+    >>> heating = SpaceConditioningEndUseConfig(
+    ...     existing_fuels=["NG", "ELC"],
+    ...     new_technologies=["air-source heat pump", "gas furnace"],
+    ... )
+    >>> heating.new_technologies
+    [<NewTechnology.AirSourceHeatPump: 'air-source heat pump'>, <NewTechnology.GasFurnace: 'gas furnace'>]
     """
 
     model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
@@ -76,6 +64,16 @@ class ExistingStockEndUseConfig(BaseModel):
     apply_weather_mapping: bool = False
     # Fuels we expect existing stock for. Missing ones are handled by `missing_data_behavior`
     existing_fuels: list[CANOEFuel]
+    # Technologies that can be built to serve the end use (none by default)
+    new_technologies: list[NewTechnology] = []
+
+    @field_validator("new_technologies")
+    @classmethod
+    def _check_no_duplicates(cls, value: list[NewTechnology]) -> list[NewTechnology]:
+        duplicates = {t for t in value if value.count(t) > 1}
+        if duplicates:
+            raise ValueError(f"new_technologies listed more than once: {duplicates}")
+        return value
 
 
 class ElectrificationConfig(BaseModel):
@@ -135,17 +133,29 @@ class EndUsesConfig(BaseModel):
 
     model_config = ConfigDict(extra="forbid", populate_by_name=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
-    space_heating: ExistingStockEndUseConfig | None = Field(
+    space_heating: SpaceConditioningEndUseConfig | None = Field(
         default=None, alias="space heating"
     )
-    space_cooling: ExistingStockEndUseConfig | None = Field(
+    space_cooling: SpaceConditioningEndUseConfig | None = Field(
         default=None, alias="space cooling"
     )
     other: OtherEndUseConfig | None = None
 
+    @model_validator(mode="after")
+    def _check_new_technologies_serve_end_use(self) -> Self:
+        for end_use, config in self.space_conditioning().items():
+            valid = technologies_for(end_use)
+            invalid = [t for t in config.new_technologies if t not in valid]
+            if invalid:
+                raise ValueError(
+                    f"{[str(t.value) for t in invalid]} cannot serve "
+                    + f"{end_use.get_full_name()}. Options: {[str(t.value) for t in valid]}"
+                )
+        return self
+
     def get(
         self, end_use: CommercialEndUse
-    ) -> ExistingStockEndUseConfig | OtherEndUseConfig | None:
+    ) -> SpaceConditioningEndUseConfig | OtherEndUseConfig | None:
         return {
             CommercialEndUse.SpaceHeating: self.space_heating,
             CommercialEndUse.SpaceCooling: self.space_cooling,
@@ -163,13 +173,44 @@ class EndUsesConfig(BaseModel):
             if (config := self.get(eu)) is not None
         }
 
-    def existing_stock(self) -> dict[CommercialEndUse, ExistingStockEndUseConfig]:
-        """Enabled end uses modelled with existing-stock technologies"""
+    def space_conditioning(
+        self,
+    ) -> dict[CommercialEndUse, SpaceConditioningEndUseConfig]:
+        """Enabled space heating / cooling end uses"""
         return {
             eu: config
             for eu in CommercialEndUse
-            if isinstance(config := self.get(eu), ExistingStockEndUseConfig)
+            if isinstance(config := self.get(eu), SpaceConditioningEndUseConfig)
         }
+
+    def new_technologies(self) -> dict[NewTechnology, list[CommercialEndUse]]:
+        """
+        Selected new technologies -> end uses each one serves (space heating first).
+
+        Examples
+        --------
+        >>> end_uses = EndUsesConfig.model_validate(
+        ...     {
+        ...         "space heating": {
+        ...             "existing_fuels": ["ELC"],
+        ...             "new_technologies": ["air-source heat pump", "electric boiler"],
+        ...         },
+        ...         "space cooling": {
+        ...             "existing_fuels": ["ELC"],
+        ...             "new_technologies": ["air-source heat pump"],
+        ...         },
+        ...     }
+        ... )
+        >>> for technology, served in end_uses.new_technologies().items():
+        ...     print(technology.value, [str(end_use) for end_use in served])
+        air-source heat pump ['SpaceHeating', 'SpaceCooling']
+        electric boiler ['SpaceHeating']
+        """
+        selected: dict[NewTechnology, list[CommercialEndUse]] = {}
+        for end_use, config in self.space_conditioning().items():
+            for technology in config.new_technologies:
+                selected.setdefault(technology, []).append(end_use)
+        return selected
 
 
 class CEUDConfig(BaseModel):

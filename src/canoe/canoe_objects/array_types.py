@@ -79,7 +79,13 @@ class RegionVintagePeriodArray(LabeledArray):
         self.data[mask] = fill
         return self
 
-    def mask_out_after_life(self, life: float, fill: float = np.nan):
+    def mask_out_after_life(
+        self, life: float | RegionalValuesArray, fill: float = np.nan
+    ):
+        """
+        Set to `fill` the cells whose vintage has retired by the period
+        (`vintage + life <= period`). `life` is a single lifetime or one per region.
+        """
         periods = np.array(self.coords["period"])
         vintages = np.array(self.coords["vintage"])
 
@@ -93,6 +99,13 @@ class RegionVintagePeriodArray(LabeledArray):
 
         p = periods.reshape(p_shape)
         v = vintages.reshape(v_shape)
+
+        if isinstance(life, RegionalValuesArray):
+            l_shape = [1] * len(self.dims)
+            l_shape[self.dims.index("region")] = len(self.coords["region"])
+            life = np.array(  # pyright: ignore[reportAssignmentType]
+                [life.get(region=region) for region in self.coords["region"]]
+            ).reshape(l_shape)
 
         mask = np.broadcast_to(v + life <= p, self.shape)
         self.data[mask] = fill

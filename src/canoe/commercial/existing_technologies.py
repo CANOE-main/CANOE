@@ -37,7 +37,7 @@ from canoe.common.naming import (
 )
 
 if TYPE_CHECKING:
-    from .config import CommercialEndUse
+    from .end_uses import CommercialEndUse
 
 
 def build_existing_technologies(

@@ -12,12 +12,18 @@ from canoe.canoe_objects.demand import (
     DemandSpecificDistributionArray,
 )
 from canoe.commercial.comstock_processing import load_and_process_comstock
+from canoe.commercial.end_uses import CommercialEndUse
 from canoe.commercial.existing_capacity import (
     compute_existing_tech_life_params,
+    load_new_technology_params,
     load_total_secondary_energy,
 )
 from canoe.commercial.existing_technologies import build_existing_technologies
 from canoe.commercial.loaders import get_cer_gdp
+from canoe.commercial.new_technologies import (
+    build_new_technologies,
+    new_technology_fuel_commodities,
+)
 from canoe.commercial.other_end_use import build_other_technology
 from canoe.common import (
     CANOEFuel,
@@ -38,7 +44,7 @@ from canoe.common.naming import (
 from .validation import validate_db_against_config
 
 if TYPE_CHECKING:
-    from .config import CANOECommercialConfig, CommercialEndUse
+    from .config import CANOECommercialConfig
 
 
 def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
@@ -51,8 +57,6 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         - data_ids separated by province
         - data sources (require label)
     """
-    from .config import CommercialEndUse  # runtime import: config imports this module
-
     logger.info(
         f"Running COMMERCIAL (high-resolution) sector on {cfg.database_file}...\n"
     )
@@ -161,6 +165,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 f"growth by (CER, {2023})"
             ),
         }
+        logger.info("Processing and building demand entities")
         for end_use in cfg.end_uses.enabled():
             # Holds all demand-related data
             demand = DemandEntity(
@@ -221,11 +226,12 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             demand.build(db_conn)
 
         # Existing Capacity (SPH and SPC)
+        logger.info("Processing and building existing technology entities")
         existing_technologies = build_existing_technologies(
             existing_techs,
             {
                 end_use: end_use_config.existing_fuels
-                for end_use, end_use_config in cfg.end_uses.existing_stock().items()
+                for end_use, end_use_config in cfg.end_uses.space_conditioning().items()
             },
             cfg.provinces,
             cfg.model_periods,
@@ -244,6 +250,33 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 CANOEFuelImport(sector=CANOESector.Commercial, fuel=f)
                 for f in fuel_serving_technologies.fuels
             ]
+
+        # New Capacity (SPH and SPC)
+        new_technologies = cfg.end_uses.new_technologies()
+        if new_technologies:
+            logger.info("Processing and building new technology entities")
+            new_tech_params = load_new_technology_params(
+                new_technologies, cfg.provinces, cfg.aeo_config.us_census_mapping
+            )
+            for fuel_commodity in new_technology_fuel_commodities(
+                new_technologies, sector_data_id
+            ):
+                fuel_commodity.build(db_conn)
+                fuel_imports.append(
+                    CANOEFuelImport(
+                        sector=CANOESector.Commercial, fuel=fuel_commodity.fuel
+                    )
+                )
+            for technology in build_new_technologies(
+                new_technologies,
+                new_tech_params,
+                existing_techs[["province", "end_use", "fuel", "acf"]],  # pyright: ignore[reportArgumentType]
+                cfg.provinces,
+                cfg.model_periods,
+                sector_data_id,
+            ):
+                logger.debug(f"Writing new technology `{technology.name}` to database")
+                technology.build(db_conn)
 
         # Other
         if other_config is not None and other_sec is not None:

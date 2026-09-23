@@ -2,13 +2,13 @@
 A single Temoa technology and the parameter tables that describe it.
 
 `TechnologyEntity` is the building block for anything that converts input
-commodities into one output commodity. Higher-level entities, such as
+commodities into output commodities. Higher-level entities, such as
 `FuelServingTechnologyEntity`, decide how many technologies to create and hand the
 values to `TechnologyEntity` objects.
 
 Examples in this module run against `db`, an in-memory CANOE database prepared in
 `canoe_objects/conftest.py` (data sets `COMDOC*`, regions ON/QC, periods 2020-2035,
-commodity labels `C_elc`, `C_ng`, `C_D_DOC`).
+commodity labels `C_elc`, `C_ng`, `C_D_DOC`, `C_D_SPH`, `C_D_SPC`).
 """
 
 from dataclasses import dataclass
@@ -19,6 +19,7 @@ import numpy as np
 from canoe_schema.v4_0 import (
     CapacityToActivity,
     CostFixed,
+    CostInvest,
     Efficiency,
     ExistingCapacity,
     LifetimeTech,
@@ -82,8 +83,8 @@ class CapacityFactorLimit:
 
 class TechnologyEntity:
     """
-    A single technology: one row in `technology`, one output commodity and any
-    number of input commodities (one per `with_efficiency` call).
+    A single technology: one row in `technology`, with any number of input and output
+    commodities (one efficiency per (input, output) pair, see `with_efficiency`).
 
     Configure it with the `set_*` and `with_*` methods (they return the entity, so
     calls can be chained) and write it with `build`. Every parameter is a labeled
@@ -101,15 +102,19 @@ class TechnologyEntity:
     - the technology has no inputs, or non-positive efficiencies
     - a parameter was set but has no values (all NaN)
     - input splits for commodities that are not inputs, or adding up to more than 1
-    - existing capacity for a (region, vintage) without any efficiency
+    - existing capacity or investment costs for a (region, vintage) without any
+      efficiency
     - fixed costs for periods before the vintage or after the end of its lifetime
+    - capacity factor limits for commodities that are not outputs
 
     Parameters
     ----------
     name : str
         Technology name (`tech` column).
     output_commodity : str
-        Commodity produced by the technology.
+        Main commodity produced by the technology: the output used by
+        `with_efficiency` and `with_limit_annual_capacity_factor` unless they are
+        given another one.
     data_id : DatasetIdentifier
         Data set the rows belong to.
     description : str, optional
@@ -195,20 +200,27 @@ class TechnologyEntity:
 
         # Set-able parameters
         # -------------------
-        # input commodity -> efficiencies
-        self.efficiencies: dict[str, Parameter[RegionVintageArray]] = {}
+        # (input commodity, output commodity) -> efficiencies
+        self.efficiencies: dict[tuple[str, str], Parameter[RegionVintageArray]] = {}
         # input commodity -> input split
         self.input_splits: dict[str, InputSplit] = {}
         self.lifetime: Parameter[RegionalValuesArray] | None = None
         self.capacity_to_activity: Parameter[RegionalValuesArray] | None = None
         self.existing_capacity: Parameter[RegionVintageArray] | None = None
+        self.investment_cost: Parameter[RegionVintageArray] | None = None
         self.fixed_cost: Parameter[RegionVintagePeriodArray] | None = None
-        self.capacity_factor_limit: CapacityFactorLimit | None = None
+        # output commodity -> capacity factor limit
+        self.capacity_factor_limits: dict[str, CapacityFactorLimit] = {}
 
     @property
     def inputs(self) -> list[str]:
         """Input commodities, in the order they were added with `with_efficiency`"""
-        return list(self.efficiencies)
+        return list(dict.fromkeys(i for i, _ in self.efficiencies))
+
+    @property
+    def outputs(self) -> list[str]:
+        """Output commodities, in the order they were added with `with_efficiency`"""
+        return list(dict.fromkeys(o for _, o in self.efficiencies))
 
     def set_annual(self, annual: bool = True):
         """
@@ -230,19 +242,20 @@ class TechnologyEntity:
         self,
         input_commodity: str,
         efficiencies: RegionVintageArray,
+        output_commodity: str | None = None,
         notes: str | None = None,
         data_quality: DataQualityProfile | None = None,
         reference_code: str | None = None,
         units: str | None = None,
     ):
         """
-        Add `input_commodity` as an input, with its conversion efficiency to the
-        output commodity.
+        Add a conversion from `input_commodity` to `output_commodity`, making them an
+        input and an output of the technology.
 
         Writes `efficiency`: one row per (region, vintage) with a value. The vintages
         with a value are the ones the technology can be built in (or, for existing
-        capacity, was built in). Calling it again with the same commodity replaces
-        its efficiencies.
+        capacity, was built in). Calling it again with the same input and output
+        replaces their efficiencies.
 
         Parameters
         ----------
@@ -250,24 +263,43 @@ class TechnologyEntity:
             Name of the input commodity.
         efficiencies : RegionVintageArray
             Output per unit of input, by region and vintage. Must be positive.
+        output_commodity : str, optional
+            Name of the output commodity, the entity's `output_commodity` by default.
 
         Examples
         --------
         A technology can have several inputs, e.g. a dual-fuel heater:
 
         >>> from canoe.common import CANOESector
+        >>> data_id = DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
         >>> regions = [CANOEProvince.ONTARIO]
         >>> heater = (
-        ...     TechnologyEntity(
-        ...         "C_DUAL", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
-        ...     )
+        ...     TechnologyEntity("C_DUAL", "C_D_DOC", data_id)
         ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=1.0))
         ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025], fill=0.8))
         ... )
         >>> heater.inputs
         ['C_elc', 'C_ng']
+
+        Or several outputs, e.g. a heat pump serving heating and cooling:
+
+        >>> heat_pump = (
+        ...     TechnologyEntity("C_SPHC_HP", "C_D_SPH", data_id)
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=3.4))
+        ...     .with_efficiency(
+        ...         "C_elc",
+        ...         RegionVintageArray(regions, [2025], fill=4.1),
+        ...         output_commodity="C_D_SPC",
+        ...     )
+        ... )
+        >>> heat_pump.inputs, heat_pump.outputs
+        (['C_elc'], ['C_D_SPH', 'C_D_SPC'])
+        >>> heat_pump.build(db)
+        >>> db.execute("SELECT input_comm, output_comm, efficiency FROM efficiency").fetchall()
+        [('C_elc', 'C_D_SPH', 3.4), ('C_elc', 'C_D_SPC', 4.1)]
         """
-        self.efficiencies[input_commodity] = Parameter(
+        output = output_commodity or self.output_commodity
+        self.efficiencies[(input_commodity, output)] = Parameter(
             efficiencies,
             ParameterMetadata(notes, reference_code, data_quality, units),
         )
@@ -414,6 +446,49 @@ class TechnologyEntity:
         )
         return self
 
+    def with_investment_cost(
+        self,
+        investment_cost: RegionVintageArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        """
+        Set the cost of building one unit of new capacity.
+
+        Writes `cost_invest`: one row per (region, vintage) with a value. Every
+        (region, vintage) with a cost needs an efficiency for at least one input
+        (checked by `validate`).
+
+        Parameters
+        ----------
+        investment_cost : RegionVintageArray
+            Cost by region and (new) vintage.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> boiler = (
+        ...     TechnologyEntity(
+        ...         "C_ELC_BLR", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025, 2030], fill=0.98))
+        ...     .with_investment_cost(
+        ...         RegionVintageArray(regions, [2025, 2030], fill=2.4), units="M$/PJ/y"
+        ...     )
+        ... )
+        >>> boiler.build(db)
+        >>> db.execute("SELECT region, tech, vintage, cost, units FROM cost_invest").fetchall()
+        [('ON', 'C_ELC_BLR', 2025, 2.4, 'M$/PJ/y'), ('ON', 'C_ELC_BLR', 2030, 2.4, 'M$/PJ/y')]
+        """
+        self.investment_cost = Parameter(
+            investment_cost,
+            ParameterMetadata(notes, reference_code, data_quality, units),
+        )
+        return self
+
     def with_fixed_cost(
         self,
         fixed_cost: RegionVintagePeriodArray,
@@ -443,16 +518,17 @@ class TechnologyEntity:
         self,
         capacity_factors: RegionVintageArray,
         operator: OperatorCode = OperatorCode.LE,
+        output_commodity: str | None = None,
         notes: str | None = None,
         data_quality: DataQualityProfile | None = None,
         reference_code: str | None = None,
     ):
         """
-        Limit the annual capacity factor: the fraction of the year's full-capacity
-        output the technology can deliver.
+        Limit the annual capacity factor of one output: the fraction of the year's
+        full-capacity output the technology can deliver.
 
         Writes `limit_annual_capacity_factor`: one row per (region, vintage) with a
-        value, for the output commodity.
+        value. Calling it again with the same output replaces its limit.
 
         Parameters
         ----------
@@ -460,8 +536,12 @@ class TechnologyEntity:
             Capacity factor (0-1) by region and vintage.
         operator : OperatorCode
             Upper bound (`le`, default), lower bound (`ge`) or exact factor (`e`).
+        output_commodity : str, optional
+            Output the limit applies to, the entity's `output_commodity` by default.
+            Must be an output (see `with_efficiency`).
         """
-        self.capacity_factor_limit = CapacityFactorLimit(
+        output = output_commodity or self.output_commodity
+        self.capacity_factor_limits[output] = CapacityFactorLimit(
             Parameter(
                 capacity_factors,
                 ParameterMetadata(notes, reference_code, data_quality),
@@ -506,15 +586,19 @@ class TechnologyEntity:
 
         # Parameters that were set but have no values (all NaN)
         parameters: dict[str, Parameter[Any] | None] = {
-            **{f"efficiency ({i})": p for i, p in self.efficiencies.items()},
+            **{
+                f"efficiency ({i} -> {o})": p for (i, o), p in self.efficiencies.items()
+            },
             **{f"input split ({i})": s.parameter for i, s in self.input_splits.items()},
             "lifetime": self.lifetime,
             "capacity to activity": self.capacity_to_activity,
             "existing capacity": self.existing_capacity,
+            "investment cost": self.investment_cost,
             "fixed cost": self.fixed_cost,
-            "annual capacity factor limit": self.capacity_factor_limit.parameter
-            if self.capacity_factor_limit
-            else None,
+            **{
+                f"annual capacity factor limit ({o})": limit.parameter
+                for o, limit in self.capacity_factor_limits.items()
+            },
         }
         for parameter_name, parameter in parameters.items():
             if parameter is not None and not parameter.values.to_records():
@@ -524,17 +608,28 @@ class TechnologyEntity:
 
         # (region, vintage) cells with at least one efficiency
         efficiency_cells: set[tuple[CANOEProvince, int]] = set()
-        for input_commodity, efficiency in self.efficiencies.items():
+        for (
+            input_commodity,
+            output_commodity,
+        ), efficiency in self.efficiencies.items():
             for record in efficiency.values.to_records():
                 if record["value"] <= 0:
                     raise ValueError(
                         f"Technology {self.name}: non-positive efficiency {record['value']} "
-                        + f"for input {input_commodity} at {record['region']}, {record['vintage']}"
+                        + f"for {input_commodity} -> {output_commodity} "
+                        + f"at {record['region']}, {record['vintage']}"
                     )
                 efficiency_cells.add((record["region"], record["vintage"]))
 
+        # Capacity factor limits
+        not_outputs = set(self.capacity_factor_limits) - set(self.outputs)
+        if not_outputs:
+            raise ValueError(
+                f"Technology {self.name}: capacity factor limits for commodities that are not outputs: {not_outputs}"
+            )
+
         # Input splits
-        not_inputs = set(self.input_splits) - set(self.efficiencies)
+        not_inputs = set(self.input_splits) - set(self.inputs)
         if not_inputs:
             raise ValueError(
                 f"Technology {self.name}: input splits for commodities that are not inputs: {not_inputs}"
@@ -551,12 +646,18 @@ class TechnologyEntity:
                     + f"at {region}, {period}"
                 )
 
-        # Existing capacity
-        if self.existing_capacity:
-            for record in self.existing_capacity.values.to_records():
+        # Existing capacity and investment costs
+        vintage_parameters = {
+            "existing capacity": self.existing_capacity,
+            "investment cost": self.investment_cost,
+        }
+        for parameter_name, parameter in vintage_parameters.items():
+            if parameter is None:
+                continue
+            for record in parameter.values.to_records():
                 if (record["region"], record["vintage"]) not in efficiency_cells:
                     raise ValueError(
-                        f"Technology {self.name}: existing capacity without efficiency "
+                        f"Technology {self.name}: {parameter_name} without efficiency "
                         + f"at {record['region']}, {record['vintage']}"
                     )
 
@@ -667,8 +768,11 @@ class TechnologyEntity:
             )
             db_conn.executemany(sql, params)
 
-        # Efficiencies (one set of rows per input)
-        for input_commodity, efficiency in self.efficiencies.items():
+        # Efficiencies (one set of rows per input and output)
+        for (
+            input_commodity,
+            output_commodity,
+        ), efficiency in self.efficiencies.items():
             meta = efficiency.metadata
             efficiencies = [
                 Efficiency(
@@ -676,7 +780,7 @@ class TechnologyEntity:
                     input_comm=input_commodity,
                     tech=self.name,
                     vintage=row["vintage"],
-                    output_comm=self.output_commodity,
+                    output_comm=output_commodity,
                     efficiency=row["value"],
                     units=meta.units,
                     notes=options.notes(meta, i),
@@ -713,6 +817,28 @@ class TechnologyEntity:
             )
             db_conn.executemany(sql, params)
 
+        # Investment costs
+        if self.investment_cost:
+            meta = self.investment_cost.metadata
+            investment_costs = [
+                CostInvest(
+                    region=row["region"].short(),
+                    tech=self.name,
+                    vintage=row["vintage"],
+                    cost=row["value"],
+                    units=meta.units,
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(self.investment_cost.values.to_records())
+            ]
+            sql, params = CostInvest.bulk_insert_or_ignore_sql(
+                investment_costs, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
         # Fixed costs
         if self.fixed_cost:
             meta = self.fixed_cost.metadata
@@ -736,16 +862,15 @@ class TechnologyEntity:
             )
             db_conn.executemany(sql, params)
 
-        # Annual capacity factor limits
-        if self.capacity_factor_limit:
-            limit = self.capacity_factor_limit
+        # Annual capacity factor limits (one set of rows per output)
+        for output_commodity, limit in self.capacity_factor_limits.items():
             meta = limit.parameter.metadata
             capacity_factors = [
                 LimitAnnualCapacityFactor(
                     region=row["region"].short(),
                     tech_or_group=self.name,
                     vintage=row["vintage"],
-                    output_comm=self.output_commodity,
+                    output_comm=output_commodity,
                     operator=limit.operator,
                     factor=row["value"],
                     notes=options.notes(meta, i),

@@ -23,9 +23,22 @@ EPA_emission_commodity = "co2e"
 # the whole table (header included) to skip it.
 # Valid names: "space heating", "space cooling", "other".
 #
-# Space heating / cooling: one existing-capacity technology per fuel
+# Space heating / cooling: one existing-capacity technology per fuel, plus the new
+# technologies that can be built
 #   apply_weather_mapping : map the US Comstock hourly profiles to Canadian weather (DSD)
 #   existing_fuels        : fuels we expect existing stock for (NG, OIL, ELC, ...)
+#   new_technologies      : technologies that can be built for the end use (optional).
+#                           One listed under both space heating and space cooling is a
+#                           single technology serving both demands (e.g. a heat pump).
+#     space heating and space cooling:
+#       "air-source heat pump", "ground-source heat pump",
+#       "gas engine-driven heat pump", "residential-type gas heat pump"
+#     space heating only:
+#       "electric boiler", "electric resistance heater", "gas furnace", "gas boiler",
+#       "oil furnace", "oil boiler"
+#     space cooling only:
+#       "rooftop air conditioner", "wall/window air conditioner",
+#       "residential-type central air conditioner"
 #
 # Other (everything else: lighting, equipment, water heating, ...)
 #   Demand = CEUD secondary energy use minus space heating and cooling, served with
@@ -44,10 +57,22 @@ EPA_emission_commodity = "co2e"
 [end_uses."space heating"]
 apply_weather_mapping = true
 existing_fuels = ["NG", "OIL", "ELC"]
+new_technologies = [
+  "air-source heat pump",
+  "ground-source heat pump",
+  "electric boiler",
+  "electric resistance heater",
+  "gas furnace",
+]
 
 [end_uses."space cooling"]
 apply_weather_mapping = true
 existing_fuels = ["ELC", "NG"]
+new_technologies = [
+  "air-source heat pump",
+  "ground-source heat pump",
+  "rooftop air conditioner",
+]
 
 [end_uses.other]
 apply_weather_mapping = false

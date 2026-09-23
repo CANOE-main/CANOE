@@ -6,12 +6,17 @@ import pandas as pd
 
 from canoe.common import CANOEFuel, CANOEProvince, GoldConnectorConfig
 
+from .end_uses import CommercialEndUse
 from .loaders import (
     get_aeo_data,
     get_ceud_table,
     get_exchange_and_inflation_dfs,
     get_statcan_atlantic_fractions_table,
 )
+from .technology_catalog import NEW_TECHNOLOGIES, NewTechnology
+
+# AEO CDM costs are in $/(kBtu/h); multiply to get M$/(PJ/y)
+_AEO_COST_TO_M_PER_PJ = 0.108198
 
 
 def compute_existing_tech_life_params(
@@ -40,7 +45,9 @@ def compute_existing_tech_life_params(
             df_exs[col] = df_exs.index.map(lambda euf: cdm_exs.loc[euf, col])  # noqa: B023  # pyright: ignore[reportUnknownLambdaType]
 
         ## Adjust units of fixed cost
-        df_exs["avg_fixed_cost"] *= 0.108198  # $/(kBtu/h) → M$/(PJ/y)
+        df_exs["avg_fixed_cost"] *= (
+            _AEO_COST_TO_M_PER_PJ  # AEO CDM costs are in $/(kBtu/h); multiply to get M$/(PJ/y)
+        )
         df_exs["avg_fixed_cost"] = _aeo_conv_curr(df_exs["avg_fixed_cost"])
 
         ## Multiply secondary energies by average efficiencies to get demanded output energies
@@ -122,6 +129,82 @@ def load_total_secondary_energy(
     out = pd.concat(frames, ignore_index=True)
     out["fuel"] = out["fuel"].map(CANOEFuel.from_str)
     return out[["province", "fuel", "sec"]]  # pyright: ignore[reportReturnType]
+
+
+def load_new_technology_params(
+    new_technologies: dict[NewTechnology, list[CommercialEndUse]],
+    provinces: list[CANOEProvince],
+    us_census_mapping: dict[CANOEProvince, str],
+) -> pd.DataFrame:
+    """
+    Efficiency, lifetime and costs of new technologies from the AEO CDM technology menu
+    (ktek), for the AEO technology of each (technology, end use) in `technology_catalog`.
+
+    Each province takes the values of its comparable US census division
+    (`us_census_mapping`), as for the existing stock.
+
+    NOTE: this changed from the previous version of the code, which used the first ktek
+    row of each technology (always the New England census division) for every province.
+    ktek values are the same across census divisions except for the ground-source heat
+    pump heating maintenance cost (3.5 in New England, 3.75 elsewhere), so only that
+    value changes, for provinces not mapped to New England.
+
+    params:
+    - new_technologies: technology -> end uses it serves, see `EndUsesConfig.new_technologies`
+
+    Returns one row per (technology, end_use, province) with columns `technology`,
+    `end_use`, `province`, `fuel`, `aeo_technology`, `efficiency`, `life` (years),
+    `investment_cost` (M$/(PJ/y), CAD 2020) and `fixed_cost` (M$/(PJ/y) per year, CAD 2020).
+    """
+    columns = [
+        "technology",
+        "end_use",
+        "province",
+        "fuel",
+        "aeo_technology",
+        "efficiency",
+        "life",
+        "investment_cost",
+        "fixed_cost",
+    ]
+    aeo = get_aeo_data()
+
+    rows: list[dict[str, Any]] = []
+    for technology, end_uses in new_technologies.items():
+        spec = NEW_TECHNOLOGIES[technology]
+        for end_use in end_uses:
+            aeo_technology = spec.aeo_technologies[end_use]
+            for province in provinces:
+                census_division = us_census_mapping[province]
+                match = aeo[
+                    (aeo["techname"] == aeo_technology)
+                    & (aeo["reg"] == census_division)
+                ]
+                if match.empty:
+                    raise ValueError(
+                        f"AEO technology {aeo_technology!r} ({technology.value}, "
+                        + f"{end_use.get_full_name()}) not found for census division "
+                        + f"{census_division!r} ({province.short()})"
+                    )
+                aeo_row = match.iloc[0]
+                rows.append(
+                    {
+                        "technology": technology,
+                        "end_use": end_use,
+                        "province": province,
+                        "fuel": spec.fuel,
+                        "aeo_technology": aeo_technology,
+                        "efficiency": aeo_row["efficiency"],
+                        "life": aeo_row["life"],
+                        "investment_cost": _aeo_conv_curr(
+                            aeo_row["capcst"] * _AEO_COST_TO_M_PER_PJ
+                        ),
+                        "fixed_cost": _aeo_conv_curr(
+                            aeo_row["maintcst"] * _AEO_COST_TO_M_PER_PJ
+                        ),
+                    }
+                )
+    return pd.DataFrame(rows, columns=columns)
 
 
 def _merge_ceud_fuels(sec: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:

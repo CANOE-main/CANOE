@@ -1,4 +1,5 @@
 import tomllib
+from pathlib import Path
 
 import pytest
 from canoe_schema.v4_0 import OperatorCode
@@ -8,9 +9,15 @@ from canoe.canoe_objects.fuel_serving_tech import FuelGrouping
 from canoe.commercial.config import (
     CommercialEndUse,
     EndUsesConfig,
-    ExistingStockEndUseConfig,
+    SpaceConditioningEndUseConfig,
+)
+from canoe.commercial.technology_catalog import (
+    NEW_TECHNOLOGIES,
+    NewTechnology,
 )
 from canoe.common import CANOEFuel
+
+DEFAULT_CONFIG = Path(__file__).parents[1] / "configuration" / "commercial-default.toml"
 
 
 def _parse(toml: str) -> EndUsesConfig:
@@ -32,7 +39,7 @@ class TestEndUsesConfig:
             CommercialEndUse.Other,
         ]
 
-    def test_existing_stock_only_includes_heating_and_cooling(self):
+    def test_space_conditioning_only_includes_heating_and_cooling(self):
         config = _parse(
             """
             [end_uses."space cooling"]
@@ -41,12 +48,13 @@ class TestEndUsesConfig:
             fuels = ["ELC"]
             """
         )
-        existing = config.existing_stock()
-        assert list(existing) == [CommercialEndUse.SpaceCooling]
+        space_conditioning = config.space_conditioning()
+        assert list(space_conditioning) == [CommercialEndUse.SpaceCooling]
         assert isinstance(
-            existing[CommercialEndUse.SpaceCooling], ExistingStockEndUseConfig
+            space_conditioning[CommercialEndUse.SpaceCooling],
+            SpaceConditioningEndUseConfig,
         )
-        assert existing[CommercialEndUse.SpaceCooling].existing_fuels == [
+        assert space_conditioning[CommercialEndUse.SpaceCooling].existing_fuels == [
             CANOEFuel.Electricity
         ]
 
@@ -143,3 +151,92 @@ class TestOtherEndUseConfig:
                 [end_uses.other]
                 """
             )
+
+
+class TestNewTechnologiesConfig:
+    def test_default_is_no_new_technologies(self):
+        config = _parse(
+            """
+            [end_uses."space heating"]
+            existing_fuels = ["NG"]
+            """
+        )
+        assert config.new_technologies() == {}
+
+    def test_technology_listed_under_both_end_uses_serves_both(self):
+        config = _parse(
+            """
+            [end_uses."space cooling"]
+            existing_fuels = ["ELC"]
+            new_technologies = ["air-source heat pump", "rooftop air conditioner"]
+            [end_uses."space heating"]
+            existing_fuels = ["ELC"]
+            new_technologies = ["gas furnace", "air-source heat pump"]
+            """
+        )
+        assert config.new_technologies() == {
+            NewTechnology.GasFurnace: [CommercialEndUse.SpaceHeating],
+            NewTechnology.AirSourceHeatPump: [
+                CommercialEndUse.SpaceHeating,
+                CommercialEndUse.SpaceCooling,
+            ],
+            NewTechnology.RooftopAirConditioner: [CommercialEndUse.SpaceCooling],
+        }
+
+    def test_technology_that_cannot_serve_end_use_is_rejected(self):
+        with pytest.raises(ValidationError, match="cannot serve space cooling"):
+            _parse(
+                """
+                [end_uses."space cooling"]
+                existing_fuels = ["ELC"]
+                new_technologies = ["gas furnace"]
+                """
+            )
+
+    def test_unknown_technology_is_rejected(self):
+        with pytest.raises(ValidationError):
+            _parse(
+                """
+                [end_uses."space heating"]
+                existing_fuels = ["ELC"]
+                new_technologies = ["heat pump"]
+                """
+            )
+
+    def test_duplicate_technology_is_rejected(self):
+        with pytest.raises(ValidationError, match="more than once"):
+            _parse(
+                """
+                [end_uses."space heating"]
+                existing_fuels = ["ELC"]
+                new_technologies = ["gas furnace", "gas furnace"]
+                """
+            )
+
+
+class TestTechnologyCatalog:
+    def test_every_technology_has_a_spec(self):
+        assert set(NEW_TECHNOLOGIES) == set(NewTechnology)
+
+    def test_specs_only_serve_space_conditioning(self):
+        for spec in NEW_TECHNOLOGIES.values():
+            assert set(spec.aeo_technologies) <= {
+                CommercialEndUse.SpaceHeating,
+                CommercialEndUse.SpaceCooling,
+            }
+
+    def test_options_are_listed_in_config_docstring(self):
+        docstring = " ".join((SpaceConditioningEndUseConfig.__doc__ or "").split())
+        for technology in NewTechnology:
+            assert f'"{technology.value}"' in docstring
+
+    def test_options_are_listed_in_default_toml(self):
+        toml = DEFAULT_CONFIG.read_text()
+        for technology in NewTechnology:
+            assert f'"{technology.value}"' in toml
+
+    def test_default_toml_is_valid(self):
+        end_uses = EndUsesConfig.model_validate(
+            tomllib.loads(DEFAULT_CONFIG.read_text())["end_uses"]
+        )
+        assert NewTechnology.AirSourceHeatPump in end_uses.new_technologies()

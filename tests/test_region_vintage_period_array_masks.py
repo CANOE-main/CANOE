@@ -1,7 +1,10 @@
 import numpy as np
 import pytest
 
-from canoe.canoe_objects.technology import RegionVintagePeriodArray
+from canoe.canoe_objects.array_types import (
+    RegionalValuesArray,
+    RegionVintagePeriodArray,
+)
 from canoe.common import CANOEProvince
 
 REGIONS = [CANOEProvince.ONTARIO, CANOEProvince.QUEBEC]
@@ -104,6 +107,18 @@ class TestMaskAfterLife:
             for p_idx, period in enumerate(PERIODS):
                 if vintage <= period:
                     assert np.all(np.isnan(arr.data[:, v_idx, p_idx]))
+
+    def test_regional_life(self, arr):
+        """Each region is masked with its own lifetime."""
+        life = RegionalValuesArray(REGIONS)
+        life.set(1, region=CANOEProvince.ONTARIO)
+        life.set(3, region=CANOEProvince.QUEBEC)
+        arr.mask_out_after_life(life)
+        for r_idx, region_life in enumerate([1, 3]):
+            for v_idx, vintage in enumerate(VINTAGES):
+                for p_idx, period in enumerate(PERIODS):
+                    masked = np.isnan(arr.data[r_idx, v_idx, p_idx])
+                    assert masked == (vintage + region_life <= period)
 
 
 # --- combined ---

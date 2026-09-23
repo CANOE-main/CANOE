@@ -69,6 +69,42 @@ class TestTechnologyEntityValidation:
         with pytest.raises(ValueError, match="existing capacity without efficiency"):
             technology.validate()
 
+    def test_investment_cost_without_efficiency(self):
+        technology = (
+            _technology()
+            .with_efficiency("IN", _efficiency([2025]))
+            .with_investment_cost(RegionVintageArray(REGIONS, [2030], fill=1.0))
+        )
+        with pytest.raises(ValueError, match="investment cost without efficiency"):
+            technology.validate()
+
+    def test_capacity_factor_limit_for_unknown_output(self):
+        technology = (
+            _technology()
+            .with_efficiency("IN", _efficiency([2025]))
+            .with_limit_annual_capacity_factor(
+                RegionVintageArray(REGIONS, [2025], fill=0.5), output_commodity="OTHER"
+            )
+        )
+        with pytest.raises(ValueError, match="not outputs"):
+            technology.validate()
+
+    def test_capacity_factor_limit_per_output(self):
+        technology = (
+            _technology()
+            .with_efficiency("IN", _efficiency([2025]))
+            .with_efficiency("IN", _efficiency([2025]), output_commodity="OUT2")
+            .with_limit_annual_capacity_factor(
+                RegionVintageArray(REGIONS, [2025], fill=0.5)
+            )
+            .with_limit_annual_capacity_factor(
+                RegionVintageArray(REGIONS, [2025], fill=0.3), output_commodity="OUT2"
+            )
+        )
+        technology.validate()
+        assert technology.outputs == ["OUT", "OUT2"]
+        assert list(technology.capacity_factor_limits) == ["OUT", "OUT2"]
+
     def test_fixed_cost_before_vintage(self):
         technology = (
             _technology()

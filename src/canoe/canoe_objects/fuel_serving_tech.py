@@ -16,7 +16,6 @@ from sqlite3 import Connection
 from typing import Any
 
 from canoe_schema.v4_0 import (
-    Commodity,
     CommodityTypeCode,
     OperatorCode,
     TechnologyTypeCode,
@@ -28,11 +27,11 @@ from canoe.canoe_objects.array_types import (
     RegionVintageArray,
     RegionVintagePeriodArray,
 )
+from canoe.canoe_objects.commodity import FuelCommodityEntity
 from canoe.canoe_objects.labeled_array import LabeledArray
 from canoe.canoe_objects.parameter import ParameterMetadata
 from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.common import CANOEFuel, CANOESector, DataQualityProfile
-from canoe.common.db_tools import write_label
 from canoe.common.naming import (
     DatasetIdentifier,
     TechnologyCapacityScope,
@@ -526,7 +525,7 @@ class FuelServingTechnologyEntity:
         """
         Write the fuel commodities and the technologies to the database.
 
-        Registers one `commodity` (and `commodity_label`) per fuel, then builds each
+        Registers one `FuelCommodityEntity` per fuel, then builds each
         technology from `to_technology_entities` (see `TechnologyEntity.build`).
 
         Parameters
@@ -541,15 +540,12 @@ class FuelServingTechnologyEntity:
         """
         # Register fuel commodities
         for fuel in self.fuels:
-            commodity = Commodity(
-                name=get_fuel_commodity_in_sector(self.sector, fuel),
+            FuelCommodityEntity(
+                sector=self.sector,
+                fuel=fuel,
                 flag=self.fuel_import_flag[fuel],
-                description=f"{fuel.get_desc_name()} fuel for {self.sector.name} sector",
-                data_id=self.data_id.get_dataset_code(),
-            )
-            sql, params = Commodity.to_insert_or_ignore_sql(commodity)
-            write_label(db_conn, commodity)
-            db_conn.execute(sql, params)
+                data_id=self.data_id,
+            ).build(db_conn)
 
         # Build technologies
         for technology in self.to_technology_entities():
