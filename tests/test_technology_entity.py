@@ -1,17 +1,17 @@
 import pytest
 from canoe_schema.v4_0 import CommodityTypeCode
 
-from canoe.canoe_objects.fuel_serving_tech import (
-    FuelGrouping,
-    FuelServingTechnologyEntity,
-)
-from canoe.canoe_objects.technology import (
+from canoe.canoe_objects.array_types import (
     RegionalValuesArray,
     RegionPeriodArray,
     RegionVintageArray,
     RegionVintagePeriodArray,
-    TechnologyEntity,
 )
+from canoe.canoe_objects.fuel_serving_tech import (
+    FuelGrouping,
+    FuelServingTechnologyEntity,
+)
+from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.common import CANOEFuel, CANOEProvince, CANOESector
 from canoe.common.naming import DatasetIdentifier
 

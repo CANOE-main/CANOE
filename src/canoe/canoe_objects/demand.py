@@ -1,3 +1,11 @@
+"""
+End-use demands: the demand commodity, its projected values and its time profile.
+
+Examples in this module run against `db`, an in-memory CANOE database prepared in
+`canoe_objects/conftest.py` (data sets `COMDOC*`, regions ON/QC, periods 2020-2035,
+season D001 and times of day H01/H02).
+"""
+
 from sqlite3 import Connection
 
 import numpy as np
@@ -48,6 +56,65 @@ class DemandSeriesArray(LabeledArray):
 
 
 class DemandEntity:
+    """
+    A demand commodity with its projected demand and, optionally, its demand-specific
+    distribution (DSD) over time slices.
+
+    Configure it with `with_demand_series` (required) and `with_dsd`, then write it
+    with `build`. Both are labeled arrays; `build` writes one row per non-NaN cell,
+    converting regions to their short code and filling notes, data source, data
+    quality and `data_id` as described by `RowOptions`.
+
+    Parameters
+    ----------
+    name : str
+        Name of the demand commodity.
+    commodity_description : str
+        Description in the `commodity` table.
+    unit : str
+        Units of the demand, written to `commodity` and `demand`.
+    data_id : DatasetIdentifier
+        Data set the rows belong to.
+    notes_only_on_first, reference_only_on_first, include_region_in_data_id : bool
+        How metadata is spread over rows, see `RowOptions`.
+
+    Examples
+    --------
+    >>> from canoe.common import CANOESector
+    >>> regions = [CANOEProvince.ONTARIO]
+    >>> demand = DemandSeriesArray(regions, [2025, 2030])
+    >>> demand.set(100.0, period=2025)
+    >>> demand.set(110.0, period=2030)
+    >>> dsd = DemandSpecificDistributionArray(regions, [2025, 2030], ["D001"], ["H01", "H02"])
+    >>> dsd.set(0.3, tod="H01")
+    >>> dsd.set(0.7, tod="H02")
+    >>> entity = (
+    ...     DemandEntity(
+    ...         name="C_D_DOC",
+    ...         commodity_description="demand for commercial documentation",
+    ...         unit="PJ",
+    ...         data_id=DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+    ...     )
+    ...     .with_demand_series(demand, notes="Base-year demand indexed to GDP")
+    ...     .with_dsd(dsd, notes="Normalized hourly profile")
+    ... )
+    >>> entity.build(db)
+    >>> db.execute("SELECT name, flag, units FROM commodity").fetchall()
+    [('C_D_DOC', 'd', 'PJ')]
+    >>> for row in db.execute("SELECT region, period, commodity, demand, units, notes FROM demand"):
+    ...     print(row)
+    ('ON', 2025, 'C_D_DOC', 100.0, 'PJ', 'Base-year demand indexed to GDP')
+    ('ON', 2030, 'C_D_DOC', 110.0, 'PJ', None)
+    >>> for row in db.execute(
+    ...     "SELECT region, period, season, tod, dsd FROM demand_specific_distribution"
+    ... ):
+    ...     print(row)
+    ('ON', 2025, 'D001', 'H01', 0.3)
+    ('ON', 2025, 'D001', 'H02', 0.7)
+    ('ON', 2030, 'D001', 'H01', 0.3)
+    ('ON', 2030, 'D001', 'H02', 0.7)
+    """
+
     def __init__(
         self,
         name: str,
@@ -79,6 +146,23 @@ class DemandEntity:
         reference_code: str | None = None,
         data_quality: DataQualityProfile | None = None,
     ) -> "DemandEntity":
+        """
+        Set the demand-specific distribution: the fraction of each period's demand
+        that falls in each time slice.
+
+        Writes `demand_specific_distribution`: one row per (region, period, season,
+        time of day) with a value. Values should add up to 1 over the time slices of
+        each region and period.
+
+        Parameters
+        ----------
+        dsd_array : DemandSpecificDistributionArray
+            Fractions by region, period, season and time of day.
+        notes : str or None
+            Notes, see `ParameterMetadata`.
+        reference_code, data_quality : optional
+            Data source and data quality, see `ParameterMetadata`.
+        """
         self.dsd = Parameter(
             dsd_array, ParameterMetadata(notes, reference_code, data_quality)
         )
@@ -91,6 +175,19 @@ class DemandEntity:
         reference_code: str | None = None,
         data_quality: DataQualityProfile | None = None,
     ) -> "DemandEntity":
+        """
+        Set the projected demand.
+
+        Writes `demand`: one row per (region, period) with a value, in the entity's
+        `unit`.
+
+        Parameters
+        ----------
+        demand_array : DemandSeriesArray
+            Demand by region and period.
+        notes, reference_code, data_quality : optional
+            Notes, data source and data quality, see `ParameterMetadata`.
+        """
         self.demand = Parameter(
             demand_array,
             ParameterMetadata(notes, reference_code, data_quality, units=self.unit),
@@ -98,6 +195,21 @@ class DemandEntity:
         return self
 
     def build(self, db_conn: Connection):
+        """
+        Write the demand commodity, its demand and (if set) its DSD to the database.
+
+        Rows that already exist are left untouched (insert or ignore).
+
+        Parameters
+        ----------
+        db_conn : Connection
+            Open connection; the caller manages the transaction.
+
+        Raises
+        ------
+        ValueError
+            If no demand series was set.
+        """
         if self.demand is None:
             raise ValueError("demand must be set before building")
         options = self.row_options

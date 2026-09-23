@@ -1,3 +1,15 @@
+"""
+Technologies that serve an end-use demand from a set of input fuels.
+
+`FuelServingTechnologyEntity` registers the sector's fuel commodities and creates the
+`TechnologyEntity` objects that turn those fuels into the demand, either one per fuel
+or a single shared one (see `FuelGrouping`).
+
+Examples in this module run against `db`, an in-memory CANOE database prepared in
+`canoe_objects/conftest.py` (data sets `COMDOC*`, regions ON/QC, periods 2020-2035,
+commodity label `C_D_DOC` for the demand).
+"""
+
 from dataclasses import dataclass
 from enum import StrEnum
 from sqlite3 import Connection
@@ -29,6 +41,15 @@ from canoe.common.naming import (
 
 
 class FuelGrouping(StrEnum):
+    """
+    How a `FuelServingTechnologyEntity` maps fuels to technologies.
+
+    - `PerFuel`: one technology per fuel, each with a single input. The model chooses
+      the fuel mix, subject to each technology's capacity and costs.
+    - `Shared`: a single technology with every fuel as an input. The fuel mix is
+      controlled with input splits.
+    """
+
     # One technology per fuel, each with a single input
     PerFuel = "per_fuel"
     # A single technology with every fuel as an input
@@ -38,15 +59,25 @@ class FuelGrouping(StrEnum):
 @dataclass(frozen=True)
 class TechnologyParameter[A: LabeledArray]:
     """
-    A technology-level parameter (lifetime, capacity, costs, ...).
-    `values` is a dict by fuel for `FuelGrouping.PerFuel`, or a single array for
-    the one technology of `FuelGrouping.Shared`.
+    A technology-level parameter (lifetime, capacity, costs, ...) and its metadata.
+
+    Parameters
+    ----------
+    values : dict[CANOEFuel, LabeledArray] or LabeledArray
+        One array per fuel for `FuelGrouping.PerFuel`, or a single array for the one
+        technology of `FuelGrouping.Shared`.
+    metadata : ParameterMetadata
+        Notes, data source, data quality and units, shared by all technologies.
     """
 
     values: dict[CANOEFuel, A] | A
     metadata: ParameterMetadata
 
     def for_technology(self, fuel: CANOEFuel | None) -> A:
+        """
+        Values for the technology of `fuel` (per-fuel), or for the shared technology
+        (`fuel` ignored).
+        """
         if isinstance(self.values, dict):
             assert fuel is not None, (
                 "Attempted to retrieve values of a per-fuel parameter, but fuel is None"
@@ -57,7 +88,16 @@ class TechnologyParameter[A: LabeledArray]:
 
 @dataclass(frozen=True)
 class InputParameter[A: LabeledArray]:
-    """An input-level parameter (efficiency, input split), always by fuel"""
+    """
+    An input-level parameter (efficiency, input split) and its metadata.
+
+    Parameters
+    ----------
+    values : dict[CANOEFuel, LabeledArray]
+        One array per fuel, whatever the grouping.
+    metadata : ParameterMetadata
+        Notes, data source, data quality and units, shared by all fuels.
+    """
 
     values: dict[CANOEFuel, A]
     metadata: ParameterMetadata
@@ -72,6 +112,90 @@ class FuelServingTechnologyEntity:
     With `FuelGrouping.Shared` there is a single technology (`{sector}_{short_desc}{scope}`)
     taking all fuels as inputs: efficiencies and input splits are still given by fuel,
     technology-level parameters (lifetimes, capacities, costs, ...) as a single array.
+
+    The input of each fuel is the sector's fuel commodity
+    (`get_fuel_commodity_in_sector`, e.g. `C_elc`), which `build` registers. The
+    output commodity must already exist. Each `with_*` method maps to the
+    `TechnologyEntity` method of the same name and takes the same optional metadata
+    (`notes`, `data_quality`, `reference_code`, `units`), shared by all technologies.
+
+    Parameters
+    ----------
+    sector : CANOESector
+        Sector of the technologies and fuel commodities.
+    short_desc : str
+        Short description used in technology names, e.g. "SPH".
+    fuels : list[CANOEFuel]
+        Input fuels.
+    fuel_import_flag : dict[CANOEFuel, CommodityTypeCode]
+        Commodity type of each fuel commodity, e.g. physical (`p`) for electricity
+        and annual (`a`) for fuels. Required for every fuel.
+    output_commodity_name : str
+        Commodity produced by the technologies (the demand).
+    data_id : DatasetIdentifier
+        Data set the rows belong to.
+    capacity_scope : TechnologyCapacityScope, optional
+        Appended to technology names, e.g. "-EXS" for existing capacity.
+    grouping : FuelGrouping
+        One technology per fuel (default) or a single shared one.
+    tech_flag : TechnologyTypeCode
+        Technology type, production (`p`) by default.
+    include_region_in_data_id, notes_only_on_first, reference_only_on_first : bool
+        How metadata is spread over rows, see `RowOptions`.
+
+    Examples
+    --------
+    Existing electric and natural gas heating in Ontario, one technology per fuel:
+
+    >>> from canoe.canoe_objects.array_types import RegionalValuesArray, RegionVintageArray
+    >>> from canoe.common import CANOEProvince
+    >>> regions = [CANOEProvince.ONTARIO]
+    >>> fuels = [CANOEFuel.Electricity, CANOEFuel.NaturalGas]
+    >>> heating = (
+    ...     FuelServingTechnologyEntity(
+    ...         sector=CANOESector.Commercial,
+    ...         short_desc="DOC",
+    ...         fuels=fuels,
+    ...         fuel_import_flag={
+    ...             CANOEFuel.Electricity: CommodityTypeCode.P,
+    ...             CANOEFuel.NaturalGas: CommodityTypeCode.A,
+    ...         },
+    ...         output_commodity_name="C_D_DOC",
+    ...         data_id=DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+    ...         capacity_scope=TechnologyCapacityScope.Existing,
+    ...     )
+    ...     .set_annual()
+    ...     .with_efficiencies(
+    ...         {
+    ...             CANOEFuel.Electricity: RegionVintageArray(regions, [2020], fill=1.0),
+    ...             CANOEFuel.NaturalGas: RegionVintageArray(regions, [2020], fill=0.8),
+    ...         }
+    ...     )
+    ...     .with_existing_capacities(
+    ...         {
+    ...             CANOEFuel.Electricity: RegionVintageArray(regions, [2020], fill=30),
+    ...             CANOEFuel.NaturalGas: RegionVintageArray(regions, [2020], fill=220),
+    ...         },
+    ...         units="PJ",
+    ...     )
+    ...     .with_lifetimes({fuel: RegionalValuesArray(regions, fill=20) for fuel in fuels})
+    ... )
+    >>> [technology.name for technology in heating.to_technology_entities()]
+    ['C_DOC_ELC-EXS', 'C_DOC_NG-EXS']
+    >>> heating.build(db)
+    >>> db.execute("SELECT name, flag FROM commodity").fetchall()
+    [('C_elc', 'p'), ('C_ng', 'a')]
+    >>> db.execute("SELECT tech, input_comm, vintage, efficiency FROM efficiency").fetchall()
+    [('C_DOC_ELC-EXS', 'C_elc', 2020, 1.0), ('C_DOC_NG-EXS', 'C_ng', 2020, 0.8)]
+    >>> db.execute("SELECT tech, vintage, capacity, units FROM existing_capacity").fetchall()
+    [('C_DOC_ELC-EXS', 2020, 30.0, 'PJ'), ('C_DOC_NG-EXS', 2020, 220.0, 'PJ')]
+
+    Technology-level values must match the grouping:
+
+    >>> heating.with_lifetimes(RegionalValuesArray(regions, fill=20))
+    Traceback (most recent call last):
+    ...
+    TypeError: lifetimes: FuelGrouping.PerFuel expects a dict of values by fuel
     """
 
     def __init__(
@@ -129,10 +253,15 @@ class FuelServingTechnologyEntity:
         self.lacf_operator: OperatorCode = OperatorCode.LE
 
     def set_annual(self, annual: int = 1):
+        """Mark all technologies as annual, see `TechnologyEntity.set_annual`"""
         self.annual = annual
         return self
 
     def set_unlimited_capacity(self, unlimited: int = 1):
+        """
+        Mark all technologies as having unlimited capacity, see
+        `TechnologyEntity.set_unlimited_capacity`
+        """
         self.unlimited_capacity = unlimited
         return self
 
@@ -144,6 +273,15 @@ class FuelServingTechnologyEntity:
         reference_code: str | None = None,
         units: str | None = "year",
     ):
+        """
+        Set the lifetimes (`lifetime_tech`), see `TechnologyEntity.with_lifetime`.
+
+        Parameters
+        ----------
+        lifetimes : dict[CANOEFuel, RegionalValuesArray] or RegionalValuesArray
+            Lifetime in years by region; by fuel for `PerFuel`, a single array for
+            `Shared`.
+        """
         self.lifetimes = TechnologyParameter(
             self._check_technology_values(lifetimes, "lifetimes"),
             ParameterMetadata(notes, reference_code, data_quality, units),
@@ -158,6 +296,16 @@ class FuelServingTechnologyEntity:
         reference_code: str | None = None,
         units: str | None = None,
     ):
+        """
+        Set the efficiency of each fuel (`efficiency`), see
+        `TechnologyEntity.with_efficiency`.
+
+        Parameters
+        ----------
+        efficiencies : dict[CANOEFuel, RegionVintageArray]
+            Output per unit of input by region and vintage, for every fuel (whatever
+            the grouping).
+        """
         self.efficiencies = InputParameter(
             self._check_input_values(efficiencies, "efficiencies"),
             ParameterMetadata(notes, reference_code, data_quality, units),
@@ -172,7 +320,69 @@ class FuelServingTechnologyEntity:
         data_quality: DataQualityProfile | None = None,
         reference_code: str | None = None,
     ):
-        """Annual input splits. Only meaningful for `FuelGrouping.Shared`."""
+        """
+        Set the annual share of each fuel in the shared technology's inputs
+        (`limit_tech_input_split_annual`), see `TechnologyEntity.with_input_split`.
+
+        Only for `FuelGrouping.Shared`: per-fuel technologies have a single input.
+        Fuels missing from `input_splits` get no split.
+
+        Parameters
+        ----------
+        input_splits : dict[CANOEFuel, RegionPeriodArray]
+            Share (0-1) of each fuel by region and period.
+        operator : OperatorCode
+            Upper bound (`le`, default), lower bound (`ge`) or exact share (`e`).
+
+        Raises
+        ------
+        ValueError
+            If the grouping is not `FuelGrouping.Shared`.
+
+        Examples
+        --------
+        A single technology serving a demand from electricity and natural gas, with
+        unlimited capacity and the fuel mix fixed by input splits:
+
+        >>> from canoe.canoe_objects.array_types import RegionPeriodArray, RegionVintageArray
+        >>> from canoe.common import CANOEProvince
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> fuels = [CANOEFuel.Electricity, CANOEFuel.NaturalGas]
+        >>> other = (
+        ...     FuelServingTechnologyEntity(
+        ...         sector=CANOESector.Commercial,
+        ...         short_desc="DOC",
+        ...         fuels=fuels,
+        ...         fuel_import_flag={
+        ...             CANOEFuel.Electricity: CommodityTypeCode.P,
+        ...             CANOEFuel.NaturalGas: CommodityTypeCode.A,
+        ...         },
+        ...         output_commodity_name="C_D_DOC",
+        ...         data_id=DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+        ...         grouping=FuelGrouping.Shared,
+        ...     )
+        ...     .set_annual()
+        ...     .set_unlimited_capacity()
+        ...     .with_efficiencies(
+        ...         {fuel: RegionVintageArray(regions, [2025], fill=1.0) for fuel in fuels}
+        ...     )
+        ...     .with_input_splits(
+        ...         {
+        ...             CANOEFuel.Electricity: RegionPeriodArray(regions, [2025], fill=0.8),
+        ...             CANOEFuel.NaturalGas: RegionPeriodArray(regions, [2025], fill=0.2),
+        ...         }
+        ...     )
+        ... )
+        >>> [technology.name for technology in other.to_technology_entities()]
+        ['C_DOC']
+        >>> other.build(db)
+        >>> db.execute("SELECT tech, unlim_cap, annual FROM technology").fetchall()
+        [('C_DOC', 1, 1)]
+        >>> db.execute(
+        ...     "SELECT tech, input_comm, proportion FROM limit_tech_input_split_annual"
+        ... ).fetchall()
+        [('C_DOC', 'C_elc', 0.8), ('C_DOC', 'C_ng', 0.2)]
+        """
         if self.grouping != FuelGrouping.Shared:
             raise ValueError(
                 "Input splits need FuelGrouping.Shared: per-fuel technologies have a single input"
@@ -191,6 +401,16 @@ class FuelServingTechnologyEntity:
         reference_code: str | None = None,
         units: str | None = None,
     ):
+        """
+        Set the existing capacities (`existing_capacity`), see
+        `TechnologyEntity.with_existing_capacity`.
+
+        Parameters
+        ----------
+        existing_capacities : dict[CANOEFuel, RegionVintageArray] or RegionVintageArray
+            Installed capacity by region and vintage; by fuel for `PerFuel`, a single
+            array for `Shared`.
+        """
         self.existing_capacities = TechnologyParameter(
             self._check_technology_values(existing_capacities, "existing_capacities"),
             ParameterMetadata(notes, reference_code, data_quality, units),
@@ -206,6 +426,15 @@ class FuelServingTechnologyEntity:
         reference_code: str | None = None,
         units: str | None = None,
     ):
+        """
+        Set the fixed costs (`cost_fixed`), see `TechnologyEntity.with_fixed_cost`.
+
+        Parameters
+        ----------
+        fixed_costs : dict[CANOEFuel, RegionVintagePeriodArray] or RegionVintagePeriodArray
+            Cost by region, vintage and period; by fuel for `PerFuel`, a single array
+            for `Shared`.
+        """
         self.fixed_costs = TechnologyParameter(
             self._check_technology_values(fixed_costs, "fixed_costs"),
             ParameterMetadata(notes, reference_code, data_quality, units),
@@ -220,6 +449,18 @@ class FuelServingTechnologyEntity:
         data_quality: DataQualityProfile | None = None,
         reference_code: str | None = None,
     ):
+        """
+        Limit the annual capacity factors (`limit_annual_capacity_factor`), see
+        `TechnologyEntity.with_limit_annual_capacity_factor`.
+
+        Parameters
+        ----------
+        capacity_factors : dict[CANOEFuel, RegionVintageArray] or RegionVintageArray
+            Capacity factor (0-1) by region and vintage; by fuel for `PerFuel`, a
+            single array for `Shared`.
+        operator : OperatorCode
+            Upper bound (`le`), lower bound (`ge`) or exact factor (`e`).
+        """
         self.limit_annual_capacity_factors = TechnologyParameter(
             self._check_technology_values(capacity_factors, "capacity_factors"),
             ParameterMetadata(notes, reference_code, data_quality),
@@ -233,6 +474,15 @@ class FuelServingTechnologyEntity:
         | RegionalValuesArray,
         units: str | None = None,
     ):
+        """
+        Set the capacity-to-activity ratios (`capacity_to_activity`), see
+        `TechnologyEntity.with_capacity_to_activity`.
+
+        Parameters
+        ----------
+        capacity_to_activity : dict[CANOEFuel, RegionalValuesArray] or RegionalValuesArray
+            Ratio by region; by fuel for `PerFuel`, a single array for `Shared`.
+        """
         self.capacity_to_activity = TechnologyParameter(
             self._check_technology_values(capacity_to_activity, "capacity_to_activity"),
             ParameterMetadata(units=units),
@@ -240,7 +490,12 @@ class FuelServingTechnologyEntity:
         return self
 
     def to_technology_entities(self) -> list[TechnologyEntity]:
-        """The technologies this entity builds, one per fuel or a single shared one"""
+        """
+        The technologies this entity builds, one per fuel or a single shared one.
+
+        Useful to inspect (or validate) the technologies without writing them;
+        `build` writes exactly these.
+        """
         tag = self.sector.get_tag()
         scope = self.capacity_scope_str
         scope_desc = f" {scope}" if scope else ""
@@ -268,6 +523,22 @@ class FuelServingTechnologyEntity:
         return [shared_technology]
 
     def build(self, db_conn: Connection):
+        """
+        Write the fuel commodities and the technologies to the database.
+
+        Registers one `commodity` (and `commodity_label`) per fuel, then builds each
+        technology from `to_technology_entities` (see `TechnologyEntity.build`).
+
+        Parameters
+        ----------
+        db_conn : Connection
+            Open connection; the caller manages the transaction.
+
+        Raises
+        ------
+        ValueError
+            If a technology fails `TechnologyEntity.validate`.
+        """
         # Register fuel commodities
         for fuel in self.fuels:
             commodity = Commodity(

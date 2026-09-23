@@ -1,3 +1,16 @@
+"""
+A single Temoa technology and the parameter tables that describe it.
+
+`TechnologyEntity` is the building block for anything that converts input
+commodities into one output commodity. Higher-level entities, such as
+`FuelServingTechnologyEntity`, decide how many technologies to create and hand the
+values to `TechnologyEntity` objects.
+
+Examples in this module run against `db`, an in-memory CANOE database prepared in
+`canoe_objects/conftest.py` (data sets `COMDOC*`, regions ON/QC, periods 2020-2035,
+commodity labels `C_elc`, `C_ng`, `C_D_DOC`).
+"""
+
 from dataclasses import dataclass
 from sqlite3 import Connection
 from typing import Any
@@ -13,7 +26,6 @@ from canoe_schema.v4_0 import (
     LimitTechInputSplit,
     LimitTechInputSplitAnnual,
     OperatorCode,
-    SectorLabel,
     Technology,
     TechnologyTypeCode,
 )
@@ -32,6 +44,20 @@ from canoe.common.naming import DatasetIdentifier
 
 @dataclass(frozen=True)
 class InputSplit:
+    """
+    Share of one input commodity in a technology's inputs, by region and period.
+
+    Parameters
+    ----------
+    parameter : Parameter[RegionPeriodArray]
+        Shares (0-1) and their metadata.
+    operator : OperatorCode
+        Whether the share is an upper bound (`le`), lower bound (`ge`) or exact (`e`).
+    annual : bool
+        Enforce the share over the year (`limit_tech_input_split_annual`) instead of
+        in every time slice (`limit_tech_input_split`).
+    """
+
     parameter: Parameter[RegionPeriodArray]
     operator: OperatorCode
     annual: bool
@@ -39,6 +65,17 @@ class InputSplit:
 
 @dataclass(frozen=True)
 class CapacityFactorLimit:
+    """
+    Limit on the annual capacity factor, by region and vintage.
+
+    Parameters
+    ----------
+    parameter : Parameter[RegionVintageArray]
+        Capacity factors (0-1) and their metadata.
+    operator : OperatorCode
+        Whether the factor is an upper bound (`le`), lower bound (`ge`) or exact (`e`).
+    """
+
     parameter: Parameter[RegionVintageArray]
     operator: OperatorCode
 
@@ -48,16 +85,85 @@ class TechnologyEntity:
     A single technology: one row in `technology`, one output commodity and any
     number of input commodities (one per `with_efficiency` call).
 
-    Parameters are dense labeled arrays; `build` writes one row per non-NaN cell.
-    Input and output commodities must already exist in the database.
+    Configure it with the `set_*` and `with_*` methods (they return the entity, so
+    calls can be chained) and write it with `build`. Every parameter is a labeled
+    array; `build` writes one row per non-NaN cell, converting regions to their short
+    code and filling notes, data source, data quality and `data_id` as described by
+    `RowOptions`. Input and output commodities must already exist in the database.
+
+    The `with_*` methods share these optional metadata arguments, stored as a
+    `ParameterMetadata`: `notes`, `data_quality`, `reference_code` and, for tables
+    with a units column, `units`.
 
     `validate` (called by `build`) catches inconsistencies Temoa would otherwise
     silently drop or turn into an infeasible model:
+
     - the technology has no inputs, or non-positive efficiencies
     - a parameter was set but has no values (all NaN)
     - input splits for commodities that are not inputs, or adding up to more than 1
     - existing capacity for a (region, vintage) without any efficiency
     - fixed costs for periods before the vintage or after the end of its lifetime
+
+    Parameters
+    ----------
+    name : str
+        Technology name (`tech` column).
+    output_commodity : str
+        Commodity produced by the technology.
+    data_id : DatasetIdentifier
+        Data set the rows belong to.
+    description : str, optional
+        Description in the `technology` table.
+    sector : CANOESector, optional
+        Sector of the technology, also registered in `sector_label`.
+    flag : TechnologyTypeCode
+        Technology type, production (`p`) by default.
+    include_region_in_data_id, notes_only_on_first, reference_only_on_first : bool
+        How metadata is spread over rows, see `RowOptions`.
+
+    Examples
+    --------
+    A natural gas furnace available in 2025 and 2030 in Ontario and Quebec:
+
+    >>> from canoe.canoe_objects.array_types import RegionalValuesArray, RegionVintageArray
+    >>> from canoe.common import CANOEProvince, CANOESector
+    >>> from canoe.common.naming import DatasetIdentifier
+    >>> regions = [CANOEProvince.ONTARIO, CANOEProvince.QUEBEC]
+    >>> furnace = (
+    ...     TechnologyEntity(
+    ...         name="C_SPH_NG_FRN",
+    ...         output_commodity="C_D_DOC",
+    ...         data_id=DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+    ...         description="natural gas furnace",
+    ...         sector=CANOESector.Commercial,
+    ...     )
+    ...     .set_annual()
+    ...     .with_efficiency(
+    ...         "C_ng",
+    ...         RegionVintageArray(regions, [2025, 2030], fill=0.9),
+    ...         notes="AEO typical gas furnace",
+    ...     )
+    ...     .with_lifetime(RegionalValuesArray(regions, fill=19.6))
+    ... )
+    >>> furnace.inputs
+    ['C_ng']
+    >>> furnace.build(db)
+    >>> db.execute("SELECT tech, flag, sector, annual FROM technology").fetchall()
+    [('C_SPH_NG_FRN', 'p', 'commercial', 1)]
+    >>> for row in db.execute(
+    ...     "SELECT region, input_comm, vintage, output_comm, efficiency, notes, data_id"
+    ...     " FROM efficiency"
+    ... ):
+    ...     print(row)
+    ('ON', 'C_ng', 2025, 'C_D_DOC', 0.9, 'AEO typical gas furnace', 'COMDOCON001')
+    ('ON', 'C_ng', 2030, 'C_D_DOC', 0.9, None, 'COMDOCON001')
+    ('QC', 'C_ng', 2025, 'C_D_DOC', 0.9, None, 'COMDOCQC001')
+    ('QC', 'C_ng', 2030, 'C_D_DOC', 0.9, None, 'COMDOCQC001')
+
+    Lifetimes are rounded to whole years:
+
+    >>> db.execute("SELECT region, tech, lifetime, units FROM lifetime_tech").fetchall()
+    [('ON', 'C_SPH_NG_FRN', 20.0, 'year'), ('QC', 'C_SPH_NG_FRN', 20.0, 'year')]
     """
 
     def __init__(
@@ -101,13 +207,22 @@ class TechnologyEntity:
 
     @property
     def inputs(self) -> list[str]:
+        """Input commodities, in the order they were added with `with_efficiency`"""
         return list(self.efficiencies)
 
     def set_annual(self, annual: bool = True):
+        """
+        Mark the technology as annual (`annual` column): its activity is decided per
+        year instead of per time slice, following the demand profile.
+        """
         self.annual = int(annual)
         return self
 
     def set_unlimited_capacity(self, unlimited: bool = True):
+        """
+        Mark the technology as having unlimited capacity (`unlim_cap` column): Temoa
+        does not track its capacity, only its activity.
+        """
         self.unlimited_capacity = int(unlimited)
         return self
 
@@ -120,7 +235,38 @@ class TechnologyEntity:
         reference_code: str | None = None,
         units: str | None = None,
     ):
-        """Adds `input_commodity` as an input of this technology"""
+        """
+        Add `input_commodity` as an input, with its conversion efficiency to the
+        output commodity.
+
+        Writes `efficiency`: one row per (region, vintage) with a value. The vintages
+        with a value are the ones the technology can be built in (or, for existing
+        capacity, was built in). Calling it again with the same commodity replaces
+        its efficiencies.
+
+        Parameters
+        ----------
+        input_commodity : str
+            Name of the input commodity.
+        efficiencies : RegionVintageArray
+            Output per unit of input, by region and vintage. Must be positive.
+
+        Examples
+        --------
+        A technology can have several inputs, e.g. a dual-fuel heater:
+
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> heater = (
+        ...     TechnologyEntity(
+        ...         "C_DUAL", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=1.0))
+        ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025], fill=0.8))
+        ... )
+        >>> heater.inputs
+        ['C_elc', 'C_ng']
+        """
         self.efficiencies[input_commodity] = Parameter(
             efficiencies,
             ParameterMetadata(notes, reference_code, data_quality, units),
@@ -139,7 +285,49 @@ class TechnologyEntity:
     ):
         """
         Limit the share of `input_commodity` in the technology's inputs.
-        `annual` uses `limit_tech_input_split_annual` instead of `limit_tech_input_split`.
+
+        Writes `limit_tech_input_split_annual` (or `limit_tech_input_split` if not
+        `annual`): one row per (region, period) with a value. `input_commodity` must
+        be an input (see `with_efficiency`), and the shares of all inputs must add up
+        to at most 1 in every region and period.
+
+        Parameters
+        ----------
+        input_commodity : str
+            Name of the input commodity.
+        splits : RegionPeriodArray
+            Share (0-1) of the input, by region and period.
+        operator : OperatorCode
+            Upper bound (`le`, default), lower bound (`ge`) or exact share (`e`).
+        annual : bool
+            Enforce the share over the year instead of in every time slice.
+
+        Examples
+        --------
+        Fix the fuel mix of a dual-fuel technology to 70% electricity, 30% gas:
+
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> periods = [2025, 2030]
+        >>> dual = (
+        ...     TechnologyEntity(
+        ...         "C_DUAL", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=1.0))
+        ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025], fill=1.0))
+        ...     .with_input_split("C_elc", RegionPeriodArray(regions, periods, fill=0.7))
+        ...     .with_input_split("C_ng", RegionPeriodArray(regions, periods, fill=0.3))
+        ... )
+        >>> dual.build(db)
+        >>> for row in db.execute(
+        ...     "SELECT region, period, input_comm, operator, proportion"
+        ...     " FROM limit_tech_input_split_annual"
+        ... ):
+        ...     print(row)
+        ('ON', 2025, 'C_elc', 'le', 0.7)
+        ('ON', 2030, 'C_elc', 'le', 0.7)
+        ('ON', 2025, 'C_ng', 'le', 0.3)
+        ('ON', 2030, 'C_ng', 'le', 0.3)
         """
         self.input_splits[input_commodity] = InputSplit(
             Parameter(splits, ParameterMetadata(notes, reference_code, data_quality)),
@@ -156,7 +344,19 @@ class TechnologyEntity:
         reference_code: str | None = None,
         units: str | None = "year",
     ):
-        """Lifetimes are rounded to whole years when written"""
+        """
+        Set the technical lifetime.
+
+        Writes `lifetime_tech`: one row per region with a value, rounded to whole
+        years. Without it, Temoa uses its default lifetime.
+
+        Parameters
+        ----------
+        lifetimes : RegionalValuesArray
+            Lifetime in years, by region.
+        units : str, optional
+            Defaults to "year".
+        """
         self.lifetime = Parameter(
             lifetimes, ParameterMetadata(notes, reference_code, data_quality, units)
         )
@@ -170,6 +370,18 @@ class TechnologyEntity:
         reference_code: str | None = None,
         units: str | None = None,
     ):
+        """
+        Set the capacity-to-activity ratio: the activity one unit of capacity
+        produces when fully used for a year (e.g. 1 for capacity in PJ/y and
+        activity in PJ).
+
+        Writes `capacity_to_activity`: one row per region with a value.
+
+        Parameters
+        ----------
+        capacity_to_activity : RegionalValuesArray
+            Ratio by region.
+        """
         self.capacity_to_activity = Parameter(
             capacity_to_activity,
             ParameterMetadata(notes, reference_code, data_quality, units),
@@ -184,6 +396,18 @@ class TechnologyEntity:
         reference_code: str | None = None,
         units: str | None = None,
     ):
+        """
+        Set the capacity installed before the first model period.
+
+        Writes `existing_capacity`: one row per (region, vintage) with a value.
+        Every (region, vintage) with capacity needs an efficiency for at least one
+        input (checked by `validate`).
+
+        Parameters
+        ----------
+        existing_capacity : RegionVintageArray
+            Installed capacity by region and (existing) vintage.
+        """
         self.existing_capacity = Parameter(
             existing_capacity,
             ParameterMetadata(notes, reference_code, data_quality, units),
@@ -198,6 +422,18 @@ class TechnologyEntity:
         reference_code: str | None = None,
         units: str | None = None,
     ):
+        """
+        Set the fixed operation and maintenance cost per unit of capacity.
+
+        Writes `cost_fixed`: one row per (region, vintage, period) with a value. Only
+        periods in which the vintage is alive are allowed: not before the vintage,
+        and (if a lifetime is set) before `vintage + lifetime` (checked by `validate`).
+
+        Parameters
+        ----------
+        fixed_cost : RegionVintagePeriodArray
+            Cost by region, vintage and period.
+        """
         self.fixed_cost = Parameter(
             fixed_cost, ParameterMetadata(notes, reference_code, data_quality, units)
         )
@@ -211,6 +447,20 @@ class TechnologyEntity:
         data_quality: DataQualityProfile | None = None,
         reference_code: str | None = None,
     ):
+        """
+        Limit the annual capacity factor: the fraction of the year's full-capacity
+        output the technology can deliver.
+
+        Writes `limit_annual_capacity_factor`: one row per (region, vintage) with a
+        value, for the output commodity.
+
+        Parameters
+        ----------
+        capacity_factors : RegionVintageArray
+            Capacity factor (0-1) by region and vintage.
+        operator : OperatorCode
+            Upper bound (`le`, default), lower bound (`ge`) or exact factor (`e`).
+        """
         self.capacity_factor_limit = CapacityFactorLimit(
             Parameter(
                 capacity_factors,
@@ -221,7 +471,36 @@ class TechnologyEntity:
         return self
 
     def validate(self) -> None:
-        """Raises ValueError on inconsistent parameters, see class docstring"""
+        """
+        Check the parameters are consistent before writing them (called by `build`).
+
+        Raises
+        ------
+        ValueError
+            On the first inconsistency found; see the class docstring for the list.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> data_id = DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        >>> TechnologyEntity("C_EMPTY", "C_D_DOC", data_id).validate()
+        Traceback (most recent call last):
+        ...
+        ValueError: Technology C_EMPTY has no inputs (no efficiencies)
+
+        Existing capacity needs an efficiency for its vintage:
+
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> (
+        ...     TechnologyEntity("C_OLD", "C_D_DOC", data_id)
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=1.0))
+        ...     .with_existing_capacity(RegionVintageArray(regions, [2020], fill=5.0))
+        ...     .validate()
+        ... )
+        Traceback (most recent call last):
+        ...
+        ValueError: Technology C_OLD: existing capacity without efficiency at Ontario, 2020
+        """
         if not self.efficiencies:
             raise ValueError(f"Technology {self.name} has no inputs (no efficiencies)")
 
@@ -307,6 +586,23 @@ class TechnologyEntity:
                     )
 
     def build(self, db_conn: Connection):
+        """
+        Validate the technology and write it to the database.
+
+        Writes the `technology` row (and its `technology_label`, plus `sector_label`
+        if a sector is set), then one set of rows per parameter that was set. Rows
+        that already exist are left untouched (insert or ignore).
+
+        Parameters
+        ----------
+        db_conn : Connection
+            Open connection; the caller manages the transaction.
+
+        Raises
+        ------
+        ValueError
+            If `validate` fails. Nothing is written in that case.
+        """
         self.validate()
         options = self.row_options
 
@@ -318,7 +614,8 @@ class TechnologyEntity:
         technology = Technology(
             tech=self.name,
             flag=self.flag,
-            sector=self.sector,
+            # Same value `write_label` registers in sector_label
+            sector=self.sector.name.lower() if self.sector is not None else None,
             description=self.description,
             unlim_cap=self.unlimited_capacity,
             annual=self.annual,

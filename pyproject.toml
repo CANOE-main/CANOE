@@ -54,7 +54,9 @@ dependencies = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+# Doctests are collected from canoe_objects only (see src/canoe/canoe_objects/conftest.py)
+testpaths = ["tests", "src/canoe/canoe_objects"]
+addopts = "--doctest-modules"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -18,12 +18,12 @@ import pandas as pd
 from canoe_schema.v4_0 import CommodityTypeCode
 from loguru import logger
 
-from canoe.canoe_objects.fuel_serving_tech import FuelServingTechnologyEntity
-from canoe.canoe_objects.technology import (
+from canoe.canoe_objects.array_types import (
     RegionalValuesArray,
     RegionVintageArray,
     RegionVintagePeriodArray,
 )
+from canoe.canoe_objects.fuel_serving_tech import FuelServingTechnologyEntity
 from canoe.common import (
     CANOEFuel,
     CANOEProvince,
@@ -381,8 +381,8 @@ def _compute_tech_fixed_costs(
             # Union of the existing vintages across all regions
             vintages = sorted(set().union(*tech_df["existing_vintages"]))
             df = (
-                tech_df[["avg_fixed_cost", "existing_vintages", "region", "avg_life"]]  # pyright: ignore[reportCallIssue]
-                .explode("existing_vintages")  # pyright: ignore[reportArgumentType]
+                tech_df[["avg_fixed_cost", "existing_vintages", "region", "avg_life"]]
+                .explode("existing_vintages")
                 .rename(columns={"existing_vintages": "vintage"})
                 .assign(key=1)
                 .merge(pd.DataFrame({"period": periods, "key": 1}), on="key")
