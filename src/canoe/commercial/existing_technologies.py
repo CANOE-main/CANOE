@@ -15,7 +15,7 @@ with C2A = 1 (capacity in PJ/y, activity in PJ), so CAP = DEM / ACF.
 from typing import TYPE_CHECKING, Any, Literal
 
 import pandas as pd
-from canoe_schema.v4_0 import CommodityTypeCode
+from canoe_schema.v4_0 import CommodityTypeCode, OperatorCode
 from loguru import logger
 
 from canoe.canoe_objects.array_types import (
@@ -70,12 +70,14 @@ def build_existing_technologies(
 
     # end_use -> { fuel -> labeled array }
     tech_lifetimes = _compute_tech_lifetimes(provinces, existing_techs)
-    tech_efficiencies, tech_capacities = _compute_tech_efficiencies_and_capacities(
-        provinces,
-        tech_lifetimes,
-        first_period,
-        first_period,
-        existing_techs,
+    tech_efficiencies, tech_capacities, tech_capacity_factors = (
+        _compute_tech_vintage_params(
+            provinces,
+            tech_lifetimes,
+            first_period,
+            first_period,
+            existing_techs,
+        )
     )
     tech_fixed_costs = _compute_tech_fixed_costs(
         model_periods, first_period, provinces, existing_techs
@@ -98,6 +100,7 @@ def build_existing_technologies(
             lifetimes=tech_lifetimes[eu_name],
             efficiencies=tech_efficiencies[eu_name],
             capacities=tech_capacities[eu_name],
+            capacity_factors=tech_capacity_factors[eu_name],
             fixed_costs=tech_fixed_costs[eu_name],
         )
     return entities
@@ -167,6 +170,7 @@ def _existing_fuel_serving_technology(
     lifetimes: dict[CANOEFuel, RegionalValuesArray],
     efficiencies: dict[CANOEFuel, RegionVintageArray],
     capacities: dict[CANOEFuel, RegionVintageArray],
+    capacity_factors: dict[CANOEFuel, RegionVintageArray],
     fixed_costs: dict[CANOEFuel, RegionVintagePeriodArray],
 ) -> FuelServingTechnologyEntity:
     """Technologies that serve fuel (or electricity) to the end use demand"""
@@ -228,6 +232,12 @@ def _existing_fuel_serving_technology(
             notes=fixed_cost_note,
             units="M$/PJ",
             data_quality=DataQualityProfile(cred=1, geog=2, struc=1, tech=2, time=2),
+        )
+        .with_limit_annual_capacity_factor(
+            capacity_factors,
+            operator=OperatorCode.LE,
+            notes=f"Mean hourly demand divided by peak hourly demand from Comstock (NREL, {2024})",
+            data_quality=DataQualityProfile(cred=1, geog=2, struc=5, tech=2, time=3),
         )
     )
 
@@ -294,7 +304,7 @@ def _stock_vintages(
     return vints, weights
 
 
-def _compute_tech_efficiencies_and_capacities(
+def _compute_tech_vintage_params(
     provinces: list[CANOEProvince],
     tech_lifetimes: dict[str, dict[CANOEFuel, RegionalValuesArray]],
     stock_year: int,
@@ -303,13 +313,21 @@ def _compute_tech_efficiencies_and_capacities(
 ) -> tuple[
     dict[str, dict[CANOEFuel, RegionVintageArray]],
     dict[str, dict[CANOEFuel, RegionVintageArray]],
+    dict[str, dict[CANOEFuel, RegionVintageArray]],
 ]:
+    """
+    Efficiencies, capacities and annual capacity factors of the existing vintages
+    (end_use -> { fuel -> array }). The capacity of each (region, end use, fuel) is
+    spread over its vintages; efficiency and capacity factor are the same for all of them.
+    """
     tech_efficiencies: dict[str, dict[CANOEFuel, RegionVintageArray]] = {}
     tech_capacities: dict[str, dict[CANOEFuel, RegionVintageArray]] = {}
+    tech_capacity_factors: dict[str, dict[CANOEFuel, RegionVintageArray]] = {}
 
     for end_use, fuel_lifetimes in tech_lifetimes.items():
         tech_efficiencies[end_use] = {}
         tech_capacities[end_use] = {}
+        tech_capacity_factors[end_use] = {}
         for fuel, lifetimes in fuel_lifetimes.items():
             lifetimes = lifetimes.to_records()
             tech_params = (
@@ -336,6 +354,7 @@ def _compute_tech_efficiencies_and_capacities(
                 tech_params.loc[vint_df["region"]]["capacity"].values
                 * vint_df["weight"].values
             )
+            vint_df["acf"] = tech_params.loc[vint_df["region"]]["acf"].values
 
             # Put back into Region, Vintage labeled array
             tech_efficiencies[end_use][fuel] = RegionVintageArray(
@@ -347,7 +366,12 @@ def _compute_tech_efficiencies_and_capacities(
                 region=provinces, vintage=vint_df.vintage.unique()
             ).fill_from_df(vint_df, value_col="capacity")
 
-    return tech_efficiencies, tech_capacities
+            # Put back into Region, Vintage labeled array
+            tech_capacity_factors[end_use][fuel] = RegionVintageArray(
+                region=provinces, vintage=vint_df.vintage.unique()
+            ).fill_from_df(vint_df, value_col="acf")
+
+    return tech_efficiencies, tech_capacities, tech_capacity_factors
 
 
 def _compute_tech_fixed_costs(
