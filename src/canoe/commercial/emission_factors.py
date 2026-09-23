@@ -56,6 +56,6 @@ def _clean_epa_table(raw: pd.DataFrame) -> pd.DataFrame:
     """
     columns = [column for column, _ in _EPA_COLUMNS.values()]
     table = raw[["Fuel Type", *columns]]
-    numeric = pd.to_numeric(table["CO2 Factor"], errors="coerce").notna()
+    numeric = pd.to_numeric(table["CO2 Factor"], errors="coerce").notna()  # pyright: ignore[reportAttributeAccessIssue]
     table = table[numeric].set_index("Fuel Type")
     return table.astype(float)

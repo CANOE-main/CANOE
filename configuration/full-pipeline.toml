@@ -7,8 +7,8 @@ db_output_dir = "canoe-pwd/canoe.sqlite"
 data_version = "003"
 existing_periods = [2005, 2010, 2015, 2020, 2024, 2022]
 future_periods = [2025, 2030, 2035, 2040, 2045, 2050]
-# provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
-provinces = ["ON", "AB"]
+provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
+# provinces = ["ON", "AB"]
 global_discount_rate = 0.03
 
 # Emission commodities (CO2, CH4, N2O and CO2e) are always registered

@@ -194,7 +194,7 @@ def _write_co2_equivalents(
         )
 
     weighted = activities.assign(
-        co2e=activities["activity"] * activities["emis_comm"].map(gwp)
+        co2e=activities["activity"] * activities["emis_comm"].map(gwp)  # pyright: ignore[reportArgumentType]
     )
     co2e = weighted.groupby(flow, as_index=False).agg(
         activity=("co2e", "sum"), units=("units", "first")
@@ -206,16 +206,16 @@ def _write_co2_equivalents(
     )
     co2e_activities = [
         EmissionActivity(
-            region=row.region,
+            region=row.region,  # pyright: ignore[reportAttributeAccessIssue]
             emis_comm=get_co2_equivalent_commodity_name(),
-            input_comm=row.input_comm,
-            tech=row.tech,
-            vintage=row.vintage,
-            output_comm=row.output_comm,
-            activity=row.activity,
-            units=row.units,
+            input_comm=row.input_comm,  # pyright: ignore[reportAttributeAccessIssue]
+            tech=row.tech,  # pyright: ignore[reportAttributeAccessIssue]
+            vintage=row.vintage,  # pyright: ignore[reportAttributeAccessIssue]
+            output_comm=row.output_comm,  # pyright: ignore[reportAttributeAccessIssue]
+            activity=row.activity,  # pyright: ignore[reportAttributeAccessIssue]
+            units=row.units,  # pyright: ignore[reportAttributeAccessIssue]
             notes=notes if i == 0 else None,
-            data_id=row.data_id,
+            data_id=row.data_id,  # pyright: ignore[reportAttributeAccessIssue]
         )
         for i, row in enumerate(co2e.itertuples(index=False))
     ]

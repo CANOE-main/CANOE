@@ -39,7 +39,7 @@ def db() -> sqlite3.Connection:
     )
     db.execute("INSERT INTO technology_label (tech) VALUES ('C_FRN')")
     db.execute(
-        "INSERT INTO technology (tech, flag, sector, data_id) "
+        "INSERT INTO technology (tech, flag, sector, data_id) "  # pyright: ignore[reportImplicitStringConcatenation]
         "VALUES ('C_FRN', 'p', 'commercial', 'COMTEST')"
     )
     return db
@@ -49,7 +49,7 @@ def _write_activity(
     db: sqlite3.Connection, emission: str, activity: float, units: str = "kt/PJ"
 ) -> None:
     db.execute(
-        "INSERT INTO emission_activity "
+        "INSERT INTO emission_activity "  # pyright: ignore[reportImplicitStringConcatenation]
         "(region, emis_comm, input_comm, tech, vintage, output_comm, activity, units, data_id) "
         "VALUES ('ON', ?, 'C_ng', 'C_FRN', 2025, 'C_D', ?, ?, 'COMTEST')",
         (emission, activity, units),
