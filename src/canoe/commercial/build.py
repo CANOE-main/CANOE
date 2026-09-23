@@ -1,8 +1,7 @@
 # pyright: reportImportCycles=false
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
-import numpy as np
 import pandas as pd
 from canoe_schema.v4_0 import DataSet
 from loguru import logger
@@ -15,10 +14,13 @@ from canoe.canoe_objects.demand import (
 from canoe.commercial.comstock_processing import load_and_process_comstock
 from canoe.commercial.existing_capacity import (
     compute_existing_tech_life_params,
+    load_total_secondary_energy,
 )
 from canoe.commercial.existing_technologies import build_existing_technologies
 from canoe.commercial.loaders import get_cer_gdp
+from canoe.commercial.other_end_use import build_other_technology
 from canoe.common import (
+    CANOEFuel,
     CANOEFuelImport,
     CANOEModuleOutput,
     CANOEProvince,
@@ -49,6 +51,8 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         - data_ids separated by province
         - data sources (require label)
     """
+    from .config import CommercialEndUse  # runtime import: config imports this module
+
     logger.info(
         f"Running COMMERCIAL (high-resolution) sector on {cfg.database_file}...\n"
     )
@@ -97,15 +101,37 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
 
         # Compute parameters
         # ------------------
+        # - Other: secondary energy use not used for space heating and cooling (province, fuel, sec)
+        other_config = cfg.end_uses.other
+        other_sec: pd.DataFrame | None = None
+        if other_config is not None:
+            other_sec = _compute_other_secondary_energy(
+                load_total_secondary_energy(
+                    cfg.provinces, cfg.ceud_config, cfg.data_cache_config
+                ),
+                existing_techs,
+                other_config.fuels,
+                other_config.min_fuel_share,
+            )
+
         # - Demand series (demand projections)
         #   Adjust by gdp projections and reshape as end_use, region, period, demand
+        base_demand: Any = existing_techs[["end_use", "province", "dem"]]
+        if other_sec is not None:
+            # Served with efficiency 1, so demand equals secondary energy use
+            other_demand = other_sec.assign(
+                end_use=CommercialEndUse.Other.get_full_name(), dem=other_sec["sec"]
+            )[["end_use", "province", "dem"]]
+            base_demand = pd.concat([base_demand, other_demand], ignore_index=True)
         demand_df = _compute_end_use_demand(
-            existing_techs, gdp_projections_index, cfg.provinces
+            base_demand,
+            gdp_projections_index,
+            cfg.period_end_years,
         )
 
         # - Demand specific distribution
         #   Reorganize data in long-form region, end_use, season, tod, value
-        dsd_df = _compute_dsd_frame(province_dsd, cfg.end_uses)
+        dsd_df = _compute_dsd_frame(province_dsd, cfg.end_uses.enabled())
 
         # - Annual Capacity Factor => mean(DSD) / max(DSD) for the region, end_use, fuel series
         existing_techs["acf"] = _compute_annual_capacity_factor(
@@ -120,12 +146,22 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         tods = sorted({t.tod for t in time_slices})
 
         # Demand objects
-        for end_use in cfg.end_uses:
-            from .config import CommercialEndUse
-
-            if end_use == CommercialEndUse.Other:
-                continue
-
+        demand_notes = {
+            CommercialEndUse.SpaceHeating: (
+                f"Efficiency (AEO, {2012}) times secondary energy consumption (NRCan, {2022}) "
+                f"indexed to projected provincial gdp growth by (CER, {2023})"
+            ),
+            CommercialEndUse.SpaceCooling: (
+                f"Efficiency (AEO, {2012}) times secondary energy consumption (NRCan, {2022}) "
+                f"indexed to projected provincial gdp growth by (CER, {2023})"
+            ),
+            CommercialEndUse.Other: (
+                "Annual secondary energy consumption summed over all fuels minus space "
+                f"heating and cooling (NRCan, {2022}) indexed to projected provincial gdp "
+                f"growth by (CER, {2023})"
+            ),
+        }
+        for end_use in cfg.end_uses.enabled():
             # Holds all demand-related data
             demand = DemandEntity(
                 name=get_commodity_name(
@@ -140,12 +176,8 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
 
             # Demand values
             # -------------
-            demand_note = (
-                f"Efficiency (AEO, {2012}) times secondary energy consumption (NRCan, {2022}) "
-                f"indexed to projected provincial gdp growth by (CER, {2023})"
-            )
             demand_series = DemandSeriesArray(
-                region=cfg.provinces, period=cfg.future_periods, fill=0.0
+                region=cfg.provinces, period=cfg.model_periods, fill=0.0
             ).fill_from_df(
                 demand_df.loc[end_use.get_full_name()],
                 dims=["region", "period"],
@@ -153,7 +185,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             )
             demand = demand.with_demand_series(
                 demand_series,
-                notes=demand_note,
+                notes=demand_notes[end_use],
                 # reference_code="COM-DEMAND",
                 data_quality=DataQualityProfile(
                     cred=1, geog=2, struc=2, tech=2, time=3
@@ -165,7 +197,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 # -------------
                 dsd_series = DemandSpecificDistributionArray(
                     region=cfg.provinces,
-                    period=cfg.future_periods,
+                    period=cfg.model_periods,
                     season=seasons,
                     tod=tods,
                 ).fill_from_df(
@@ -188,12 +220,15 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             logger.debug(f"Writing demand entities `{end_use}` to database")
             demand.build(db_conn)
 
-        # Existing Capacity
+        # Existing Capacity (SPH and SPC)
         existing_technologies = build_existing_technologies(
             existing_techs,
-            cfg.existing_technologies_fuels,
+            {
+                end_use: end_use_config.existing_fuels
+                for end_use, end_use_config in cfg.end_uses.existing_stock().items()
+            },
             cfg.provinces,
-            cfg.future_periods,
+            cfg.model_periods,
             cfg.capacity_min_tolerance,
             cfg.missing_data_behavior,
             sector_data_id,
@@ -210,33 +245,92 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 for f in fuel_serving_technologies.fuels
             ]
 
+        # Other
+        if other_config is not None and other_sec is not None:
+            other_technologies = build_other_technology(
+                other_sec,
+                other_config,
+                cfg.provinces,
+                cfg.model_periods,
+                cfg.period_end_years,
+                cfg.ceud_config.base_year,
+                sector_data_id,
+            )
+            logger.debug("Writing fuel serving technology entities `Other` to database")
+            other_technologies.build(db_conn)
+
+            fuel_imports += [
+                CANOEFuelImport(sector=CANOESector.Commercial, fuel=f)
+                for f in other_technologies.fuels
+            ]
+
     return CANOEModuleOutput(fuel_imports=fuel_imports)
 
 
-def _compute_end_use_demand(
-    existing_capacity: pd.DataFrame,
-    gdp_projections_index: pd.DataFrame,
-    provinces: list[CANOEProvince],
+def _compute_other_secondary_energy(
+    total_sec: pd.DataFrame,
+    existing_techs: pd.DataFrame,
+    fuels: list[CANOEFuel],
+    min_fuel_share: float,
 ) -> pd.DataFrame:
     """
-    Compute end-use demand for each end-use and region over the projection period.
-    Adjust by gdp projections and reshape as end_use, region, period, demand
+    Secondary energy use of `other`: total minus space heating and cooling, by province
+    and fuel. Fuels below `min_fuel_share` of a province's `other` energy use (including
+    negative remainders) and fuels not in `fuels` are dropped.
+
+    params:
+    - total_sec: province, fuel, sec
+    - existing_techs: province, end_use, fuel, sec
+
+    Returns province, fuel, sec
     """
-    n_end_uses = len(existing_capacity.end_use.unique())
+    sec = total_sec.set_index(["province", "fuel"])["sec"]
+    sphc_sec = existing_techs.groupby(["province", "fuel"])["sec"].sum()
+    other_sec = (sec - sphc_sec.reindex(sec.index, fill_value=0)).reset_index()  # pyright: ignore[reportAttributeAccessIssue]
+
+    share = other_sec["sec"] / other_sec.groupby("province")["sec"].transform("sum")
+    other_sec = other_sec[share > min_fuel_share]
+
+    dropped = other_sec[~other_sec["fuel"].isin(fuels)]
+    if not dropped.empty:
+        logger.info(
+            f"Fuels not in `other` fuels left out of its demand: {set(dropped['fuel'])}"
+        )
+    return other_sec[other_sec["fuel"].isin(fuels)].reset_index(drop=True)
+
+
+def _compute_end_use_demand(
+    base_demand: pd.DataFrame,
+    gdp_projections_index: pd.DataFrame,
+    period_end_years: dict[int, int],
+) -> pd.DataFrame:
+    """
+    Compute end-use demand for each end-use and region over the model periods.
+
+    params:
+    - base_demand: base-year demand with columns `end_use`, `province`, `dem`
+    - gdp_projections_index: gdp indexed to the base year, by year
+    - period_end_years: model period -> year it ends. Demand for a period is scaled by
+      the gdp index at the end of the period.
+
+    Returns end_use (index), region, period, dem
+    """
     demand_df = (
-        existing_capacity[["end_use", "province", "dem"]]
-        .reset_index()
-        .rename({"province": "region"}, axis=1)
-        .groupby(["end_use", "region"])
+        base_demand.rename(columns={"province": "region"})
+        .groupby(["end_use", "region"], as_index=False)
         .dem.sum()
-    )  # end_use, region => 2022 demand
-    demand_df = pd.concat(
-        [demand_df * gdp_factor for gdp_factor in gdp_projections_index.values]
-    ).reset_index()
-    demand_df["period"] = np.repeat(
-        gdp_projections_index.index, n_end_uses * len(provinces)
+    )  # end_use, region => base-year demand
+    gdp_growth = pd.DataFrame(
+        {
+            "period": list(period_end_years),
+            "gdp_factor": gdp_projections_index.loc[
+                list(period_end_years.values()), "gdp"
+            ].values,
+        }
     )
-    return demand_df.set_index("end_use")
+    demand_df = demand_df.merge(gdp_growth, how="cross")
+    demand_df["dem"] = demand_df["dem"] * demand_df["gdp_factor"]
+    return demand_df.drop(columns="gdp_factor").set_index("end_use")
 
 
 def _compute_annual_capacity_factor(

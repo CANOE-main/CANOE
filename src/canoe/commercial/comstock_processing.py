@@ -21,11 +21,12 @@ def load_and_process_comstock(
     # Pre-load all weather maps. It is too slow otherwise
     weather_maps = _load_all_weather_maps(cfg.provinces, cfg.data_cache_config)
     province_comstock = _load_provinces_comstock(cfg)
+    weather_mapping = cfg.end_uses.weather_mapping()
 
     province_dsd: dict[CANOEProvince, pd.DataFrame] = {}
     for province, comstock_df in province_comstock.items():
         province_df = comstock_df.copy()
-        for end_use in cfg.end_uses:
+        for end_use in cfg.end_uses.enabled():
             # All columns that match "{end_use} fuel"
             relevant_cols = [
                 col for col in comstock_df.columns if end_use.get_full_name() in col
@@ -34,10 +35,7 @@ def load_and_process_comstock(
             # TODO: We are assuming that the weather mapping is already available
             # Let's make sure the code to download and process the weather maps is accesible
             for column in relevant_cols:
-                apply_mapping = cfg.comstock_config.apply_weather_mapping.get(
-                    end_use, False
-                )
-                if apply_mapping:
+                if weather_mapping[end_use]:
                     logger.debug(
                         f"Applying US-CA weather map for {province}, {end_use}, {column}..."
                     )

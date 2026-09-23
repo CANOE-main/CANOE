@@ -6,9 +6,12 @@ from canoe_schema.v4_0 import (
     Commodity,
     CommodityLabel,
     DataSource,
+    SectorLabel,
     Technology,
     TechnologyLabel,
 )
+
+from canoe.common.sectors import CANOESector
 
 
 @contextmanager
@@ -91,7 +94,7 @@ def atomic_transaction(db_path: Path, force_foreign_keys: bool = True):
 
 
 def write_label(
-    conn: sqlite3.Connection, entity: Commodity | Technology | DataSource
+    conn: sqlite3.Connection, entity: Commodity | Technology | DataSource | CANOESector
 ) -> None:
     """
     Writes a label for the given entity to the database.
@@ -103,6 +106,10 @@ def write_label(
     elif isinstance(entity, Technology):
         label = TechnologyLabel(tech=entity.tech)
         sql, params = TechnologyLabel.to_insert_or_ignore_sql(label)
+        conn.execute(sql, params)
+    elif isinstance(entity, CANOESector):
+        label = SectorLabel(sector=entity.name.lower())
+        sql, params = SectorLabel.to_insert_or_ignore_sql(label)
         conn.execute(sql, params)
     else:
         raise TypeError(f"Unsupported entity type: {type(entity)}")

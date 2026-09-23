@@ -69,22 +69,13 @@ def _load_all_ceud_tables(
     province_ceud: dict[CANOEProvince, pd.DataFrame] = {}
     for province in provinces:
         # This table is consumption (PJ) per fuel for each end use
-        sh_ceud = get_ceud_table(24, 2, 7, province, data_cache_config)[
-            ceud_config.base_year
-        ]
+        sh_ceud = _merge_ceud_fuels(
+            get_ceud_table(24, 2, 7, province, data_cache_config)[ceud_config.base_year]
+        )
         sc_ceud = get_ceud_table(32, 2, 3, province, data_cache_config)[
             ceud_config.base_year
         ]
 
-        # Aggregate heavy/light oil and propane/natural gas as we dont have that technological resolution
-        sh_ceud["oil"] = (
-            sh_ceud["light fuel oil and kerosene"] + sh_ceud["heavy fuel oil"]
-        )
-        sh_ceud["natural gas"] = sh_ceud["natural gas"] + sh_ceud["other"]
-        sh_ceud.drop(
-            ["other", "steam", "light fuel oil and kerosene", "heavy fuel oil"],
-            inplace=True,
-        )
         # Filter out low-fraction fuels
         sc_ceud = sc_ceud.loc[
             sc_ceud / sc_ceud.sum() > ceud_config.space_cooling_tolerance
@@ -100,17 +91,62 @@ def _load_all_ceud_tables(
         df_out = pd.concat([df_sph, df_spc])
 
         if province.is_atlantic():
-            # Some fuels we don't have data for in the atlantic region, so set to 0
-            df_out = df_out[
-                df_out["fuel"].isin(atlantic_fraction[province.value.lower()].index)  # pyright: ignore[reportArgumentType, reportAttributeAccessIssue]
-            ]
-            df_out["sec"] = (
-                df_out["sec"]
-                * atlantic_fraction.loc[province.value.lower()][df_out["fuel"]].values
-            )
+            df_out = _apply_atlantic_fraction(df_out, province, atlantic_fraction)
         df_out.set_index(["end_use", "fuel"], inplace=True)
-        province_ceud[province] = df_out  # pyright: ignore[reportArgumentType]
+        province_ceud[province] = df_out
     return province_ceud
+
+
+def load_total_secondary_energy(
+    provinces: list[CANOEProvince],
+    ceud_config: "CEUDConfig",
+    data_cache_config: GoldConnectorConfig,
+) -> pd.DataFrame:
+    """
+    Total commercial secondary energy use by fuel from NRCan CEUD (table 1).
+    Returns one row per (province, fuel) with columns `province`, `fuel` (CANOEFuel), `sec`.
+    """
+    atlantic_fraction = get_statcan_atlantic_fractions_table(data_cache_config)
+
+    frames: list[pd.DataFrame] = []
+    for province in provinces:
+        sec = _merge_ceud_fuels(
+            get_ceud_table(1, 2, 7, province, data_cache_config)[
+                ceud_config.base_year
+            ].astype(float)
+        )
+        df = pd.DataFrame({"sec": sec.values, "fuel": sec.index})
+        if province.is_atlantic():
+            df = _apply_atlantic_fraction(df, province, atlantic_fraction)
+        frames.append(df.assign(province=province))
+    out = pd.concat(frames, ignore_index=True)
+    out["fuel"] = out["fuel"].map(CANOEFuel.from_str)
+    return out[["province", "fuel", "sec"]]  # pyright: ignore[reportReturnType]
+
+
+def _merge_ceud_fuels(sec: pd.Series | pd.DataFrame) -> pd.Series | pd.DataFrame:
+    """
+    Aggregate heavy/light oil and propane/natural gas as we dont have that technological
+    resolution. Steam is dropped.
+    """
+    sec = sec.copy()
+    sec["oil"] = sec["light fuel oil and kerosene"] + sec["heavy fuel oil"]
+    sec["natural gas"] = sec["natural gas"] + sec["other"]
+    return sec.drop(["other", "steam", "light fuel oil and kerosene", "heavy fuel oil"])
+
+
+def _apply_atlantic_fraction(
+    df: pd.DataFrame,
+    province: CANOEProvince,
+    atlantic_fraction: pd.Series,
+) -> pd.DataFrame:
+    """
+    Scale the aggregated Atlantic CEUD `sec` column (by `fuel`) down to `province`.
+    Fuels we don't have Statcan data for in the atlantic region are dropped.
+    """
+    province_fraction = atlantic_fraction.loc[province.value.lower()]
+    df = df[df["fuel"].isin(province_fraction.index)]  # pyright: ignore[reportAssignmentType]
+    return df.assign(sec=df["sec"] * province_fraction[df["fuel"]].values)
 
 
 def _load_aeo_data(

@@ -18,11 +18,12 @@ import pandas as pd
 from canoe_schema.v4_0 import CommodityTypeCode
 from loguru import logger
 
-from canoe.canoe_objects.fuel_serving_tech import (
-    FuelServingTechnologyEntity,
+from canoe.canoe_objects.fuel_serving_tech import FuelServingTechnologyEntity
+from canoe.canoe_objects.technology import (
     RegionalValuesArray,
+    RegionVintageArray,
+    RegionVintagePeriodArray,
 )
-from canoe.canoe_objects.technology import RegionVintageArray, RegionVintagePeriodArray
 from canoe.common import (
     CANOEFuel,
     CANOEProvince,
@@ -43,7 +44,7 @@ def build_existing_technologies(
     existing_techs: pd.DataFrame,
     existing_technologies_fuels: dict["CommercialEndUse", list[CANOEFuel]],
     provinces: list[CANOEProvince],
-    future_periods: list[int],
+    model_periods: list[int],
     capacity_min_tolerance: float,
     missing_data_behavior: Literal["error", "warning"],
     data_id: DatasetIdentifier,
@@ -56,15 +57,16 @@ def build_existing_technologies(
       `province`, `end_use`, `fuel`, `dem`, `acf`, `avg_eff`, `avg_life`, `avg_fixed_cost`.
       Not modified.
     - existing_technologies_fuels: fuels we expect to have existing stock for, per end use
-    - capacity_min_tolerance: existing capacity is dropped for rows whose share of total
-      demand is below this fraction
+    - model_periods: periods fixed costs are written for (horizon end excluded)
+    - capacity_min_tolerance: existing capacity is dropped for rows whose share of their
+      province's total existing-stock demand is below this fraction
 
     End uses with no available fuels are left out of the returned dict.
     """
     existing_techs = existing_techs.assign(
         capacity=_compute_existing_capacity(existing_techs, capacity_min_tolerance)
     )
-    first_period = future_periods[0]
+    first_period = model_periods[0]
 
     # end_use -> { fuel -> labeled array }
     tech_lifetimes = _compute_tech_lifetimes(provinces, existing_techs)
@@ -76,7 +78,7 @@ def build_existing_technologies(
         existing_techs,
     )
     tech_fixed_costs = _compute_tech_fixed_costs(
-        future_periods, first_period, provinces, existing_techs
+        model_periods, first_period, provinces, existing_techs
     )
 
     entities: dict[CommercialEndUse, FuelServingTechnologyEntity] = {}
@@ -105,10 +107,14 @@ def _compute_existing_capacity(
     existing_techs: pd.DataFrame,
     capacity_min_tolerance: float,
 ) -> pd.Series:
-    """CAP = DEM / ACF, dropping tiny energy consumptions"""
+    """
+    CAP = DEM / ACF, dropping tiny energy consumptions: rows below `capacity_min_tolerance`
+    of their province's total existing-stock demand
+    """
     capacity = existing_techs["dem"] / existing_techs["acf"]
+    province_dem = existing_techs.groupby("province")["dem"].transform("sum")
     return capacity.where(
-        existing_techs["dem"] / existing_techs["dem"].sum() > capacity_min_tolerance,
+        existing_techs["dem"] / province_dem > capacity_min_tolerance,
         0,
     )
 

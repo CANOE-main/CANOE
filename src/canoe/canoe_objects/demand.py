@@ -9,6 +9,7 @@ from canoe_schema.v4_0 import (
 )
 
 from canoe.canoe_objects.labeled_array import LabeledArray
+from canoe.canoe_objects.parameter import Parameter, ParameterMetadata, RowOptions
 from canoe.common import CANOEProvince, DataQualityProfile
 from canoe.common.db_tools import write_label
 from canoe.common.naming import DatasetIdentifier
@@ -61,20 +62,15 @@ class DemandEntity:
         self.flag: CommodityTypeCode = CommodityTypeCode.D
         self.commodity_description: str = commodity_description
         self.unit: str = unit
-        self.data_id: DatasetIdentifier = data_id
-        self.notes_only_on_first: bool = notes_only_on_first
-        self.reference_only_on_first: bool = reference_only_on_first
-        self.include_region_in_data_id: bool = include_region_in_data_id
+        self.row_options: RowOptions = RowOptions(
+            data_id=data_id,
+            include_region_in_data_id=include_region_in_data_id,
+            notes_only_on_first=notes_only_on_first,
+            reference_only_on_first=reference_only_on_first,
+        )
 
-        self.dsd: DemandSpecificDistributionArray | None = None
-        self.dsd_notes: str | None = None
-        self.dsd_reference_code: str | None
-        self.dsd_data_quality: DataQualityProfile | None = None
-
-        self.demand: DemandSeriesArray | None = None
-        self.demand_notes: str | None = None
-        self.demand_reference_code: str | None
-        self.demand_data_quality: DataQualityProfile | None = None
+        self.dsd: Parameter[DemandSpecificDistributionArray] | None = None
+        self.demand: Parameter[DemandSeriesArray] | None = None
 
     def with_dsd(
         self,
@@ -83,12 +79,9 @@ class DemandEntity:
         reference_code: str | None = None,
         data_quality: DataQualityProfile | None = None,
     ) -> "DemandEntity":
-        self.dsd = dsd_array
-
-        # DSD secondary parameters
-        self.dsd_notes = notes
-        self.dsd_reference_code = reference_code
-        self.dsd_data_quality = data_quality
+        self.dsd = Parameter(
+            dsd_array, ParameterMetadata(notes, reference_code, data_quality)
+        )
         return self
 
     def with_demand_series(
@@ -98,17 +91,16 @@ class DemandEntity:
         reference_code: str | None = None,
         data_quality: DataQualityProfile | None = None,
     ) -> "DemandEntity":
-        self.demand = demand_array
-
-        # Demand secondary parameters
-        self.demand_notes = notes
-        self.demand_reference_code = reference_code
-        self.demand_data_quality = data_quality
+        self.demand = Parameter(
+            demand_array,
+            ParameterMetadata(notes, reference_code, data_quality, units=self.unit),
+        )
         return self
 
     def build(self, db_conn: Connection):
         if self.demand is None:
             raise ValueError("demand must be set before building")
+        options = self.row_options
 
         # Build commodities
         commodity = Commodity(
@@ -116,68 +108,48 @@ class DemandEntity:
             flag=self.flag,
             description=self.commodity_description,
             units=self.unit,
-            data_id=self.data_id.get_dataset_code(),
+            data_id=options.dataset_code(),
         )
         sql, params = Commodity.to_insert_or_ignore_sql(commodity)
         write_label(db_conn, commodity)
         db_conn.execute(sql, params)
 
         # Build Demand series
+        meta = self.demand.metadata
         demands = [
             Demand(
                 region=row["region"].short(),
                 period=row["period"],
                 commodity=self.name,
                 demand=row["value"],
-                units=self.unit,
-                notes=self.demand_notes
-                if i == 0 or not self.notes_only_on_first
-                else None,
-                data_source=self.demand_reference_code
-                if i == 0 or not self.reference_only_on_first
-                else None,
-                data_id=self.data_id.get_dataset_code(
-                    province=row["region"] if self.include_region_in_data_id else None
-                ),
-                **(
-                    self.demand_data_quality.as_kwargs()
-                    if self.demand_data_quality and i == 0
-                    else {}
-                ),
+                units=meta.units,
+                notes=options.notes(meta, i),
+                data_source=options.reference(meta, i),
+                data_id=options.dataset_code(row["region"]),
+                **options.data_quality(meta, i),
             )
-            for i, row in enumerate(self.demand.to_records())
+            for i, row in enumerate(self.demand.values.to_records())
         ]
         sql, params = Demand.bulk_insert_or_ignore_sql(demands, include_nulls=True)
         db_conn.executemany(sql, params)
 
         # Build DSD
         if self.dsd is not None:
+            meta = self.dsd.metadata
             dsds = [
                 DemandSpecificDistribution(
-                    region=row["region"],
+                    region=row["region"].short(),
                     period=row["period"],
                     season=row["season"],
                     tod=row["tod"],
                     demand_name=self.name,
                     dsd=row["value"],
-                    notes=self.dsd_notes
-                    if i == 0 or not self.notes_only_on_first
-                    else None,
-                    data_source=self.dsd_reference_code
-                    if i == 0 or not self.reference_only_on_first
-                    else None,
-                    data_id=self.data_id.get_dataset_code(
-                        province=row["region"]
-                        if self.include_region_in_data_id
-                        else None
-                    ),
-                    **(
-                        self.dsd_data_quality.as_kwargs()
-                        if self.dsd_data_quality and i == 0
-                        else {}
-                    ),
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
                 )
-                for i, row in enumerate(self.dsd.to_records())
+                for i, row in enumerate(self.dsd.values.to_records())
             ]
             sql, params = DemandSpecificDistribution.bulk_insert_or_ignore_sql(
                 dsds, include_nulls=True

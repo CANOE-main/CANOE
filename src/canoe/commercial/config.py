@@ -1,10 +1,12 @@
 from collections.abc import Callable
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, ClassVar, Literal, override
+from typing import Any, ClassVar, Literal, Self, override
 
-from pydantic import BaseModel, ConfigDict
+from canoe_schema.v4_0 import OperatorCode
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from canoe.canoe_objects.fuel_serving_tech import FuelGrouping
 from canoe.commercial.build import build_commercial
 from canoe.common import (
     CANOEFuel,
@@ -60,7 +62,114 @@ class CommercialEndUse(StrEnum):
 class ComstockConfig(BaseModel):
     building_types: list[str]
     us_map: dict[CANOEProvince, str]
-    apply_weather_mapping: dict[CommercialEndUse, bool]
+
+
+class ExistingStockEndUseConfig(BaseModel):
+    """
+    Space heating / space cooling: one existing-capacity technology per fuel,
+    estimated from CEUD energy use and AEO installed stock.
+    """
+
+    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
+
+    # Map the Comstock (US) hourly profiles to Canadian weather for the DSD
+    apply_weather_mapping: bool = False
+    # Fuels we expect existing stock for. Missing ones are handled by `missing_data_behavior`
+    existing_fuels: list[CANOEFuel]
+
+
+class ElectrificationConfig(BaseModel):
+    """
+    Linear shift of the fuel shares of `other` towards electricity: by the end of the
+    last model period, `factor` of the non-electric energy is switched 1:1 to electricity.
+    """
+
+    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
+
+    factor: float = Field(ge=0, le=1)
+    # Appended to the input split notes
+    notes: str = ""
+
+
+class OtherEndUseConfig(BaseModel):
+    """
+    Everything except space heating and cooling (lighting, equipment, water heating, ...).
+
+    Demand is the CEUD secondary energy use minus space heating and cooling, served with
+    efficiency 1 by new technologies with unlimited capacity.
+    """
+
+    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
+
+    # Map the Comstock (US) hourly profiles to Canadian weather for the DSD
+    apply_weather_mapping: bool = False
+    # Fuels that serve the demand. Energy use of other fuels is left out of the demand
+    fuels: list[CANOEFuel]
+    # Fuels below this share of a province's `other` energy use are dropped
+    min_fuel_share: float = Field(default=0.05, ge=0, lt=1)
+    # "shared": one technology, fuel mix fixed by input splits
+    # "per_fuel": one technology per fuel, fuel mix left to the model
+    technology_grouping: FuelGrouping = FuelGrouping.Shared
+    # Operator of the input splits ("shared" only)
+    input_split_operator: OperatorCode = OperatorCode.LE
+    # Leave out for constant base-year fuel shares ("shared" only)
+    electrification: ElectrificationConfig | None = None
+
+    @model_validator(mode="after")
+    def _check_shared_only_options(self) -> Self:
+        if self.technology_grouping == FuelGrouping.PerFuel:
+            shared_only = {"input_split_operator", "electrification"}
+            used = shared_only & self.model_fields_set
+            if used:
+                raise ValueError(
+                    f"{sorted(used)} only apply to technology_grouping = 'shared'"
+                )
+        return self
+
+
+class EndUsesConfig(BaseModel):
+    """
+    One table per end use, `[end_uses."<end use name>"]` in TOML.
+    An end use runs if and only if its table is present.
+    """
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
+    space_heating: ExistingStockEndUseConfig | None = Field(
+        default=None, alias="space heating"
+    )
+    space_cooling: ExistingStockEndUseConfig | None = Field(
+        default=None, alias="space cooling"
+    )
+    other: OtherEndUseConfig | None = None
+
+    def get(
+        self, end_use: CommercialEndUse
+    ) -> ExistingStockEndUseConfig | OtherEndUseConfig | None:
+        return {
+            CommercialEndUse.SpaceHeating: self.space_heating,
+            CommercialEndUse.SpaceCooling: self.space_cooling,
+            CommercialEndUse.Other: self.other,
+        }[end_use]
+
+    def enabled(self) -> list[CommercialEndUse]:
+        """End uses with a table, in a fixed order"""
+        return [eu for eu in CommercialEndUse if self.get(eu) is not None]
+
+    def weather_mapping(self) -> dict[CommercialEndUse, bool]:
+        return {
+            eu: config.apply_weather_mapping
+            for eu in CommercialEndUse
+            if (config := self.get(eu)) is not None
+        }
+
+    def existing_stock(self) -> dict[CommercialEndUse, ExistingStockEndUseConfig]:
+        """Enabled end uses modelled with existing-stock technologies"""
+        return {
+            eu: config
+            for eu in CommercialEndUse
+            if isinstance(config := self.get(eu), ExistingStockEndUseConfig)
+        }
 
 
 class CEUDConfig(BaseModel):
@@ -97,8 +206,7 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     future_periods: list[int] = inherit()
     provinces: list[CANOEProvince] = inherit()
     base_year: int
-    end_uses: list[CommercialEndUse]
-    existing_technologies_fuels: dict[CommercialEndUse, list[CANOEFuel]]
+    end_uses: EndUsesConfig
     # period_step: int
     # timezone: str
 
@@ -272,6 +380,25 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     #     self.sources = build_sources(self)
 
     #     print("Instantiated setup config.\n")
+
+    @property
+    def model_periods(self) -> list[int]:
+        """
+        Periods we write parameters for.
+
+        `future_periods` is Temoa's time_future: its last year marks the end of the
+        horizon and is not a period itself, e.g. [2025, ..., 2045, 2050] has model
+        periods 2025-2045, the last one ending in 2050.
+        """
+        return self.future_periods[:-1]
+
+    @property
+    def period_end_years(self) -> dict[int, int]:
+        """
+        Model period -> the year it ends (the next year in `future_periods`).
+        Projected data (GDP growth, electrification, ...) is taken at the period end.
+        """
+        return dict(zip(self.future_periods[:-1], self.future_periods[1:]))
 
     @override
     def get_dataset_code(self) -> str:
