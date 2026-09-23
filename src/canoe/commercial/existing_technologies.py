@@ -215,7 +215,7 @@ def _existing_fuel_serving_technology(
         .set_annual()
         .with_lifetimes(
             lifetimes,
-            data_quality=DataQualityProfile(cred=1, geog=2, struc=2, tech=2, time=3),
+            data_quality=DataQualityProfile(cred=1, geog=2, struc=1, tech=2, time=3),
         )
         .with_capacity_to_activity(
             capacity_to_activity,
@@ -229,7 +229,7 @@ def _existing_fuel_serving_technology(
         .with_existing_capacities(
             capacities,
             notes=capacity_notes,
-            units="PJ",  # TODO: Double check
+            units="PJ/y",  # Capacity: annual output at full utilisation
             data_quality=DataQualityProfile(cred=1, geog=2, struc=2, tech=2, time=1),
         )
         .with_fixed_costs(
