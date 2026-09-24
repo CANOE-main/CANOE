@@ -1,12 +1,10 @@
 module_name = "commercial"
 # data_version is inherited from [compiler.base]; set it here to override
+# data_version = "003"
 base_year = 2022
 
 # Filter out secondary energy consumption below this fraction of total
 capacity_min_tolerance = 0.05
-
-# period_step = 5
-# timezone = "EST"
 
 # DSD Parameters
 include_dsd = true

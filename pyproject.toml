@@ -48,10 +48,23 @@ reportUnknownArgumentType = false
 reportUnknownVariableType = false
 reportUnknownMemberType = false
 
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/.*",
+    "assets",
+]
+ignore = ["assets"]
+
+[tool.ruff]
+extend-exclude = ["assets"]
+force-exclude = true
+
 [tool.hatch.envs.dev]
 dependencies = [
   "pandas-stubs",
 ]
+
 
 [tool.pytest.ini_options]
 # Doctests are collected from canoe_objects (see src/canoe/canoe_objects/conftest.py),

@@ -71,13 +71,6 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         f"Running COMMERCIAL (high-resolution) sector on {cfg.database_file}...\n"
     )
 
-    #
-    #
-    # WE NEED TO CHECK DSD!
-    #
-    #
-    #
-
     # Accumulators
     sector_data_id: DatasetIdentifier = DatasetIdentifier(
         sector=CANOESector.Commercial,
@@ -110,6 +103,10 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             cfg.ceud_config,
             cfg.data_cache_config,
             cfg.aeo_config,
+        )
+        new_technologies = cfg.end_uses.new_technologies()
+        new_tech_params = load_new_technology_params(
+            new_technologies, cfg.provinces, cfg.aeo_config.us_census_mapping
         )
         gdp_projections_index = get_cer_gdp(cfg.data_cache_config, base_year=2022)
         # Estimated from EPA: kt of each gas per PJ of fuel burned (none if disabled)
@@ -271,12 +268,8 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             ]
 
         # New Capacity (SPH and SPC)
-        new_technologies = cfg.end_uses.new_technologies()
         if new_technologies:
             logger.info("Processing and building new technology entities")
-            new_tech_params = load_new_technology_params(
-                new_technologies, cfg.provinces, cfg.aeo_config.us_census_mapping
-            )
             for fuel_commodity in new_technology_fuel_commodities(
                 new_technologies, sector_data_id
             ):

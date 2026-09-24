@@ -6,7 +6,7 @@ db_output_dir = "canoe-pwd/canoe.sqlite"
 # Version in the data set codes (e.g. COMHR003), inherited by the sectors
 data_version = "003"
 existing_periods = [2005, 2010, 2015, 2020, 2024, 2022]
-future_periods = [2025, 2030, 2035, 2040, 2045, 2050]
+future_periods = [2025, 2030, 2035, 2040, 2045, 2050]  # TODO: Maybe make the code automatically add one period more, and treat this as the actual future periods
 provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
 # provinces = ["ON", "AB"]
 global_discount_rate = 0.03
