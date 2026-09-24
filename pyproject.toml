@@ -68,12 +68,14 @@ dependencies = [
 
 [tool.pytest.ini_options]
 # Doctests are collected from canoe_objects (see src/canoe/canoe_objects/conftest.py),
-# the commercial configuration and the emissions modules
+# the commercial and agriculture configurations, and the gdp and emissions modules
 testpaths = [
   "tests",
   "src/canoe/canoe_objects",
   "src/canoe/commercial/config.py",
+  "src/canoe/agriculture/config.py",
   "src/canoe/common/emissions.py",
+  "src/canoe/common/gdp.py",
   "src/canoe/common/naming.py",
   "src/canoe/emissions",
 ]

@@ -14,12 +14,15 @@ from typing import Annotated, Any
 
 from pydantic import Field, TypeAdapter
 
+from .agriculture.config import CANOEAgricultureConfig
 from .commercial.config import CANOECommercialConfig
 from .initializer import CANOEBaseConfig
 
-# Add new sector configs here as they're implemented, e.g.:
-# SectorConfig = Annotated[CANOECommercialConfig | CANOEResidentialConfig, Field(discriminator="module_name")]
-SectorConfig = Annotated[CANOECommercialConfig, Field(discriminator="module_name")]
+# Add new sector configs here as they're implemented
+SectorConfig = Annotated[
+    CANOECommercialConfig | CANOEAgricultureConfig,
+    Field(discriminator="module_name"),
+]
 
 _SECTOR_CONFIG_ADAPTER: TypeAdapter[Any] = TypeAdapter(SectorConfig)
 

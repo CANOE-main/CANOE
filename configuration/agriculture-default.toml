@@ -1,0 +1,33 @@
+module_name = "agriculture"
+# data_version, gdp_scenario and gdp_projection_point are inherited from
+# [compiler.base]; set them here to override
+
+# Year of the NRCan CEUD agriculture data read (energy use and fuel mix).
+# GDP projections are indexed to this year.
+ceud_data_year = 2022
+
+# ----------------------------------------------------------
+#                          FUELS
+# ----------------------------------------------------------
+# Fuels the agriculture technology consumes. Options: "ELC", "NG", "GSL", "DSL",
+# "PROP", "HFO". A fuel with zero energy use in a region is left out there.
+fuels = ["ELC", "NG", "DSL", "GSL"]
+
+# How the CEUD fuel mix becomes the input splits of the agriculture technology:
+#   "nrcan_percent_with_remainder" -> NRCan published shares (rounded); the share of
+#                                     fuels not modelled goes to remainder_fuel
+#   "energy_with_remainder"        -> energy use by fuel / total energy use; the share
+#                                     of fuels not modelled goes to remainder_fuel
+#   "energy_normalized"            -> energy use by fuel / energy use of the modelled
+#                                     fuels (remainder_fuel does not apply)
+input_split_strategy = "nrcan_percent_with_remainder"
+remainder_fuel = "DSL"
+# "ge" (lower bound), "le" (upper bound) or "e" (exact share)
+input_split_operator = "ge"
+
+# ----------------------------------------------------------
+#                     RUNTIME SWITCHES
+# ----------------------------------------------------------
+# "error" or "warning"
+validation_behavior = "error"      # database lacks periods or regions
+missing_data_behavior = "warning"  # data missing for a requested fuel

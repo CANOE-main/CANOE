@@ -23,25 +23,56 @@ from canoe_schema.v4_0.models import (
     TimeSeason,
 )
 from loguru import logger
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .common import CANOEProvince, GoldConnectorConfig
+from .common.gdp import CERScenario, GDPProjectionPoint
 from .emissions import EmissionsConfig
 
 
 class CANOEBaseConfig(BaseModel):
+    """
+    Settings shared by the whole model, `[compiler.base]` in the pipeline TOML.
+
+    Sector configs inherit the fields they declare with `inherit()` (see
+    `canoe.common.module_inheritance`) unless their own TOML sets them.
+    """
+
+    model_config = ConfigDict(use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
     # TODO currently schema import for pydantic objects is hard-coded
     db_output_dir: Path
-    # Version in the data set codes (e.g. COMHR003), inherited by the modules
+    """Path of the output database. Rebuilt from scratch on every run."""
+
     data_version: str
+    """Version in the data set codes (e.g. COMHR003), inherited by the modules."""
+
     existing_periods: list[int]
+    """Existing (past) periods, written to `time_period` with flag 'e'."""
+
     future_periods: list[int]
+    """Temoa's `time_future`: the model periods followed by the end of the horizon,
+    e.g. [2025, ..., 2045, 2050] has model periods 2025-2045, the last one ending in
+    2050."""
+
     provinces: list[CANOEProvince]
-    # This is used for global_discount_rate and for default_loan_rate
+    """Regions of the model."""
+
     global_discount_rate: float = 0.03
-    # Emission commodities, GWPs and costs, see `canoe.emissions`
+    """Used for `global_discount_rate` and for `default_loan_rate`."""
+
     emissions: EmissionsConfig = Field(default_factory=EmissionsConfig)
+    """Emission commodities, GWPs and costs, see `canoe.emissions`."""
+
     data_cache_config: GoldConnectorConfig
+    """Location and date of the data lake cache."""
+
+    gdp_scenario: CERScenario = CERScenario.GlobalNetZero
+    """CER scenario of the GDP projections that scale the sector demands."""
+
+    gdp_projection_point: GDPProjectionPoint = GDPProjectionPoint.PeriodEnd
+    """Year of each model period at which projected GDP scales the base-year
+    demands."""
 
     @classmethod
     def validate_from_toml(cls, toml_dir: str):

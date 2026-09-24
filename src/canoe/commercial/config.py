@@ -18,6 +18,7 @@ from canoe.common import (
     GoldConnectorConfig,
     naming,
 )
+from canoe.common.gdp import CERScenario, GDPProjectionPoint
 from canoe.common.time_slices import AllTimeSlices, CANOETimeSliceSet
 
 from ..common.module_inheritance import InheritsFromBase, inherit
@@ -214,7 +215,12 @@ class EndUsesConfig(BaseModel):
 
 
 class CEUDConfig(BaseModel):
-    base_year: int
+    model_config = ConfigDict(use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
+    data_year: int
+    """Year of the NRCan CEUD data read: base-year energy use, existing stock and the
+    year the GDP projections are indexed to."""
+
     space_cooling_tolerance: float = 0.05
 
 
@@ -241,8 +247,11 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     # Model scope
     future_periods: list[int] = inherit()
     provinces: list[CANOEProvince] = inherit()
-    base_year: int
     end_uses: EndUsesConfig
+
+    # Demand projections
+    gdp_scenario: CERScenario = inherit()
+    gdp_projection_point: GDPProjectionPoint = inherit()
 
     # Filter out secondary energy consumption below this fraction of total
     capacity_min_tolerance: float
