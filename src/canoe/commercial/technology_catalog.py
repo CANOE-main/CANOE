@@ -16,6 +16,12 @@ from canoe.common import CANOEFuel
 
 
 class NewTechnology(StrEnum):
+    """
+    Technologies that can be built to serve commercial space heating and cooling
+    (`new_technologies`). Values are the names used in the TOML; parameters come from
+    the AEO technology menu (see `NEW_TECHNOLOGIES`).
+    """
+
     AirSourceHeatPump = "air-source heat pump"
     GroundSourceHeatPump = "ground-source heat pump"
     GasEngineHeatPump = "gas engine-driven heat pump"

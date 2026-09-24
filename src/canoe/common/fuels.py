@@ -3,6 +3,8 @@ from typing import Any, override
 
 
 class CANOEFuel(StrEnum):
+    """Fuels of the model. Configs take the value (e.g. `"ELC"`) or the name."""
+
     Electricity = "ELC"  # Not sure this belongs here but it's a good start
     Coal = "COAL"
     Oil = "OIL"

@@ -12,15 +12,15 @@ Issues](https://github.com/CANOE-main/CANOE/issues). This is the fastest way to 
 keeps a public record other users can search.
 
 !!! tip
-    Before opening a new issue, search existing issues to see if it's already been reported. See
-    the [Contributing guide](contributing.md) for how to tag and file issues.
+Before opening a new issue, search existing issues to see if it's already been reported. See
+the [Contributing guide](contributing.md) for how to tag and file issues.
 
 ## Project team
 
 <div class="grid cards" markdown>
 
--   :material-code-braces:{ .lg .middle } **Dev team**
-    ---
+- :material-code-braces:{ .lg .middle } **Dev team**
+  ---
 
     Yamil Essus
     :material-github: [Profile](https://github.com/yamilbknsu)
@@ -37,8 +37,8 @@ keeps a public record other users can search.
 
     :material-email-outline: [david.turnbull1@ucalgary.ca](mailto:david.turnbull1@ucalgary.ca)
 
--   :material-account-tie:{ .lg .middle } **Principal Investigators**
-    ---
+- :material-account-tie:{ .lg .middle } **Principal Investigators**
+  ---
 
     I. Daniel Posen, University of Toronto
 
@@ -58,5 +58,5 @@ keeps a public record other users can search.
 ---
 
 <small>
-See also: [Contributing](contributing.md) &nbsp;·&nbsp; [License](license.md)
+See also: [Contributing](contributing.md)
 </small>

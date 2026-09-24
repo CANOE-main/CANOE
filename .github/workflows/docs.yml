@@ -8,12 +8,16 @@ on:
             - "v*"
         paths:
             - "docs/**"
+            - "src/canoe/**"
+            - "configuration/**"
             - "mkdocs.yml"
             - "pyproject.toml"
             - ".github/workflows/docs.yml"
     pull_request:
         paths:
             - "docs/**"
+            - "src/canoe/**"
+            - "configuration/**"
             - "mkdocs.yml"
             - "pyproject.toml"
             - ".github/workflows/docs.yml"

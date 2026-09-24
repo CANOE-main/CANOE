@@ -54,9 +54,10 @@ class TimeSliceSetVariant(BaseModel, ABC):  # pyright: ignore[reportUnsafeMultip
 
 
 class AllTimeSlices(TimeSliceSetVariant):
-    """Every hour of the year, 1..HOURS_PER_YEAR."""
+    """Every hour of the year, 1..HOURS_PER_YEAR: `{ kind = "all_year" }`."""
 
     kind: Literal["all_year"] = "all_year"
+    """Selects this variant."""
 
     @override
     def as_list(self) -> list[TimeSlice]:
@@ -64,10 +65,13 @@ class AllTimeSlices(TimeSliceSetVariant):
 
 
 class SpecificTimeSlices(TimeSliceSetVariant):
-    """An explicit, user-provided list of hours."""
+    """An explicit, user-provided list of hours: `{ kind = "specific", slices = [...] }`."""
 
     kind: Literal["specific"] = "specific"
+    """Selects this variant."""
+
     slices: list[TimeSlice]
+    """The time slices."""
 
     @override
     def as_list(self) -> list[TimeSlice]:

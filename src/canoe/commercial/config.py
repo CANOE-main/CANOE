@@ -26,8 +26,15 @@ from ..initializer import CANOEBaseConfig
 
 
 class ComstockConfig(BaseModel):
+    """NREL ComStock hourly profiles, used for the demand-specific distribution."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
     building_types: list[str]
+    """ComStock building types summed into the commercial profiles."""
+
     us_map: dict[CANOEProvince, str]
+    """US state whose ComStock profiles each province takes."""
 
 
 class SpaceConditioningEndUseConfig(BaseModel):
@@ -59,14 +66,17 @@ class SpaceConditioningEndUseConfig(BaseModel):
     [<NewTechnology.AirSourceHeatPump: 'air-source heat pump'>, <NewTechnology.GasFurnace: 'gas furnace'>]
     """
 
-    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
-    # Map the Comstock (US) hourly profiles to Canadian weather for the DSD
     apply_weather_mapping: bool = False
-    # Fuels we expect existing stock for. Missing ones are handled by `missing_data_behavior`
+    """Map the ComStock (US) hourly profiles to Canadian weather for the DSD."""
+
     existing_fuels: list[CANOEFuel]
-    # Technologies that can be built to serve the end use (none by default)
+    """Fuels we expect existing stock for. Missing ones are handled by
+    `missing_data_behavior`."""
+
     new_technologies: list[NewTechnology] = []
+    """Technologies that can be built to serve the end use (none by default)."""
 
     @field_validator("new_technologies")
     @classmethod
@@ -83,11 +93,14 @@ class ElectrificationConfig(BaseModel):
     last model period, `factor` of the non-electric energy is switched 1:1 to electricity.
     """
 
-    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
     factor: float = Field(ge=0, le=1)
-    # Appended to the input split notes
+    """Fraction (0-1) of the non-electric energy switched to electricity by the end of
+    the last model period."""
+
     notes: str = ""
+    """Appended to the input split notes."""
 
 
 class OtherEndUseConfig(BaseModel):
@@ -98,21 +111,28 @@ class OtherEndUseConfig(BaseModel):
     efficiency 1 by new technologies with unlimited capacity.
     """
 
-    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
-    # Map the Comstock (US) hourly profiles to Canadian weather for the DSD
     apply_weather_mapping: bool = False
-    # Fuels that serve the demand. Energy use of other fuels is left out of the demand
+    """Map the ComStock (US) hourly profiles to Canadian weather for the DSD."""
+
     fuels: list[CANOEFuel]
-    # Fuels below this share of a province's `other` energy use are dropped
+    """Fuels that serve the demand. Energy use of other fuels is left out of the
+    demand."""
+
     min_fuel_share: float = Field(default=0.05, ge=0, lt=1)
-    # "shared": one technology, fuel mix fixed by input splits
-    # "per_fuel": one technology per fuel, fuel mix left to the model
+    """Fuels below this share of a province's `other` energy use are dropped."""
+
     technology_grouping: FuelGrouping = FuelGrouping.Shared
-    # Operator of the input splits ("shared" only)
+    """`shared`: one technology, fuel mix fixed by input splits. `per_fuel`: one
+    technology per fuel, fuel mix left to the model."""
+
     input_split_operator: OperatorCode = OperatorCode.LE
-    # Leave out for constant base-year fuel shares ("shared" only)
+    """Operator of the input splits (`shared` only)."""
+
     electrification: ElectrificationConfig | None = None
+    """Shift of the fuel mix towards electricity (`shared` only). Leave out for
+    constant data-year fuel shares."""
 
     @model_validator(mode="after")
     def _check_shared_only_options(self) -> Self:
@@ -132,15 +152,22 @@ class EndUsesConfig(BaseModel):
     An end use runs if and only if its table is present.
     """
 
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = ConfigDict(  # pyright: ignore[reportUnannotatedClassAttribute]
+        extra="forbid", populate_by_name=True, use_attribute_docstrings=True
+    )
 
     space_heating: SpaceConditioningEndUseConfig | None = Field(
         default=None, alias="space heating"
     )
+    """`[end_uses."space heating"]`."""
+
     space_cooling: SpaceConditioningEndUseConfig | None = Field(
         default=None, alias="space cooling"
     )
+    """`[end_uses."space cooling"]`."""
+
     other: OtherEndUseConfig | None = None
+    """`[end_uses.other]`."""
 
     @model_validator(mode="after")
     def _check_new_technologies_serve_end_use(self) -> Self:
@@ -215,6 +242,8 @@ class EndUsesConfig(BaseModel):
 
 
 class CEUDConfig(BaseModel):
+    """NRCan Comprehensive Energy Use Database (CEUD), commercial tables."""
+
     model_config = ConfigDict(use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
     data_year: int
@@ -222,15 +251,33 @@ class CEUDConfig(BaseModel):
     year the GDP projections are indexed to."""
 
     space_cooling_tolerance: float = 0.05
+    """Space cooling fuels below this share of a province's space cooling energy use
+    are dropped."""
 
 
 class AEOConfig(BaseModel):
+    """EIA Annual Energy Outlook, Commercial Demand Module technology data."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
     us_census_mapping: dict[CANOEProvince, str]
+    """US census division whose technology data each province takes."""
 
 
 class CANOECommercialConfig(InheritsFromBase, CANOEModule):
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+    """
+    Commercial sector, `module_name = "commercial"`.
+
+    Fields marked as inherited take their value from `[compiler.base]` unless set in
+    the sector TOML.
+    """
+
+    model_config = ConfigDict(  # pyright: ignore[reportUnannotatedClassAttribute]
+        extra="forbid", arbitrary_types_allowed=True, use_attribute_docstrings=True
+    )
+
     module_name: Literal["commercial"]
+    """Selects this sector in the pipeline."""
 
     # Fields inherited as-is need no entry here; only renames/derivations do.
     _INHERIT_RESOLVERS: ClassVar[dict[str, Callable[[CANOEBaseConfig], Any]]] = {
@@ -239,41 +286,64 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
 
     # Identity
     data_version: str = inherit()
+    """Version in the data set codes (e.g. COMHR003). Inherited."""
 
     # File paths
     database_file: Path = inherit()
+    """Database written to. Inherited from `db_output_dir`."""
+
     data_cache_config: GoldConnectorConfig = inherit()
+    """Location and date of the data lake cache. Inherited."""
 
     # Model scope
     future_periods: list[int] = inherit()
+    """Temoa's `time_future`, see `model_periods`. Inherited."""
+
     provinces: list[CANOEProvince] = inherit()
+    """Regions written. Inherited."""
+
     end_uses: EndUsesConfig
+    """End uses modelled, one table each."""
 
     # Demand projections
     gdp_scenario: CERScenario = inherit()
-    gdp_projection_point: GDPProjectionPoint = inherit()
+    """CER scenario of the GDP projections that scale the demands. Inherited."""
 
-    # Filter out secondary energy consumption below this fraction of total
+    gdp_projection_point: GDPProjectionPoint = inherit()
+    """Year of each period at which GDP scales the demands. Inherited."""
+
     capacity_min_tolerance: float
+    """Existing stock below this fraction of the total secondary energy consumption
+    is filtered out."""
 
     # Runtime switches
     validation_behavior: Literal["error", "warning"] = "error"
+    """What to do when the database lacks the periods, regions or time slices this
+    sector needs."""
+
     missing_data_behavior: Literal["error", "warning"] = "warning"
+    """What to do when the data of a requested fuel is missing."""
 
     # DSD parameters
     include_dsd: bool = True
-    dsd_time_slices: CANOETimeSliceSet = AllTimeSlices()
+    """Write the demand-specific distribution (hourly profile) of each demand."""
 
-    # Combustion emissions (CO2, CH4, N2O) of the fuels, from EPA emission factors.
-    # CO2-equivalents are added by the central emissions step.
+    dsd_time_slices: CANOETimeSliceSet = AllTimeSlices()
+    """Time slices of the demand-specific distribution."""
+
     include_emissions: bool = False
+    """Deprecated, must stay false: combustion emissions are handled by the fuels
+    sector."""
 
     # Data sources
     comstock_config: ComstockConfig
-    ceud_config: CEUDConfig
+    """NREL ComStock hourly profiles."""
 
-    # # AEO
+    ceud_config: CEUDConfig
+    """NRCan CEUD commercial tables."""
+
     aeo_config: AEOConfig
+    """EIA AEO commercial technology data."""
 
     @model_validator(mode="after")
     def emissions_deprecated(self) -> "CANOECommercialConfig":

@@ -27,7 +27,7 @@ canoe-compiler = "canoe.cli:main"
 [project.optional-dependencies]
 all = ["canoe[dev]", "canoe[docs]", "canoe[solvers]"]
 dev = ["ruff", "matplotlib", "marimo", "plotly"]
-docs = ["mkdocs-material>=9.5", "mkdocs-git-revision-date-localized-plugin>=1.2", "mike"]
+docs = ["mkdocs-material>=9.5", "mkdocs-git-revision-date-localized-plugin>=1.2", "mike", "mkdocstrings[python]", "griffe-pydantic"]
 solvers = ["gurobipy"]
 
 [dependency-groups]

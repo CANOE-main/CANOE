@@ -3,6 +3,11 @@ from typing import override
 
 
 class CANOEProvince(StrEnum):
+    """
+    Regions of the model. Configs take the short code (e.g. `"ON"`, `"NLLAB"`) or the
+    full name.
+    """
+
     ALBERTA = "Alberta"
     BRITISH_COLUMBIA = "British Columbia"
     MANITOBA = "Manitoba"
