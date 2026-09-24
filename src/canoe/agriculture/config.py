@@ -17,6 +17,7 @@ from canoe_schema.v4_0 import OperatorCode
 from pydantic import ConfigDict, field_validator, model_validator
 
 from canoe.agriculture.build import build_agriculture
+from canoe.agriculture.loaders import CEUD_AGRICULTURE_SOURCES
 from canoe.common import (
     CANOEFuel,
     CANOEModule,
@@ -32,15 +33,11 @@ from canoe.common.validation import ValidationBehavior
 from ..common.module_inheritance import InheritsFromBase, inherit
 from ..initializer import CANOEBaseConfig
 
-SUPPORTED_FUELS: tuple[CANOEFuel, ...] = (
-    CANOEFuel.Electricity,
-    CANOEFuel.NaturalGas,
-    CANOEFuel.Gasoline,
-    CANOEFuel.Diesel,
-    CANOEFuel.Propane,
-    CANOEFuel.HeavyFuelOil,
+SUPPORTED_FUELS: tuple[CANOEFuel, ...] = tuple(
+    fuel for fuel in CEUD_AGRICULTURE_SOURCES.values() if fuel is not None
 )
-"""Fuels with their own row in the NRCan CEUD agriculture tables."""
+"""Fuels with their own row in the NRCan CEUD agriculture tables: ELC, NG, GSL, DSL,
+HFO and PROP."""
 
 
 class InputSplitStrategy(StrEnum):

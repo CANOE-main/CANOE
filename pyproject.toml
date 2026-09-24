@@ -74,6 +74,7 @@ testpaths = [
   "src/canoe/canoe_objects",
   "src/canoe/commercial/config.py",
   "src/canoe/agriculture/config.py",
+  "src/canoe/agriculture/energy_use.py",
   "src/canoe/common/emissions.py",
   "src/canoe/common/gdp.py",
   "src/canoe/common/naming.py",

@@ -27,7 +27,7 @@ cache_date = "2026-08-10"
 force_sync = false
 
 [compiler.sectors]
-commercial = "configuration/commercial-default.toml"
+# commercial = "configuration/commercial-default.toml"
 agriculture = "configuration/agriculture-default.toml"
 
 # [temoa_config]

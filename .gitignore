@@ -6,6 +6,7 @@ site/
 *.pyc
 *.egg-info/
 .venv/
+**/__marimo__/
 
 # Project folders
 .cache/
