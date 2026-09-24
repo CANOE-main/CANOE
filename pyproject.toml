@@ -53,11 +53,12 @@ exclude = [
     "**/__pycache__",
     "**/.*",
     "assets",
+    "notebooks"
 ]
-ignore = ["assets"]
+ignore = ["assets", "notebooks"]
 
 [tool.ruff]
-extend-exclude = ["assets"]
+extend-exclude = ["assets", "notebooks"]
 force-exclude = true
 
 [tool.hatch.envs.dev]

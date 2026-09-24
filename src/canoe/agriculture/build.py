@@ -13,7 +13,7 @@ from canoe.common import (
     CANOESector,
     atomic_transaction,
 )
-from canoe.common.gdp import CERScenario, GDPProjectionPoint
+from canoe.common.gdp import CERScenario, GDPProjectionPoint, gdp_growth_by_period
 from canoe.common.loaders import get_cer_gdp
 from canoe.common.naming import DatasetIdentifier
 
@@ -24,7 +24,7 @@ from .energy_use import (
     load_ceud_tables,
 )
 from .entities import build_agriculture_demand, build_agriculture_technology
-from .input_splits import InputSplitStrategy
+from .input_splits import InputSplitStrategy, compute_input_splits
 from .loaders import get_statcan_atlantic_agriculture_shares
 from .validation import validate_db_against_config
 
@@ -79,13 +79,21 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
 
         # Compute parameters
         # ------------------
-        # TODO Placeholders with the final shape, until the parameters are computed
-        logger.warning("Agriculture parameters are placeholders")
-        # - Demand: region, period, demand (PJ)
-        demand_df = _placeholder_demand(total_energy_use, cfg.model_periods)
-        # - Input splits: region, period, fuel, split (0-1)
-        input_split_df = _placeholder_input_splits(
-            energy_use_by_source, cfg.fuels, cfg.model_periods
+        # - Demand (region, period, demand): data-year energy use indexed to the
+        #   projected gdp growth of each period
+        demand_df = _compute_demand(
+            total_energy_use,
+            gdp_growth_by_period(
+                gdp_projections_index, cfg.future_periods, cfg.gdp_projection_point
+            ),
+        )
+        # - Input splits (region, period, fuel, split): the data-year fuel mix
+        input_split_df = compute_input_splits(
+            energy_use_by_source,
+            cfg.fuels,
+            cfg.input_split_strategy,
+            cfg.remainder_fuel,
+            cfg.model_periods,
         )
 
         # Build TEMOA Objects
@@ -176,24 +184,24 @@ def _input_split_notes(
     }[strategy]
 
 
-def _placeholder_demand(
-    total_energy_use: pd.DataFrame, model_periods: list[int]
+def _compute_demand(
+    total_energy_use: pd.DataFrame, gdp_growth: dict[int, float]
 ) -> pd.DataFrame:
-    """TODO Remove: the data-year energy use in every period (no GDP growth)"""
-    return total_energy_use.rename(
-        columns={"province": "region", "energy_use": "demand"}
-    ).merge(pd.DataFrame({"period": model_periods}), how="cross")
+    """
+    Agriculture energy demand of each province over the model periods.
 
+    params:
+    - total_energy_use: data-year energy use, columns `province`, `energy_use` (PJ)
+    - gdp_growth: model period -> gdp growth factor from the data year, see
+      `canoe.common.gdp.gdp_growth_by_period`
 
-def _placeholder_input_splits(
-    energy_use_by_source: pd.DataFrame,
-    fuels: list[CANOEFuel],
-    model_periods: list[int],
-) -> pd.DataFrame:
-    """TODO Remove: the published shares of the requested fuels (no remainder)"""
-    requested: pd.DataFrame = energy_use_by_source.loc[
-        energy_use_by_source["fuel"].isin(fuels), ["province", "fuel", "share"]
-    ]
-    return requested.rename(columns={"province": "region", "share": "split"}).merge(
-        pd.DataFrame({"period": model_periods}), how="cross"
+    Returns region, period, demand (PJ)
+    """
+    gdp_growth_df = pd.DataFrame(
+        {"period": list(gdp_growth), "gdp_factor": list(gdp_growth.values())}
     )
+    demand_df = total_energy_use.rename(columns={"province": "region"}).merge(
+        gdp_growth_df, how="cross"
+    )
+    demand_df["demand"] = demand_df["energy_use"] * demand_df["gdp_factor"]
+    return demand_df[["region", "period", "demand"]]  # pyright: ignore[reportReturnType]
