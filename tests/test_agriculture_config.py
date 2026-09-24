@@ -6,7 +6,8 @@ import pytest
 from canoe_schema.v4_0 import OperatorCode
 from pydantic import ValidationError
 
-from canoe.agriculture.config import CANOEAgricultureConfig, InputSplitStrategy
+from canoe.agriculture.config import CANOEAgricultureConfig
+from canoe.agriculture.input_splits import InputSplitStrategy
 from canoe.common import CANOEFuel
 from canoe.common.gdp import CERScenario, GDPProjectionPoint
 from canoe.initializer import CANOEBaseConfig
