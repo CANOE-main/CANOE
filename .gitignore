@@ -6,12 +6,14 @@ site/
 *.pyc
 *.egg-info/
 .venv/
+**/__marimo__/
 
 # Project folders
 .cache/
 output/
+canoe-pwd/
 
 # Representative periods data
-assets/rep_periods_data/clustering_output_data/*/
+assets/**/
 periods.csv
 sequence.csv

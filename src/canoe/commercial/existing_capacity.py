@@ -77,10 +77,10 @@ def _load_all_ceud_tables(
     for province in provinces:
         # This table is consumption (PJ) per fuel for each end use
         sh_ceud = _merge_ceud_fuels(
-            get_ceud_table(24, 2, 7, province, data_cache_config)[ceud_config.base_year]
+            get_ceud_table(24, 2, 7, province, data_cache_config)[ceud_config.data_year]
         )
         sc_ceud = get_ceud_table(32, 2, 3, province, data_cache_config)[
-            ceud_config.base_year
+            ceud_config.data_year
         ]
 
         # Filter out low-fraction fuels
@@ -119,7 +119,7 @@ def load_total_secondary_energy(
     for province in provinces:
         sec = _merge_ceud_fuels(
             get_ceud_table(1, 2, 7, province, data_cache_config)[
-                ceud_config.base_year
+                ceud_config.data_year
             ].astype(float)
         )
         df = pd.DataFrame({"sec": sec.values, "fuel": sec.index})
@@ -312,11 +312,12 @@ def _aeo_conv_curr(
 
     # Currency and currency year for final data, converting to this
     base_curr = "CAD"
-    base_year = 2020
+    base_currency_year = 2020
 
     # Multiplier for final currency (to normalise if not using CAD2020)
     base_fact = (
-        exchange.loc[base_year, base_curr] * inflation.loc[base_year, "gdp_deflator"]
+        exchange.loc[base_currency_year, base_curr]
+        * inflation.loc[base_currency_year, "gdp_deflator"]
     )
 
     return (

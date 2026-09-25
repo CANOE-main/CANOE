@@ -18,6 +18,7 @@ from canoe.common import (
     GoldConnectorConfig,
     naming,
 )
+from canoe.common.gdp import CERScenario, GDPProjectionPoint
 from canoe.common.time_slices import AllTimeSlices, CANOETimeSliceSet
 
 from ..common.module_inheritance import InheritsFromBase, inherit
@@ -25,8 +26,15 @@ from ..initializer import CANOEBaseConfig
 
 
 class ComstockConfig(BaseModel):
+    """NREL ComStock hourly profiles, used for the demand-specific distribution."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
     building_types: list[str]
+    """ComStock building types summed into the commercial profiles."""
+
     us_map: dict[CANOEProvince, str]
+    """US state whose ComStock profiles each province takes."""
 
 
 class SpaceConditioningEndUseConfig(BaseModel):
@@ -58,14 +66,17 @@ class SpaceConditioningEndUseConfig(BaseModel):
     [<NewTechnology.AirSourceHeatPump: 'air-source heat pump'>, <NewTechnology.GasFurnace: 'gas furnace'>]
     """
 
-    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
-    # Map the Comstock (US) hourly profiles to Canadian weather for the DSD
     apply_weather_mapping: bool = False
-    # Fuels we expect existing stock for. Missing ones are handled by `missing_data_behavior`
+    """Map the ComStock (US) hourly profiles to Canadian weather for the DSD."""
+
     existing_fuels: list[CANOEFuel]
-    # Technologies that can be built to serve the end use (none by default)
+    """Fuels we expect existing stock for. Missing ones are handled by
+    `missing_data_behavior`."""
+
     new_technologies: list[NewTechnology] = []
+    """Technologies that can be built to serve the end use (none by default)."""
 
     @field_validator("new_technologies")
     @classmethod
@@ -82,11 +93,14 @@ class ElectrificationConfig(BaseModel):
     last model period, `factor` of the non-electric energy is switched 1:1 to electricity.
     """
 
-    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
     factor: float = Field(ge=0, le=1)
-    # Appended to the input split notes
+    """Fraction (0-1) of the non-electric energy switched to electricity by the end of
+    the last model period."""
+
     notes: str = ""
+    """Appended to the input split notes."""
 
 
 class OtherEndUseConfig(BaseModel):
@@ -97,21 +111,28 @@ class OtherEndUseConfig(BaseModel):
     efficiency 1 by new technologies with unlimited capacity.
     """
 
-    model_config = ConfigDict(extra="forbid")  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
-    # Map the Comstock (US) hourly profiles to Canadian weather for the DSD
     apply_weather_mapping: bool = False
-    # Fuels that serve the demand. Energy use of other fuels is left out of the demand
+    """Map the ComStock (US) hourly profiles to Canadian weather for the DSD."""
+
     fuels: list[CANOEFuel]
-    # Fuels below this share of a province's `other` energy use are dropped
+    """Fuels that serve the demand. Energy use of other fuels is left out of the
+    demand."""
+
     min_fuel_share: float = Field(default=0.05, ge=0, lt=1)
-    # "shared": one technology, fuel mix fixed by input splits
-    # "per_fuel": one technology per fuel, fuel mix left to the model
+    """Fuels below this share of a province's `other` energy use are dropped."""
+
     technology_grouping: FuelGrouping = FuelGrouping.Shared
-    # Operator of the input splits ("shared" only)
+    """`shared`: one technology, fuel mix fixed by input splits. `per_fuel`: one
+    technology per fuel, fuel mix left to the model."""
+
     input_split_operator: OperatorCode = OperatorCode.LE
-    # Leave out for constant base-year fuel shares ("shared" only)
+    """Operator of the input splits (`shared` only)."""
+
     electrification: ElectrificationConfig | None = None
+    """Shift of the fuel mix towards electricity (`shared` only). Leave out for
+    constant data-year fuel shares."""
 
     @model_validator(mode="after")
     def _check_shared_only_options(self) -> Self:
@@ -131,15 +152,22 @@ class EndUsesConfig(BaseModel):
     An end use runs if and only if its table is present.
     """
 
-    model_config = ConfigDict(extra="forbid", populate_by_name=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = ConfigDict(  # pyright: ignore[reportUnannotatedClassAttribute]
+        extra="forbid", populate_by_name=True, use_attribute_docstrings=True
+    )
 
     space_heating: SpaceConditioningEndUseConfig | None = Field(
         default=None, alias="space heating"
     )
+    """`[end_uses."space heating"]`."""
+
     space_cooling: SpaceConditioningEndUseConfig | None = Field(
         default=None, alias="space cooling"
     )
+    """`[end_uses."space cooling"]`."""
+
     other: OtherEndUseConfig | None = None
+    """`[end_uses.other]`."""
 
     @model_validator(mode="after")
     def _check_new_technologies_serve_end_use(self) -> Self:
@@ -214,209 +242,116 @@ class EndUsesConfig(BaseModel):
 
 
 class CEUDConfig(BaseModel):
-    base_year: int
+    """NRCan Comprehensive Energy Use Database (CEUD), commercial tables."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
+    data_year: int
+    """Year of the NRCan CEUD data read: base-year energy use, existing stock and the
+    year the GDP projections are indexed to."""
+
     space_cooling_tolerance: float = 0.05
+    """Space cooling fuels below this share of a province's space cooling energy use
+    are dropped."""
 
 
 class AEOConfig(BaseModel):
+    """EIA Annual Energy Outlook, Commercial Demand Module technology data."""
+
+    model_config = ConfigDict(use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
     us_census_mapping: dict[CANOEProvince, str]
+    """US census division whose technology data each province takes."""
 
 
 class CANOECommercialConfig(InheritsFromBase, CANOEModule):
-    model_config = ConfigDict(extra="forbid", arbitrary_types_allowed=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+    """
+    Commercial sector, `module_name = "commercial"`.
+
+    Fields marked as inherited take their value from `[compiler.base]` unless set in
+    the sector TOML.
+    """
+
+    model_config = ConfigDict(  # pyright: ignore[reportUnannotatedClassAttribute]
+        extra="forbid", arbitrary_types_allowed=True, use_attribute_docstrings=True
+    )
+
     module_name: Literal["commercial"]
+    """Selects this sector in the pipeline."""
 
     # Fields inherited as-is need no entry here; only renames/derivations do.
     _INHERIT_RESOLVERS: ClassVar[dict[str, Callable[[CANOEBaseConfig], Any]]] = {
-        # "province_list": lambda base: [p.short() for p in base.provinces],
         "database_file": lambda base: Path(base.db_output_dir),
     }
 
     # Identity
     data_version: str = inherit()
+    """Version in the data set codes (e.g. COMHR003). Inherited."""
 
     # File paths
     database_file: Path = inherit()
+    """Database written to. Inherited from `db_output_dir`."""
+
     data_cache_config: GoldConnectorConfig = inherit()
-    # excel_template: str
-    # excel_output: str
-    # input_files: str = "input_files/"
-    # cache_dir: str = "data_cache/"
+    """Location and date of the data lake cache. Inherited."""
 
     # Model scope
     future_periods: list[int] = inherit()
-    provinces: list[CANOEProvince] = inherit()
-    base_year: int
-    end_uses: EndUsesConfig
-    # period_step: int
-    # timezone: str
+    """Temoa's `time_future`, see `model_periods`. Inherited."""
 
-    # Filter out secondary energy consumption below this fraction of total
+    provinces: list[CANOEProvince] = inherit()
+    """Regions written. Inherited."""
+
+    end_uses: EndUsesConfig
+    """End uses modelled, one table each."""
+
+    # Demand projections
+    gdp_scenario: CERScenario = inherit()
+    """CER scenario of the GDP projections that scale the demands. Inherited."""
+
+    gdp_projection_point: GDPProjectionPoint = inherit()
+    """Year of each period at which GDP scales the demands. Inherited."""
+
     capacity_min_tolerance: float
+    """Existing stock below this fraction of the total secondary energy consumption
+    is filtered out."""
 
     # Runtime switches
     validation_behavior: Literal["error", "warning"] = "error"
+    """What to do when the database lacks the periods, regions or time slices this
+    sector needs."""
+
     missing_data_behavior: Literal["error", "warning"] = "warning"
+    """What to do when the data of a requested fuel is missing."""
 
     # DSD parameters
     include_dsd: bool = True
+    """Write the demand-specific distribution (hourly profile) of each demand."""
+
     dsd_time_slices: CANOETimeSliceSet = AllTimeSlices()
+    """Time slices of the demand-specific distribution."""
 
-    # force_download: bool = False
-    # show_plots: bool = True
-    # clone_to_xlsx: bool = False
-    # force_generate_weather_maps: bool = False
-
-    # Combustion emissions (CO2, CH4, N2O) of the fuels, from EPA emission factors.
-    # CO2-equivalents are added by the central emissions step.
     include_emissions: bool = False
+    """Deprecated, must stay false: combustion emissions are handled by the fuels
+    sector."""
 
     # Data sources
     comstock_config: ComstockConfig
+    """NREL ComStock hourly profiles."""
+
     ceud_config: CEUDConfig
+    """NRCan CEUD commercial tables."""
 
-    # # Parameters
-    # sec_tolerance: float
-    # other_electrification_factor: float
-    # cef_note: str
-    # cef_reference: str
-    # weather_year: int
-
-    # # GDP
-    # gdp_url: str
-    # gdp_scenario: str = "Global Net-zero"
-    # gdp_variable: str = "Real Gross Domestic Product ($2012 Millions)"
-    # gdp_data_year: int
-    # gdp_reference: str
-
-    # # Population
-    # population_m_scenario: str = "Projection scenario M1: medium-growth"
-    # pop_reference: str
-
-    # # AEO
-    # aeo_installed_year: int
-    # aeo_reference: str
     aeo_config: AEOConfig
+    """EIA AEO commercial technology data."""
 
-    # # NRCan
-    # nrcan_url: str
-    # nrcan_reference: str
-
-    # # Currency
-    # final_currency: str
-    # final_currency_year: int
-    # inflation_index: str
-    # aeo_currency_year: int
-    # aeo_currency: str
-
-    # # Nested config
-    # comstock: ComstockConfig
-    # weather: WeatherConfig
-    # conversion_factors: ConversionFactors
-
-    # # DQ profiles
-    # dq_demands: DataQualityProfile
-    # dq_efficiency: DataQualityProfile
-    # dq_existing_capacity: DataQualityProfile
-    # dq_costs: DataQualityProfile
-    # dq_emissions: DataQualityProfile
-    # dq_capacity_factor: DataQualityProfile
-    # dq_fuel_splits: DataQualityProfile
-    # dq_lifetime: DataQualityProfile
-
-    # # Runtime data — populated by _load_data(), not sourced from TOML
-    # regions: Optional[pd.DataFrame] = None
-    # new_techs: Optional[pd.DataFrame] = None
-    # existing_techs: Optional[pd.DataFrame] = None
-    # import_techs: Optional[pd.DataFrame] = None
-    # fuel_commodities: Optional[pd.DataFrame] = None
-    # end_use_demands: Optional[pd.DataFrame] = None
-    # time: Optional[pd.DataFrame] = None
-    # aeo_cdm: Optional[pd.DataFrame] = None
-    # gdp_index: Optional[pd.DataFrame] = None
-    # populations: Optional[dict] = None
-    # all_techs: list[str] = Field(default_factory=list)
-    # rninja_api: str = ""
-    # sources: dict = Field(default_factory=dict)
-    # data_ids: set = Field(default_factory=set)
-
-    # @property
-    # def model_periods(self) -> list[int]:
-    #     return sorted(self.future_periods)
-
-    # @property
-    # def model_regions(self) -> list[str]:
-    #     return sorted(self.province_list)
-
-    # @property
-    # def database_file(self) -> str:
-    #     return str(Path(self.db_dir) / self.sqlite_database)
-
-    # @property
-    # def excel_template_file(self) -> str:
-    #     return self.input_files + self.excel_template
-
-    # @property
-    # def excel_target_file(self) -> str:
-    #     return str(Path(self.db_dir) / self.excel_output)
-
-    # def data_id(self, text: str = '') -> str:
-    #     id = f"{self.data_id_prefix}{text}{self.data_version}"
-    #     self.data_ids.add(id)
-    #     return id
-
-    # @classmethod
-    # def validate_from_toml(cls, toml_dir: str = "input_files") -> "CANOECommercialConfig":
-    #     path = Path(toml_dir) / "params.toml"
-    #     with open(path, "rb") as f:
-    #         raw = tomllib.load(f)
-    #     cfg = cls.model_validate(raw)
-    #     cfg._load_data()
-    #     return cfg
-
-    # def _load_data(self) -> None:
-    #     if not os.path.exists(self.cache_dir):
-    #         os.mkdir(self.cache_dir)
-
-    #     self.regions = pd.read_csv(self.input_files + "regions.csv", index_col=0)
-    #     self.new_techs = pd.read_csv(self.input_files + "new_technologies.csv", index_col=0)
-    #     self.existing_techs = pd.read_csv(self.input_files + "existing_technologies.csv", index_col=0)
-    #     self.import_techs = pd.read_csv(self.input_files + "import_technologies.csv", index_col=0)
-    #     self.fuel_commodities = pd.read_csv(self.input_files + "fuel_commodities.csv", index_col=0)
-    #     self.end_use_demands = pd.read_csv(self.input_files + "end_use_demands.csv", index_col=0)
-    #     self.time = pd.read_csv(self.input_files + "time.csv", index_col=0)
-
-    #     self.new_techs = self.new_techs.loc[self.new_techs["include_new"]]
-    #     self.all_techs = [*self.new_techs.index.values, *self.existing_techs.index.values]
-
-    #     self.aeo_cdm = data_scraper.fetch_aeo_data(
-    #         aeo_file=self.input_files + "ktekx.xlsx",
-    #         indexing_file=self.input_files + "aeo_cdm_indexing.csv",
-    #     )
-
-    #     self.populations = data_scraper.fetch_population_projections(
-    #         regions_df=self.regions,
-    #         cache_dir=self.cache_dir,
-    #         force_download=self.force_download,
-    #     )
-
-    #     self.gdp_index = data_scraper.fetch_gdp_projections(
-    #         gdp_url=self.gdp_url,
-    #         base_year=self.base_year,
-    #         cache_dir=self.cache_dir,
-    #         force_download=self.force_download,
-    #     )
-
-    #     try:
-    #         with open("input_files/rninja_api_token.txt") as token_file:
-    #             self.rninja_api = token_file.read()
-    #     except FileNotFoundError:
-    #         self.rninja_api = "WARNING: rninja_api_token.txt not found"
-
-    #     from canoe_commercial.sources import build_sources
-    #     self.sources = build_sources(self)
-
-    #     print("Instantiated setup config.\n")
+    @model_validator(mode="after")
+    def emissions_deprecated(self) -> "CANOECommercialConfig":
+        if self.include_emissions:
+            raise ValueError(
+                "include_emissions is deprecated; Combustion emissions are handled by fuels sector."
+            )
+        return self
 
     @property
     def model_periods(self) -> list[int]:

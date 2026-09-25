@@ -27,8 +27,9 @@ class CANOEEmission(StrEnum):
 class GlobalWarmingPotential(StrEnum):
     """Sets of 100-year global warming potentials used to compute CO2-equivalents"""
 
-    # IPCC Fifth Assessment Report (used by the previous version of the commercial module)
     AR5_100 = "AR5-100"
+    """IPCC Fifth Assessment Report (used by the previous version of the commercial
+    module)."""
 
     def factors(self) -> dict[CANOEEmission, float]:
         """

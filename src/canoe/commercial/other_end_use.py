@@ -34,7 +34,7 @@ def build_other_technology(
     provinces: list[CANOEProvince],
     model_periods: list[int],
     period_end_years: dict[int, int],
-    base_year: int,
+    data_year: int,
     data_id: DatasetIdentifier,
 ) -> FuelServingTechnologyEntity:
     """
@@ -45,7 +45,7 @@ def build_other_technology(
       written for all of them
     - period_end_years: model period -> year it ends, where the electrification
       trajectory is evaluated
-    - base_year: year of the secondary energy use (start of the electrification trajectory)
+    - data_year: year of the secondary energy use (start of the electrification trajectory)
     """
     fuels = sorted(other_sec["fuel"].unique())
     first_period = model_periods[0]
@@ -91,14 +91,14 @@ def build_other_technology(
 
     if other_config.technology_grouping == FuelGrouping.Shared:
         split_notes = (
-            f"Secondary energy consumption by fuel (NRCan, {base_year}) "
+            f"Secondary energy consumption by fuel (NRCan, {data_year}) "
             "minus space heating and cooling."
         )
         if other_config.electrification:
             split_notes += f" {other_config.electrification.notes}"
 
         split_df = _compute_input_splits(
-            other_sec, period_end_years, base_year, other_config.electrification
+            other_sec, period_end_years, data_year, other_config.electrification
         )
         entity = entity.with_input_splits(
             {
@@ -119,13 +119,13 @@ def build_other_technology(
 def _compute_input_splits(
     other_sec: pd.DataFrame,
     period_end_years: dict[int, int],
-    base_year: int,
+    data_year: int,
     electrification: "ElectrificationConfig | None",
 ) -> pd.DataFrame:
     """
     Fuel shares of each province's `other` energy use, by period.
 
-    With electrification, shares move linearly from the base-year shares (at `base_year`)
+    With electrification, shares move linearly from the data-year shares (at `data_year`)
     to the target shares (at the end of the last period):
     - electricity: factor + share * (1 - factor)
     - other fuels: share * (1 - factor)
@@ -147,7 +147,7 @@ def _compute_input_splits(
 
     factor = electrification.factor
     last_end_year = max(period_end_years.values())
-    progress = (splits["end_year"] - base_year) / (last_end_year - base_year)
+    progress = (splits["end_year"] - data_year) / (last_end_year - data_year)
     target = (splits["share"] * (1 - factor)).where(
         ~splits["fuel"].isin([CANOEFuel.Electricity]),
         factor + splits["share"] * (1 - factor),

@@ -6,7 +6,6 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_va
 
 from canoe.common import CANOEModuleOutput, CANOESector, atomic_transaction
 from canoe.common.naming import DatasetIdentifier
-from canoe.distribution.fuel import CANOEFuelDistributionConfig
 from canoe.emissions import processing as emissions_processing
 from canoe.representative_periods.config import RepresentativePeriodsConfig
 from canoe.representative_periods.process_all import run_representative_periods
@@ -20,7 +19,6 @@ from .temoa_protocol import CANOETemoaConfig, run_temoa
 class CANOECompilerConfig(BaseModel):
     base: CANOEBaseConfig
     sectors: dict[str, SectorConfig] = Field(default_factory=dict)
-    fuel_distribution: CANOEFuelDistributionConfig
 
     @field_validator("sectors", mode="before")
     @classmethod

@@ -1,12 +1,10 @@
 module_name = "commercial"
 # data_version is inherited from [compiler.base]; set it here to override
-base_year = 2022
+# data_version = "003"
+# gdp_scenario and gdp_projection_point are also inherited from [compiler.base]
 
 # Filter out secondary energy consumption below this fraction of total
 capacity_min_tolerance = 0.05
-
-# period_step = 5
-# timezone = "EST"
 
 # DSD Parameters
 include_dsd = true
@@ -87,8 +85,9 @@ factor = 0.62
 notes = "Assumed that 62% of non-electric fuel consumption is 1:1 switched for electricity by 2050, changing linearly (CER, 2023)"
 
 [ceud_config]
-# This is used to inform existing capacity
-base_year = 2022
+# Year of the NRCan CEUD data read (energy use, existing stock); GDP projections are
+# indexed to this year
+data_year = 2022
 
 [comstock_config]
 building_types = [

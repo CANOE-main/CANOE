@@ -49,10 +49,11 @@ class FuelGrouping(StrEnum):
       controlled with input splits.
     """
 
-    # One technology per fuel, each with a single input
     PerFuel = "per_fuel"
-    # A single technology with every fuel as an input
+    """One technology per fuel, each with a single input."""
+
     Shared = "shared"
+    """A single technology with every fuel as an input."""
 
 
 @dataclass(frozen=True)

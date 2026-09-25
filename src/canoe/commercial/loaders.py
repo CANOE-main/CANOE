@@ -155,27 +155,3 @@ def get_epa_emission_factors_table(cache_config: GoldConnectorConfig) -> pd.Data
     file_path = cache_path / "epa" / f"epa_{cache_config.cache_date}.parquet"
     logger.debug("Loading cached EPA emission factors")
     return pd.read_parquet(file_path)
-
-
-def get_cer_gdp(
-    cache_config: GoldConnectorConfig,
-    base_year: int = 2022,
-    scenario: str = "Global Net-zero",
-) -> pd.DataFrame:
-    cache_path = cache_config.cache_dir / Path("silver") / cache_config.cache_date
-    file_folder = cache_path / "cer_macro"
-    file_path = file_folder / f"cer_macro_{cache_config.cache_date}.parquet"
-    logger.debug(
-        f"Loading cached gdp projections base_year={base_year} scenario={scenario}"
-    )
-    df = pd.read_parquet(file_path)
-    df_gdp = (
-        df[
-            (df.Scenario == scenario)
-            & (df.Variable == "Real Gross Domestic Product ($2012 Millions)")
-        ][["Year", "Value"]]
-        .rename({"Year": "year", "Value": "gdp"}, axis="columns")  # pyright: ignore[reportAttributeAccessIssue]
-        .set_index("year")
-    )
-
-    return df_gdp / df_gdp.loc[base_year]
