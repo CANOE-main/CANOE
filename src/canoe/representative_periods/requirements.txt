@@ -1,0 +1,11 @@
+matplotlib
+pandas
+numpy
+xmltodict
+openpyxl
+requests
+PyYAML
+XlsxWriter
+scipy
+tsam
+canoe_schema @ git+ssh://git@github.com/CANOE-main/canoe-schema.git@yep/v4
