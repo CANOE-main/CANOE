@@ -1,4 +1,5 @@
 import tomllib
+from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -6,7 +7,9 @@ from typing import Any
 from loguru import logger
 from pydantic import BaseModel
 from temoa import TemoaConfig, TemoaMode, TemoaSequencer
+from temoa.cli import setup_logging
 from temoa.core.config import SolverNotAvailableError
+from temoa.core.solver_spec import SolverSpec
 
 SOLVER_DOC_LINKS = {
     "cbc": (
@@ -26,10 +29,8 @@ SOLVER_DOC_LINKS = {
 class CANOETemoaConfig(BaseModel):
     scenario: str = "canoe"
     scenario_mode: TemoaMode | str
-    # input_database: Path
-    # output_database: Path
     output_path: Path = Path("./temoa-outputs/")
-    solver_name: str
+    solver: str | Mapping[str, Any] | SolverSpec
     neos: bool = False
     save_excel: bool = False
     save_duals: bool = True
@@ -74,10 +75,7 @@ class CANOETemoaConfig(BaseModel):
             datetime.now().strftime("%Y%m%d%H%M%S")  # noqa: DTZ005
         )
         self.output_path.mkdir(parents=True, exist_ok=True)
-        _check_temoa_solver(self.solver_name, self.save_duals)
-
-        if self.sqlite is None:
-            self.sqlite
+        _check_temoa_solver(SolverSpec.parse(self.solver), self.save_duals)
 
         config_data: dict[str, Any] = {
             **self.model_dump(),
@@ -87,26 +85,23 @@ class CANOETemoaConfig(BaseModel):
         return TemoaConfig(**config_data)
 
 
-def _check_temoa_solver(solver_name: str, save_duals: bool):
-    is_available, location = TemoaConfig._check_solver_availability(solver_name)  # pyright: ignore[reportPrivateUsage]
+def _check_temoa_solver(solver: SolverSpec, save_duals: bool = False):
+    is_available, location = TemoaConfig._check_solver_availability(solver.name)  # pyright: ignore[reportPrivateUsage]
     if not is_available:
         error_message = (
-            f"The specified solver '{solver_name}' was not found.\n"
+            f"The specified solver '{solver.name}' was not found.\n"
             "Please ensure the solver is installed and accessible.\n"
         )
-        if solver_name.lower() in SOLVER_DOC_LINKS:
-            link = SOLVER_DOC_LINKS[solver_name.lower()]
+        if solver.name.lower() in SOLVER_DOC_LINKS:
+            link = SOLVER_DOC_LINKS[solver.name.lower()]
             error_message += f"For installation instructions, refer to: {link}\n"
         else:
-            error_message += (
-                "Refer to the solver's official documentation for "
-                "installation instructions."
-            )
+            error_message += "Refer to the solver's official documentation for installation instructions."
         raise SolverNotAvailableError(error_message)
     else:
-        logger.info("Using solver: %s (%s)", solver_name, location)
+        logger.info("Using solver: %s (%s)", solver.name, location)
 
-    if solver_name == "appsi_highs" and save_duals:
+    if solver.name == "appsi_highs" and save_duals:
         raise ValueError(
             "save_duals is not supported with appsi_highs (it does not expose duals via the "
             + "APPSI interface). Disable save_duals or choose a different solver."
@@ -115,5 +110,6 @@ def _check_temoa_solver(solver_name: str, save_duals: bool):
 
 def run_temoa(db_path: Path, config: CANOETemoaConfig):
     temoa_config = config.to_temoa_config(db_path)
+    setup_logging(temoa_config.output_path, False, temoa_config.silent)
     sequencer = TemoaSequencer(config=temoa_config)
     sequencer.start()
