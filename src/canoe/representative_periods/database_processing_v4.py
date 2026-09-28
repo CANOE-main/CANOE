@@ -244,8 +244,10 @@ def process_single_day_period(
         )
 
     periods = tuple(df_period.index.unique())
-    if len(periods) > 1:
-        raise ValueError("Multiple periods found in selection")
+    if len(periods) == 1:
+        periods_str = f"'{periods[0]}'"
+    else:
+        periods_str = ", ".join([f"'{p}'" for p in periods])
     for table in season_tables:
         if table not in in_tables:
             continue  # might be a db variant without the table
@@ -253,7 +255,7 @@ def process_single_day_period(
             [row[1] for row in curs.execute(f"PRAGMA table_info({table})").fetchall()]
         )[1:-1].replace("'", "")
         curs.execute(
-            f"REPLACE INTO main.{table}({cols}) SELECT {cols} FROM dbin.{table} WHERE season IN ('{periods[0]}')"
+            f"REPLACE INTO main.{table}({cols}) SELECT {cols} FROM dbin.{table} WHERE season IN ({periods_str})"
         )
 
     total_days = df_period["weight"].sum()
