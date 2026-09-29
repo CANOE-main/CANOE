@@ -77,9 +77,9 @@ def build_fuel(
         # ------------------
         # TODO:
         # - Delivered price (sector, fuel, period) in M$/PJ of model_currency_year,
-        #   read at price_projection_point
-        # - Import and distribution costs (region, period, tech), split by
-        #   import_price_strategy
+        #   read at price_projection_point, from get_delivered_price_sources
+        # - Import and distribution costs (region, period, tech): the lowest
+        #   delivered price of each fuel, and the rest of each sector's price
         # - Emission activities (tech, emission): upstream on the imports, combustion
         #   on the distribution
 

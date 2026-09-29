@@ -7,7 +7,6 @@ from pydantic import ValidationError
 
 from canoe.common.periods import ProjectionPoint
 from canoe.fuel.config import CANOEFuelConfig
-from canoe.fuel.prices import ImportPriceStrategy
 from canoe.initializer import CANOEBaseConfig
 from canoe.pipeline import CANOECompilerConfig
 
@@ -53,18 +52,9 @@ class TestPipelineConfig:
 
 
 class TestDefaults:
-    def test_reproduce_previous_module_split(
-        self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
-    ):
-        config = _config(compiler_raw, base)
-        assert (
-            config.import_price_strategy == ImportPriceStrategy.CheapestConsumingSector
-        )
-
-    def test_price_errors_fixed(
-        self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
-    ):
-        assert not _config(compiler_raw, base).reproduce_previous_price_errors
+    def test_price_errors_fixed_by_default(self, base: CANOEBaseConfig):
+        config = CANOEFuelConfig.model_validate({}, context={"base": base})
+        assert not config.reproduce_previous_price_errors
 
     def test_can_override_inherited_price_options(
         self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
@@ -80,12 +70,6 @@ class TestDefaults:
 
 
 class TestValidation:
-    def test_rejects_unknown_strategy(
-        self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
-    ):
-        with pytest.raises(ValidationError, match="import_price_strategy"):
-            _config(compiler_raw, base, import_price_strategy="cheapest")
-
     def test_rejects_unknown_fields(
         self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
     ):

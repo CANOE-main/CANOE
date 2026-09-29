@@ -49,21 +49,10 @@ agriculture = "configuration/agriculture-default.toml"
 # ####################################################################################
 # Fuel supply of the fuels the sectors import (electricity is left to the electricity
 # module): an import technology F_IMP_<FUEL> per fuel and a distribution technology
-# F_<S>_<FUEL> per consuming sector. Remove the table to supply no fuels.
-# data_version, price_projection_point and model_currency_year are inherited from
-# [compiler.base]; set them here to override
+# F_<S>_<FUEL> per consuming sector. The import costs the lowest delivered price of
+# the fuel and each distribution technology the rest of its sector's price (see
+# canoe.fuel.prices).
 [compiler.fuel]
-# How the delivered price of each fuel is split between its import technology and
-# its distribution technologies. Each distribution technology costs its sector's
-# delivered price minus the import cost, so the price each sector pays is the same
-# either way:
-#   "cheapest_consuming_sector" -> import cost = lowest delivered price among the
-#                                  sectors that consume the fuel in this run
-#                                  (reproduces the previous fuel module)
-#   "cheapest_priced_sector"    -> import cost = lowest delivered price among all
-#                                  sectors with a price for the fuel in the data,
-#                                  so it does not depend on which sectors run
-import_price_strategy = "cheapest_consuming_sector"
 # Temporary: reproduce the price errors of the previous fuel module (unit conversion,
 # fixed exchange rate and deflators, residential LPG price) to compare with its
 # databases. See FUEL_MODULE_BUGS.md.

@@ -27,7 +27,6 @@ from canoe.common import (
 from canoe.common.periods import ProjectionPoint
 from canoe.common.validation import ValidationBehavior
 from canoe.fuel.build import build_fuel
-from canoe.fuel.prices import ImportPriceStrategy
 
 from ..common.module_inheritance import InheritsFromBase, inherit
 from ..initializer import CANOEBaseConfig
@@ -37,7 +36,7 @@ class CANOEFuelConfig(InheritsFromBase):
     """
     Fuel supply, `[compiler.fuel]` in the pipeline TOML.
 
-    Not a sector: it runs once all sectors have run, with their fuel imports (see
+    Not an end-use sector: it runs once all sectors have run, with their fuel imports (see
     `run`). Fields marked as inherited take their value from `[compiler.base]` unless
     set in `[compiler.fuel]`.
 
@@ -54,8 +53,8 @@ class CANOEFuelConfig(InheritsFromBase):
     ...         "model_currency_year": 2020,
     ...     }
     ... )
-    >>> config.import_price_strategy.value, config.reproduce_previous_price_errors
-    ('cheapest_consuming_sector', False)
+    >>> config.reproduce_previous_price_errors
+    False
     >>> config.model_periods
     [2025, 2030]
     >>> config.get_dataset_code()
@@ -95,12 +94,6 @@ class CANOEFuelConfig(InheritsFromBase):
 
     model_currency_year: int = inherit()
     """Year of the Canadian dollars the fuel prices are written in. Inherited."""
-
-    import_price_strategy: ImportPriceStrategy = (
-        ImportPriceStrategy.CheapestConsumingSector
-    )
-    """How the delivered price of each fuel is split between its import and its
-    distribution technologies."""
 
     reproduce_previous_price_errors: bool = False
     """Reproduce the price errors of the previous fuel module, to compare with its
