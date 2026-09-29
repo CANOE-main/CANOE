@@ -33,8 +33,9 @@ class GDPProjectionPoint(StrEnum):
     """
     Year of each model period at which projected GDP scales the base-year demand.
 
-    A model period runs from its first year to the next year in `future_periods`,
-    e.g. with `future_periods = [2025, 2030, ..., 2050]` period 2025 covers 2025-2029.
+    A model period runs from December 31st of its label year to December 31st of the
+    next year in `future_periods`, e.g. with `future_periods = [2025, 2030, ..., 2050]`
+    period 2025 covers the years 2026-2030.
     """
 
     PeriodEnd = "period_end"
@@ -42,11 +43,11 @@ class GDPProjectionPoint(StrEnum):
     the year of the base demand data."""
 
     PeriodStart = "period_start"
-    """GDP at the first year of the period, relative to the year of the base demand
-    data."""
+    """GDP at the label year of the period (the year just before it starts),
+    relative to the year of the base demand data."""
 
     Legacy = "legacy"
-    """GDP at the first year of the period relative to the first model period, so the
+    """GDP at the label year of the period relative to the first model period, so the
     first period keeps the base-year demand unchanged. Reproduces the previous
     agriculture module; to be removed."""
 

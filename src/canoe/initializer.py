@@ -27,6 +27,7 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from .common import CANOEProvince, GoldConnectorConfig
 from .common.gdp import CERScenario, GDPProjectionPoint
+from .common.periods import ProjectionPoint
 from .emissions import EmissionsConfig
 
 
@@ -73,6 +74,14 @@ class CANOEBaseConfig(BaseModel):
     gdp_projection_point: GDPProjectionPoint = GDPProjectionPoint.PeriodEnd
     """Year of each model period at which projected GDP scales the base-year
     demands."""
+
+    price_projection_point: ProjectionPoint = ProjectionPoint.PeriodEnd
+    """Year of each model period at which projected prices (e.g. fuel prices) are
+    read."""
+
+    model_currency_year: int = 2020
+    """Year of the Canadian dollars model costs are written in, inherited by the
+    modules. Must be a year of the exchange and inflation tables."""
 
     @classmethod
     def validate_from_toml(cls, toml_dir: str):

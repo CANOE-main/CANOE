@@ -15,21 +15,66 @@ gdp_scenario = "Global Net-zero"
 # gdp_projection_point: "period_end", "period_start" or "legacy"
 gdp_projection_point = "period_end"
 
+# Year of each period at which projected prices (e.g. fuel prices) are read, inherited
+# by the modules: "period_end" or "period_start"
+price_projection_point = "period_end"
+
+# Year of the Canadian dollars model costs are written in, inherited by the modules
+model_currency_year = 2020
+
 # Emission commodities (CO2, CH4, N2O and CO2e) are always registered
 # [compiler.base.emissions]
 # gwp = "AR5-100"          # weights of the gases in the CO2e rows
 # cost_of_co2e = 0.1       # cost of CO2e emissions in every region and model period
 # cost_units = "M$/ktCO2e"
 
+# ####################################################################################
+# CACHE CONFIG
+# ####################################################################################
 [compiler.base.data_cache_config]
 cache_dir = ".cache"
 cache_date = "2026-08-10"
 force_sync = false
 
+
+# ####################################################################################
+# END-USE SECTORS CONFIG
+# ####################################################################################
 [compiler.sectors]
 commercial = "configuration/commercial-default.toml"
 agriculture = "configuration/agriculture-default.toml"
 
+# ####################################################################################
+# FUELS CONFIG
+# ####################################################################################
+# Fuel supply of the fuels the sectors import (electricity is left to the electricity
+# module): an import technology F_IMP_<FUEL> per fuel and a distribution technology
+# F_<S>_<FUEL> per consuming sector. Remove the table to supply no fuels.
+# data_version, price_projection_point and model_currency_year are inherited from
+# [compiler.base]; set them here to override
+[compiler.fuel]
+# How the delivered price of each fuel is split between its import technology and
+# its distribution technologies. Each distribution technology costs its sector's
+# delivered price minus the import cost, so the price each sector pays is the same
+# either way:
+#   "cheapest_consuming_sector" -> import cost = lowest delivered price among the
+#                                  sectors that consume the fuel in this run
+#                                  (reproduces the previous fuel module)
+#   "cheapest_priced_sector"    -> import cost = lowest delivered price among all
+#                                  sectors with a price for the fuel in the data,
+#                                  so it does not depend on which sectors run
+import_price_strategy = "cheapest_consuming_sector"
+# Temporary: reproduce the price errors of the previous fuel module (unit conversion,
+# fixed exchange rate and deflators, residential LPG price) to compare with its
+# databases. See FUEL_MODULE_BUGS.md.
+reproduce_previous_price_errors = true
+# "error" or "warning"
+validation_behavior = "error"      # database lacks periods, regions or commodities
+missing_data_behavior = "warning"  # a fuel imported by a sector has no price or emission factors
+
+# ####################################################################################
+# TEMOA CONFIG
+# ####################################################################################
 # [temoa_config]
 # solver_name = "gurobi"
 # scenario_mode = "perfect_foresight"

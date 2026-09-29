@@ -104,10 +104,14 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             cfg.ceud_config,
             cfg.data_cache_config,
             cfg.aeo_config,
+            cfg.model_currency_year,
         )
         new_technologies = cfg.end_uses.new_technologies()
         new_tech_params = load_new_technology_params(
-            new_technologies, cfg.provinces, cfg.aeo_config.us_census_mapping
+            new_technologies,
+            cfg.provinces,
+            cfg.aeo_config.us_census_mapping,
+            cfg.model_currency_year,
         )
         # GDP indexed to the year of the CEUD energy use it scales
         gdp_projections_index = get_cer_gdp(

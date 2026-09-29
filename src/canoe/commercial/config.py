@@ -312,6 +312,10 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     gdp_projection_point: GDPProjectionPoint = inherit()
     """Year of each period at which GDP scales the demands. Inherited."""
 
+    # Costs
+    model_currency_year: int = inherit()
+    """Year of the Canadian dollars the costs are written in. Inherited."""
+
     capacity_min_tolerance: float
     """Existing stock below this fraction of the total secondary energy consumption
     is filtered out."""

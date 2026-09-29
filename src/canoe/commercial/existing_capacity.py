@@ -24,6 +24,7 @@ def compute_existing_tech_life_params(
     ceud_config: "CEUDConfig",
     data_cache_config: GoldConnectorConfig,
     aeo_config: "AEOConfig",
+    model_currency_year: int,
 ) -> pd.DataFrame:
     # Energy consumption by fuel
     province_ceud = _load_all_ceud_tables(provinces, ceud_config, data_cache_config)
@@ -48,7 +49,9 @@ def compute_existing_tech_life_params(
         df_exs["avg_fixed_cost"] *= (
             _AEO_COST_TO_M_PER_PJ  # AEO CDM costs are in $/(kBtu/h); multiply to get M$/(PJ/y)
         )
-        df_exs["avg_fixed_cost"] = _aeo_conv_curr(df_exs["avg_fixed_cost"])
+        df_exs["avg_fixed_cost"] = _aeo_conv_curr(
+            df_exs["avg_fixed_cost"], model_currency_year
+        )
 
         ## Multiply secondary energies by average efficiencies to get demanded output energies
         df_exs["dem"] = df_exs.index.map(
@@ -135,6 +138,7 @@ def load_new_technology_params(
     new_technologies: dict[NewTechnology, list[CommercialEndUse]],
     provinces: list[CANOEProvince],
     us_census_mapping: dict[CANOEProvince, str],
+    model_currency_year: int,
 ) -> pd.DataFrame:
     """
     Efficiency, lifetime and costs of new technologies from the AEO CDM technology menu
@@ -151,10 +155,12 @@ def load_new_technology_params(
 
     params:
     - new_technologies: technology -> end uses it serves, see `EndUsesConfig.new_technologies`
+    - model_currency_year: year of the CAD the costs are converted to
 
     Returns one row per (technology, end_use, province) with columns `technology`,
     `end_use`, `province`, `fuel`, `aeo_technology`, `efficiency`, `life` (years),
-    `investment_cost` (M$/(PJ/y), CAD 2020) and `fixed_cost` (M$/(PJ/y) per year, CAD 2020).
+    `investment_cost` (M$/(PJ/y)) and `fixed_cost` (M$/(PJ/y) per year), in CAD of
+    `model_currency_year`.
     """
     columns = [
         "technology",
@@ -197,10 +203,12 @@ def load_new_technology_params(
                         "efficiency": aeo_row["efficiency"],
                         "life": aeo_row["life"],
                         "investment_cost": _aeo_conv_curr(
-                            aeo_row["capcst"] * _AEO_COST_TO_M_PER_PJ
+                            aeo_row["capcst"] * _AEO_COST_TO_M_PER_PJ,
+                            model_currency_year,
                         ),
                         "fixed_cost": _aeo_conv_curr(
-                            aeo_row["maintcst"] * _AEO_COST_TO_M_PER_PJ
+                            aeo_row["maintcst"] * _AEO_COST_TO_M_PER_PJ,
+                            model_currency_year,
                         ),
                     }
                 )
@@ -292,32 +300,34 @@ def _load_aeo_data(
 
 def _aeo_conv_curr(
     orig_cost: pd.DataFrame | pd.Series | float,
+    model_currency_year: int,
     orig_year: int = 2022,  # aeo_currency_year
     orig_curr: str = "USD",  # aeo_currency
 ) -> Any:
     """
-    Converts a cost from its original currency and year to the base currency and year
+    Converts a cost from its original currency and year to CAD of the model currency year
 
     params:
     - orig_cost: the original cost as given in the data source
+    - model_currency_year: year of the CAD the cost is converted to
     - orig_year: the original currency year in the data source. By default, aeo_currency_year from params.toml
     - orig_curr: the orignal currency in the data source (USD, EUR, GDP, AUD). By default, aeo_currency from params.toml
 
     For example, if the original cost from data is $2500 USD (2010),
-    cost = conv_curr(2500, 2010, 'USD')
+    cost = conv_curr(2500, 2020, 2010, 'USD')
     """
 
     # Exchange rate and inflation tables
     exchange, inflation = get_exchange_and_inflation_dfs()
 
-    # Currency and currency year for final data, converting to this
+    # Currency for final data, converting to this
     base_curr = "CAD"
-    base_currency_year = 2020
 
-    # Multiplier for final currency (to normalise if not using CAD2020)
+    # Multiplier for final currency (to normalise if not using CAD of 2020, the year
+    # the inflation table is indexed to)
     base_fact = (
-        exchange.loc[base_currency_year, base_curr]
-        * inflation.loc[base_currency_year, "gdp_deflator"]
+        exchange.loc[model_currency_year, base_curr]
+        * inflation.loc[model_currency_year, "gdp_deflator"]
     )
 
     return (

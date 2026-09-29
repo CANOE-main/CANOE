@@ -9,6 +9,7 @@ class CANOESector(StrEnum):
     Transportation = "TRP"
     Agriculture = "AGR"
     Electricity = "ELC"
+    Fuel = "FUEL"
 
     @classmethod
     @override
@@ -28,6 +29,7 @@ class CANOESector(StrEnum):
             "TRP": "T",
             "AGR": "A",
             "ELC": "E",
+            "FUEL": "F",
         }
         return _TAGS[self.value]
 
