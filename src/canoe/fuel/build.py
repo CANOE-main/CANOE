@@ -2,6 +2,8 @@
 
 from typing import TYPE_CHECKING
 
+import pandas as pd
+from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
 from canoe.common import (
@@ -15,6 +17,7 @@ from canoe.common.loaders import get_exchange_and_inflation_tables
 from canoe.common.naming import DatasetIdentifier
 
 from .emission_factors import add_combustion_factor_proxies
+from .entities import build_fuel_supply
 from .loaders import (
     get_atb_fuel_prices,
     get_combustion_emission_factors,
@@ -104,20 +107,55 @@ def build_fuel(
 
         # Compute parameters
         # ------------------
-        # TODO:
-        # - Delivered price (sector, fuel, period) in M$/PJ of model_currency_year,
-        #   read at price_projection_point, from get_delivered_price_sources
-        # - Import and distribution costs (region, period, tech): the lowest
+        # - Import costs (region, period, fuel) and distribution costs (region,
+        #   period, sector, fuel) in M$/PJ of model_currency_year: the lowest
         #   delivered price of each fuel, and the rest of each sector's price
-        # - Emission activities (tech, emission): upstream on the imports, combustion
-        #   on the distribution
+        import_costs, distribution_costs = _costs_not_implemented()
 
         # Build TEMOA Objects
         # -------------------
-        # TODO: data set labels, F_ethos and F_<fuel> commodities, F_IMP_<FUEL> and
-        # F_<S>_<FUEL> technologies
+        # Write data_id labels (first because they impact everything)
+        datasets = [
+            DataSet(data_id=fuel_data_id.get_dataset_code(province=province))
+            for province in cfg.provinces + [None]
+        ]
+        sql, params = DataSet.bulk_insert_or_ignore_sql(
+            datasets, include_nulls=True, include_defaults=True
+        )
+        db_conn.executemany(sql, params)
 
-    return CANOEModuleOutput(fuel_imports=[], emissions=[])
+        # F_ethos and the F_<fuel> commodities, then the imports and distribution
+        # technologies (the sectors already built their fuel commodities)
+        supply = build_fuel_supply(
+            import_costs,
+            distribution_costs,
+            upstream_factors,
+            combustion_factors,
+            lifetime=cfg.period_step,
+            data_id=fuel_data_id,
+        )
+        logger.info(
+            f"Building {len(supply.imports)} fuel imports and "
+            + f"{len(supply.distributions)} distribution technologies"
+        )
+        supply.build(db_conn)
+
+    return CANOEModuleOutput(fuel_imports=[], emissions=supply.emissions)
+
+
+def _costs_not_implemented() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Placeholder of the cost computation, the next step: no costs, so no fuel
+    technologies are written.
+
+    TODO: compute them from the delivered prices (see `canoe.fuel.prices`).
+    """
+    logger.warning("Fuel costs not implemented yet: no fuel technologies written")
+    import_costs = pd.DataFrame(columns=["region", "period", "fuel", "cost", "notes"])
+    distribution_costs = pd.DataFrame(
+        columns=["region", "period", "sector", "fuel", "cost", "notes"]
+    )
+    return import_costs, distribution_costs
 
 
 def imports_to_supply(fuel_imports: list[CANOEFuelImport]) -> list[CANOEFuelImport]:
