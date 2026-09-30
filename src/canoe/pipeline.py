@@ -87,13 +87,12 @@ def run(config: CANOEPipelineConfig):
         run_initializer(base)
 
         with atomic_transaction(base.db_output_dir) as db_conn:
-            # Emission commodities, before the sectors write emission activities.
-            # The last future period is the end of the horizon, not a model period.
+            # Emission commodities, before the sectors write emission activities
             emissions_processing.init(
                 db_conn,
                 base.emissions,
                 base.provinces,
-                base.future_periods[:-1],
+                base.future_periods,
                 DatasetIdentifier(
                     sector=CANOESector.Electricity,
                     code_description="HR",

@@ -297,7 +297,11 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
 
     # Model scope
     future_periods: list[int] = inherit()
-    """Temoa's `time_future`, see `model_periods`. Inherited."""
+    """Model periods, the ones written. Inherited."""
+
+    period_step: int = inherit()
+    """Length of the last period, in years; projected data (GDP growth,
+    electrification, ...) is taken at the end of each period. Inherited."""
 
     provinces: list[CANOEProvince] = inherit()
     """Regions written. Inherited."""
@@ -356,25 +360,6 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
                 "include_emissions is deprecated; Combustion emissions are handled by fuels sector."
             )
         return self
-
-    @property
-    def model_periods(self) -> list[int]:
-        """
-        Periods we write parameters for.
-
-        `future_periods` is Temoa's time_future: its last year marks the end of the
-        horizon and is not a period itself, e.g. [2025, ..., 2045, 2050] has model
-        periods 2025-2045, the last one ending in 2050.
-        """
-        return self.future_periods[:-1]
-
-    @property
-    def period_end_years(self) -> dict[int, int]:
-        """
-        Model period -> the year it ends (the next year in `future_periods`).
-        Projected data (GDP growth, electrification, ...) is taken at the period end.
-        """
-        return dict(zip(self.future_periods[:-1], self.future_periods[1:]))
 
     @override
     def get_dataset_code(self) -> str:

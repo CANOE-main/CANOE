@@ -51,6 +51,7 @@ from canoe.common.naming import (
     hour_str,
     season_str,
 )
+from canoe.common.periods import period_end_years
 
 from .validation import validate_db_against_config
 
@@ -153,7 +154,10 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         demand_df = _compute_end_use_demand(
             base_demand,
             gdp_growth_by_period(
-                gdp_projections_index, cfg.future_periods, cfg.gdp_projection_point
+                gdp_projections_index,
+                cfg.future_periods,
+                cfg.period_step,
+                cfg.gdp_projection_point,
             ),
         )
 
@@ -206,7 +210,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             # Demand values
             # -------------
             demand_series = DemandSeriesArray(
-                region=cfg.provinces, period=cfg.model_periods, fill=0.0
+                region=cfg.provinces, period=cfg.future_periods, fill=0.0
             ).fill_from_df(
                 demand_df.loc[end_use.get_full_name()],
                 dims=["region", "period"],
@@ -226,7 +230,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 # -------------
                 dsd_series = DemandSpecificDistributionArray(
                     region=cfg.provinces,
-                    period=cfg.model_periods,
+                    period=cfg.future_periods,
                     season=seasons,
                     tod=tods,
                 ).fill_from_df(
@@ -258,7 +262,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 for end_use, end_use_config in cfg.end_uses.space_conditioning().items()
             },
             cfg.provinces,
-            cfg.model_periods,
+            cfg.future_periods,
             cfg.capacity_min_tolerance,
             cfg.missing_data_behavior,
             sector_data_id,
@@ -295,7 +299,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 new_tech_params,
                 existing_techs[["province", "end_use", "fuel", "acf"]],  # pyright: ignore[reportArgumentType]
                 cfg.provinces,
-                cfg.model_periods,
+                cfg.future_periods,
                 sector_data_id,
             ):
                 logger.debug(f"Writing new technology `{technology.name}` to database")
@@ -308,8 +312,8 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 other_sec,
                 other_config,
                 cfg.provinces,
-                cfg.model_periods,
-                cfg.period_end_years,
+                cfg.future_periods,
+                period_end_years(cfg.future_periods, cfg.period_step),
                 cfg.ceud_config.data_year,
                 sector_data_id,
             )

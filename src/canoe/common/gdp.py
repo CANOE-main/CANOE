@@ -11,6 +11,8 @@ from enum import StrEnum
 
 import pandas as pd
 
+from .periods import period_end_years
+
 
 class CERScenario(StrEnum):
     """
@@ -33,14 +35,13 @@ class GDPProjectionPoint(StrEnum):
     """
     Year of each model period at which projected GDP scales the base-year demand.
 
-    A model period runs from December 31st of its label year to December 31st of the
-    next year in `future_periods`, e.g. with `future_periods = [2025, 2030, ..., 2050]`
-    period 2025 covers the years 2026-2030.
+    See `canoe.common.periods` for the years a period covers.
     """
 
     PeriodEnd = "period_end"
-    """GDP at the end of the period (the next year in `future_periods`), relative to
-    the year of the base demand data."""
+    """GDP at the end of the period (the next label in `future_periods`, or the end
+    of the horizon for the last period), relative to the year of the base demand
+    data."""
 
     PeriodStart = "period_start"
     """GDP at the label year of the period (the year just before it starts),
@@ -55,6 +56,7 @@ class GDPProjectionPoint(StrEnum):
 def gdp_growth_by_period(
     gdp_index: pd.DataFrame,
     future_periods: list[int],
+    period_step: int,
     projection_point: GDPProjectionPoint,
 ) -> dict[int, float]:
     """
@@ -66,7 +68,9 @@ def gdp_growth_by_period(
         GDP by year (index) in column `gdp`, relative to the year of the base demand
         data, see `canoe.common.loaders.get_cer_gdp`.
     future_periods : list[int]
-        Temoa's `time_future`: the model periods followed by the end of the horizon.
+        The model periods.
+    period_step : int
+        Length of the last period, see `canoe.common.periods.period_end_years`.
     projection_point : GDPProjectionPoint
         Year of each period at which GDP is read.
 
@@ -80,25 +84,26 @@ def gdp_growth_by_period(
     >>> gdp_index = pd.DataFrame(
     ...     {"gdp": [1.0, 1.1, 1.2, 1.5]}, index=[2022, 2025, 2030, 2035]
     ... )
-    >>> gdp_growth_by_period(gdp_index, [2025, 2030, 2035], GDPProjectionPoint.PeriodEnd)
+    >>> gdp_growth_by_period(gdp_index, [2025, 2030], 5, GDPProjectionPoint.PeriodEnd)
     {2025: 1.2, 2030: 1.5}
-    >>> gdp_growth_by_period(gdp_index, [2025, 2030, 2035], GDPProjectionPoint.PeriodStart)
+    >>> gdp_growth_by_period(gdp_index, [2025, 2030], 5, GDPProjectionPoint.PeriodStart)
     {2025: 1.1, 2030: 1.2}
-    >>> growth = gdp_growth_by_period(gdp_index, [2025, 2030, 2035], GDPProjectionPoint.Legacy)
+    >>> growth = gdp_growth_by_period(gdp_index, [2025, 2030], 5, GDPProjectionPoint.Legacy)
     >>> {period: round(factor, 4) for period, factor in growth.items()}
     {2025: 1.0, 2030: 1.0909}
     """
-    model_periods = future_periods[:-1]
     gdp = gdp_index["gdp"]
 
     if projection_point == GDPProjectionPoint.PeriodEnd:
         return {
             period: float(gdp.loc[end_year])
-            for period, end_year in zip(model_periods, future_periods[1:])
+            for period, end_year in period_end_years(
+                future_periods, period_step
+            ).items()
         }
     if projection_point == GDPProjectionPoint.PeriodStart:
-        return {period: float(gdp.loc[period]) for period in model_periods}
-    first_period_gdp = float(gdp.loc[model_periods[0]])
+        return {period: float(gdp.loc[period]) for period in future_periods}
+    first_period_gdp = float(gdp.loc[future_periods[0]])
     return {
-        period: float(gdp.loc[period]) / first_period_gdp for period in model_periods
+        period: float(gdp.loc[period]) / first_period_gdp for period in future_periods
     }

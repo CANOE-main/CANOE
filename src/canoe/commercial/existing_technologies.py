@@ -57,7 +57,7 @@ def build_existing_technologies(
       `province`, `end_use`, `fuel`, `dem`, `acf`, `avg_eff`, `avg_life`, `avg_fixed_cost`.
       Not modified.
     - existing_technologies_fuels: fuels we expect to have existing stock for, per end use
-    - model_periods: periods fixed costs are written for (horizon end excluded)
+    - model_periods: periods fixed costs are written for
     - capacity_min_tolerance: existing capacity is dropped for rows whose share of their
       province's total existing-stock demand is below this fraction
 

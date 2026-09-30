@@ -9,6 +9,7 @@ Build a base database that contains the definitions for:
 import argparse
 import sqlite3
 import tomllib
+from itertools import pairwise
 from pathlib import Path
 
 from canoe_schema.sql import get_sql_schema
@@ -52,9 +53,13 @@ class CANOEBaseConfig(BaseModel):
     """Existing (past) periods, written to `time_period` with flag 'e'."""
 
     future_periods: list[int]
-    """Temoa's `time_future`: the model periods followed by the end of the horizon,
-    e.g. [2025, ..., 2045, 2050] has model periods 2025-2045, the last one ending in
-    2050."""
+    """Model periods, the ones the modules write data for, in increasing order (e.g.
+    [2025, ..., 2045]). See `canoe.common.periods`."""
+
+    period_step: int = 5
+    """Length of the last model period, in years. Temoa needs the end of the horizon
+    as one more future period with no data: `time_period` gets
+    `future_periods[-1] + period_step` (2050 for [2025, ..., 2045])."""
 
     provinces: list[CANOEProvince]
     """Regions of the model."""
@@ -93,6 +98,27 @@ class CANOEBaseConfig(BaseModel):
     def expand_path(cls, v: Path) -> Path:
         return v.expanduser()
 
+    @field_validator("future_periods")
+    @classmethod
+    def _check_future_periods(cls, value: list[int]) -> list[int]:
+        if not value:
+            raise ValueError("future_periods needs at least one period")
+        if any(later <= earlier for earlier, later in pairwise(value)):
+            raise ValueError(f"future_periods must be increasing, got {value}")
+        return value
+
+    @field_validator("period_step")
+    @classmethod
+    def _check_period_step(cls, value: int) -> int:
+        if value <= 0:
+            raise ValueError(f"period_step must be positive, got {value}")
+        return value
+
+    @property
+    def end_of_horizon(self) -> int:
+        """The period after the last model period, with no data (e.g. 2050)."""
+        return self.future_periods[-1] + self.period_step
+
 
 def time_related_values(config: CANOEBaseConfig, db_cursor: sqlite3.Cursor):
     """
@@ -122,11 +148,13 @@ def time_related_values(config: CANOEBaseConfig, db_cursor: sqlite3.Cursor):
         )
     )
 
+    # Temoa's time_future: the model periods and the end of the horizon, which only
+    # marks when the last period ends and gets no data
     _ = db_cursor.executemany(
         *TimePeriod.to_bulk_insert_sql(  # pyright: ignore[reportArgumentType]
             [
                 TimePeriod(sequence=i, period=t, flag=TimePeriodTypeCode.F)
-                for i, t in enumerate(config.future_periods)
+                for i, t in enumerate([*config.future_periods, config.end_of_horizon])
             ]
         )
     )
