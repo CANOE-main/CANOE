@@ -105,12 +105,14 @@ all = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
     { name = "plotly" },
+    { name = "pyyaml" },
     { name = "ruff" },
 ]
 dev = [
     { name = "marimo" },
     { name = "matplotlib" },
     { name = "plotly" },
+    { name = "pyyaml" },
     { name = "ruff" },
 ]
 docs = [
@@ -151,6 +153,7 @@ requires-dist = [
     { name = "pandas", specifier = "==3.0.1" },
     { name = "plotly", marker = "extra == 'dev'" },
     { name = "pydantic", specifier = "==2.13.4" },
+    { name = "pyyaml", marker = "extra == 'dev'" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "temoa", git = "https://github.com/TemoaProject/temoa.git?rev=4db1eaf52fef24697fa748e9228e97244ac56a38" },
     { name = "tsam", git = "https://github.com/CANOE-main/tsam.git?rev=v3.2-patch" },
