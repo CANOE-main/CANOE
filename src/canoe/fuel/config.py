@@ -12,9 +12,9 @@ activities the upstream and combustion emissions of the fuels.
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
-from pydantic import ConfigDict
+from pydantic import ConfigDict, model_validator
 
 from canoe.common import (
     CANOEFuelImport,
@@ -27,6 +27,7 @@ from canoe.common import (
 from canoe.common.periods import ProjectionPoint
 from canoe.common.validation import ValidationBehavior
 from canoe.fuel.build import build_fuel
+from canoe.fuel.prices import PREVIOUS_MODULE_CURRENCY_YEAR
 
 from ..common.module_inheritance import InheritsFromBase, inherit
 from ..initializer import CANOEBaseConfig
@@ -118,6 +119,19 @@ class CANOEFuelConfig(InheritsFromBase):
 
     missing_data_behavior: ValidationBehavior = "warning"
     """What to do when a fuel a sector imports has no price or emission factors."""
+
+    @model_validator(mode="after")
+    def _check_previous_price_errors(self) -> Self:
+        if (
+            self.reproduce_previous_price_errors
+            and self.model_currency_year != PREVIOUS_MODULE_CURRENCY_YEAR
+        ):
+            raise ValueError(
+                "reproduce_previous_price_errors converts prices to "
+                + f"{PREVIOUS_MODULE_CURRENCY_YEAR} CAD, as the previous module; set "
+                + f"model_currency_year = {PREVIOUS_MODULE_CURRENCY_YEAR} or turn it off"
+            )
+        return self
 
     def get_dataset_code(self) -> str:
         return naming.get_dataset_code(

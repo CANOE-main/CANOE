@@ -2,7 +2,6 @@
 
 from typing import TYPE_CHECKING
 
-import pandas as pd
 from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
@@ -10,13 +9,15 @@ from canoe.common import (
     CANOEFuel,
     CANOEFuelImport,
     CANOEModuleOutput,
+    CANOEProvince,
     CANOESector,
     atomic_transaction,
 )
 from canoe.common.loaders import get_exchange_and_inflation_tables
 from canoe.common.naming import DatasetIdentifier
+from canoe.common.periods import ProjectionPoint, projection_year_by_period
 
-from .emission_factors import add_combustion_factor_proxies
+from .emission_factors import add_combustion_factor_proxies, check_combustion_factors
 from .entities import build_fuel_supply
 from .loaders import (
     get_atb_fuel_prices,
@@ -24,6 +25,13 @@ from .loaders import (
     get_eia_energy_prices,
     get_fixed_fuel_prices,
     get_upstream_emission_factors,
+)
+from .prices import (
+    check_price_sources,
+    compute_delivered_prices,
+    convert_to_model_units,
+    get_delivered_price_sources,
+    split_import_and_distribution,
 )
 from .validation import validate_db_against_config
 
@@ -60,24 +68,27 @@ def build_fuel(
     logger.debug(f"Fuel data set: {fuel_data_id.get_dataset_code()}")
 
     imports = imports_to_supply(fuel_imports)
-    skipped: list[CANOEFuelImport] = []
-    for fuel_import in fuel_imports:
-        if fuel_import.fuel in FUELS_SUPPLIED_ELSEWHERE and fuel_import not in skipped:
-            skipped.append(fuel_import)
+    skipped = list(
+        dict.fromkeys(
+            (i.sector, i.fuel)
+            for i in fuel_imports
+            if i.fuel in FUELS_SUPPLIED_ELSEWHERE
+        )
+    )
     if skipped:
         logger.info(
             "Fuel imports supplied by other modules, skipped: "
-            + ", ".join(f"{i.sector}:{i.fuel.value}" for i in skipped)
+            + ", ".join(f"{sector}:{fuel.value}" for sector, fuel in skipped)
         )
     logger.debug(
         f"Supplying {len(imports)} fuel imports: "
-        + ", ".join(f"{i.sector}:{i.fuel.value}" for i in imports)
+        + ", ".join(f"{i.sector}:{i.fuel.value} ({len(i.provinces)})" for i in imports)
     )
 
     # Wrap everything in an atomic transaction
     with atomic_transaction(cfg.database_file) as db_conn:
         # Validate canoe-base DB structure against module config
-        validate_db_against_config(cfg, db_conn)
+        validate_db_against_config(cfg, imports, db_conn)
 
         # Load and pre-process data sources
         # ----------------------------------
@@ -107,10 +118,42 @@ def build_fuel(
 
         # Compute parameters
         # ------------------
-        # - Import costs (region, period, fuel) and distribution costs (region,
-        #   period, sector, fuel) in M$/PJ of model_currency_year: the lowest
-        #   delivered price of each fuel, and the rest of each sector's price
-        import_costs, distribution_costs = _costs_not_implemented()
+        # (sector, fuel) supplied: those with a price (the others are reported with
+        # missing_data_behavior and not supplied), and their emission factors
+        sources = get_delivered_price_sources(cfg.reproduce_previous_price_errors)
+        supplied = check_price_sources(imports, sources, cfg.missing_data_behavior)
+        check_combustion_factors(
+            [(i.sector, i.fuel) for i in supplied],
+            combustion_factors,
+            cfg.missing_data_behavior,
+        )
+        # - Delivered price (sector, fuel, period) in M$/PJ of model_currency_year,
+        #   of every sector of the price table for the fuels supplied, read at
+        #   price_projection_point
+        projection_years = projection_year_by_period(
+            cfg.future_periods, cfg.period_step, cfg.price_projection_point
+        )
+        delivered_prices = compute_delivered_prices(
+            sources,
+            list(dict.fromkeys(i.fuel for i in supplied)),
+            projection_years,
+            *(
+                convert_to_model_units(
+                    source,
+                    cfg.model_currency_year,
+                    exchange,
+                    inflation,
+                    cfg.reproduce_previous_price_errors,
+                )
+                for source in (eia_prices, atb_prices, fixed_prices)
+            ),
+        )
+        # - Import costs (region, period, fuel): the lowest delivered price of each
+        #   fuel; distribution costs (region, period, sector, fuel): the rest of each
+        #   sector's price
+        import_costs, distribution_costs = split_import_and_distribution(
+            delivered_prices, supplied, cost_notes_suffix=_cost_notes_suffix(cfg)
+        )
 
         # Build TEMOA Objects
         # -------------------
@@ -143,40 +186,54 @@ def build_fuel(
     return CANOEModuleOutput(fuel_imports=[], emissions=supply.emissions)
 
 
-def _costs_not_implemented() -> tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Placeholder of the cost computation, the next step: no costs, so no fuel
-    technologies are written.
-
-    TODO: compute them from the delivered prices (see `canoe.fuel.prices`).
-    """
-    logger.warning("Fuel costs not implemented yet: no fuel technologies written")
-    import_costs = pd.DataFrame(columns=["region", "period", "fuel", "cost", "notes"])
-    distribution_costs = pd.DataFrame(
-        columns=["region", "period", "sector", "fuel", "cost", "notes"]
+def _cost_notes_suffix(cfg: "CANOEFuelConfig") -> str:
+    point = {
+        ProjectionPoint.PeriodEnd: "the end of each period",
+        ProjectionPoint.PeriodStart: "the label year of each period",
+    }[cfg.price_projection_point]
+    conversion = (
+        "; converted as the previous fuel module (see FUEL_MODULE_BUGS.md)"
+        if cfg.reproduce_previous_price_errors
+        else ""
     )
-    return import_costs, distribution_costs
+    return (
+        f". Projected prices read at {point}, in M$/PJ of "
+        + f"{cfg.model_currency_year} CAD{conversion}"
+    )
 
 
 def imports_to_supply(fuel_imports: list[CANOEFuelImport]) -> list[CANOEFuelImport]:
     """
-    Fuel imports this module supplies: each (sector, fuel) once, in the order declared,
-    without the fuels supplied by other modules (`FUELS_SUPPLIED_ELSEWHERE`).
+    Fuel imports this module supplies: one per (sector, fuel), in the order declared,
+    in the provinces of all its declarations, without the fuels supplied by other
+    modules (`FUELS_SUPPLIED_ELSEWHERE`).
 
     Examples
     --------
+    >>> ON, QC = CANOEProvince.ONTARIO, CANOEProvince.QUEBEC
     >>> imports = [
-    ...     CANOEFuelImport(CANOESector.Commercial, CANOEFuel.NaturalGas),
-    ...     CANOEFuelImport(CANOESector.Commercial, CANOEFuel.Electricity),
-    ...     CANOEFuelImport(CANOESector.Agriculture, CANOEFuel.NaturalGas),
-    ...     CANOEFuelImport(CANOESector.Commercial, CANOEFuel.NaturalGas),
+    ...     CANOEFuelImport(CANOESector.Commercial, CANOEFuel.NaturalGas, (QC,)),
+    ...     CANOEFuelImport(CANOESector.Commercial, CANOEFuel.Electricity, (ON,)),
+    ...     CANOEFuelImport(CANOESector.Agriculture, CANOEFuel.NaturalGas, (ON,)),
+    ...     CANOEFuelImport(CANOESector.Commercial, CANOEFuel.NaturalGas, (ON, QC)),
     ... ]
-    >>> [(str(i.sector), i.fuel.value) for i in imports_to_supply(imports)]
-    [('Commercial', 'NG'), ('Agriculture', 'NG')]
+    >>> for i in imports_to_supply(imports):
+    ...     print(i.sector, i.fuel, [p.short() for p in i.provinces])
+    Commercial NaturalGas ['ON', 'QC']
+    Agriculture NaturalGas ['ON']
     """
-    supplied: list[CANOEFuelImport] = []
+    provinces: dict[tuple[CANOESector, CANOEFuel], set[CANOEProvince]] = {}
     for fuel_import in fuel_imports:
-        if fuel_import.fuel in FUELS_SUPPLIED_ELSEWHERE or fuel_import in supplied:
+        if fuel_import.fuel in FUELS_SUPPLIED_ELSEWHERE:
             continue
-        supplied.append(fuel_import)
-    return supplied
+        provinces.setdefault((fuel_import.sector, fuel_import.fuel), set()).update(
+            fuel_import.provinces
+        )
+    return [
+        CANOEFuelImport(
+            sector=sector,
+            fuel=fuel,
+            provinces=tuple(p for p in CANOEProvince if p in regions),
+        )
+        for (sector, fuel), regions in provinces.items()
+    ]

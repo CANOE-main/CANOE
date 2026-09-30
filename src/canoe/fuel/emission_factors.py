@@ -6,6 +6,7 @@ the distribution technologies, and upstream factors by fuel, on the imports.
 import pandas as pd
 
 from canoe.common import CANOEFuel, CANOESector
+from canoe.common.validation import ValidationBehavior, handle_validation_issue
 
 COMBUSTION_FACTOR_PROXIES: dict[
     tuple[CANOESector, CANOEFuel], tuple[CANOESector, CANOEFuel]
@@ -93,3 +94,49 @@ def add_combustion_factor_proxies(
             )
         )
     return pd.concat([combustion_factors, *proxied], ignore_index=True)
+
+
+def check_combustion_factors(
+    supplied: list[tuple[CANOESector, CANOEFuel]],
+    combustion_factors: pd.DataFrame,
+    behavior: ValidationBehavior,
+):
+    """
+    Report with `behavior` the supplied (sector, fuel) with no combustion factors,
+    other than `NON_EMITTING_FUELS`: they are supplied without emissions.
+
+    Examples
+    --------
+    >>> factors = pd.DataFrame(
+    ...     {"sector": [CANOESector.Commercial], "fuel": [CANOEFuel.NaturalGas]}
+    ... )
+    >>> check_combustion_factors(
+    ...     [(CANOESector.Commercial, CANOEFuel.Hydrogen)], factors, "error"
+    ... )
+    >>> check_combustion_factors(
+    ...     [(CANOESector.Commercial, CANOEFuel.Oil)], factors, "error"
+    ... )
+    Traceback (most recent call last):
+    ...
+    ValueError: No combustion emission factors for commercial oil; supplied without combustion emissions
+    """
+
+    NON_EMITTING_FUELS: tuple[CANOEFuel, ...] = (
+        CANOEFuel.Hydrogen,
+        CANOEFuel.NaturalUranium,
+        CANOEFuel.EnrichedUranium,
+    )
+    """Fuels with no combustion emissions: missing factors are expected."""
+    with_factors = set(zip(combustion_factors["sector"], combustion_factors["fuel"]))
+    missing = [
+        (sector, fuel)
+        for sector, fuel in supplied
+        if (sector, fuel) not in with_factors and fuel not in NON_EMITTING_FUELS
+    ]
+    if missing:
+        handle_validation_issue(
+            "No combustion emission factors for "
+            + ", ".join(f"{str(s).lower()} {f.get_desc_name()}" for s, f in missing)
+            + "; supplied without combustion emissions",
+            behavior,
+        )

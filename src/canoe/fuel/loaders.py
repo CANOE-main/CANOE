@@ -33,12 +33,15 @@ class SourcePrices:
         Year of the currency (real dollars of that year).
     units : str
         Energy unit the prices are per, e.g. `$/MMBtu`.
+    reference : str
+        The source, for notes.
     """
 
     prices: pd.DataFrame
     currency: str
     currency_year: int
     units: str
+    reference: str
 
 
 def _cache_dir(cache_config: GoldConnectorConfig) -> Path:
@@ -113,6 +116,7 @@ def get_eia_energy_prices(cache_config: GoldConnectorConfig) -> SourcePrices:
         currency="USD",
         currency_year=_EIA_CURRENCY_YEAR,
         units="$/MMBtu",
+        reference="EIA Annual Energy Outlook 2025, Table 3 (US average)",
     )
 
 
@@ -199,6 +203,7 @@ def get_atb_fuel_prices(cache_config: GoldConnectorConfig) -> SourcePrices:
         currency="USD",
         currency_year=_ATB_CURRENCY_YEAR,
         units="$/MMBtu",
+        reference="NREL Annual Technology Baseline 2024",
     )
 
 
@@ -233,6 +238,8 @@ def get_fixed_fuel_prices() -> SourcePrices:
         currency="CAD",
         currency_year=2020,
         units="$/GJ",
+        reference="Wolinetz & Harrison (2023), Biofuels in Canada 2023 (ethanol, "
+        + "renewable diesel); NREL ATB (SPK)",
     )
 
 

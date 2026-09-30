@@ -247,6 +247,36 @@ class TechnologyEntity:
         """Output commodities, in the order they were added with `with_efficiency`"""
         return list(dict.fromkeys(o for _, o in self.efficiencies))
 
+    def input_regions(self, input_commodity: str) -> list[CANOEProvince]:
+        """
+        Regions where the technology takes `input_commodity` as input: those with an
+        efficiency for it (any output or vintage), in order of first appearance.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> furnace = TechnologyEntity(
+        ...     "C_NG_FRN", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ... ).with_efficiency(
+        ...     "C_ng",
+        ...     RegionVintageArray([CANOEProvince.ONTARIO, CANOEProvince.QUEBEC], [2025]),
+        ... )
+        >>> furnace.input_regions("C_ng")
+        []
+        >>> furnace.efficiencies[("C_ng", "C_D_DOC")].values.set(
+        ...     0.9, region=CANOEProvince.QUEBEC, vintage=2025
+        ... )
+        >>> furnace.input_regions("C_ng")
+        [<CANOEProvince.QUEBEC: 'Quebec'>]
+        """
+        regions = (
+            record["region"]
+            for (i, _), efficiency in self.efficiencies.items()
+            if i == input_commodity
+            for record in efficiency.values.to_records()
+        )
+        return list(dict.fromkeys(regions))
+
     def set_annual(self, annual: bool = True):
         """
         Mark the technology as annual (`annual` column): its activity is decided per
@@ -838,7 +868,10 @@ class TechnologyEntity:
 
         # Fixed and variable costs only while the vintage is alive
         lifetimes: dict[CANOEProvince, float] = (
-            {r["region"]: np.round(r["value"]) for r in self.lifetime.values.to_records()}
+            {
+                r["region"]: np.round(r["value"])
+                for r in self.lifetime.values.to_records()
+            }
             if self.lifetime
             else {}
         )

@@ -65,6 +65,7 @@ class TestDefaults:
             base,
             price_projection_point="period_start",
             model_currency_year=2022,
+            reproduce_previous_price_errors=False,
         )
         assert config.price_projection_point == ProjectionPoint.PeriodStart
         assert config.model_currency_year == 2022
@@ -80,3 +81,15 @@ class TestValidation:
     def test_needs_base_for_inherited_fields(self, compiler_raw: dict[str, Any]):
         with pytest.raises(ValidationError, match="mandatory fields missing"):
             CANOEFuelConfig.model_validate(compiler_raw["fuel"])
+
+
+def test_previous_price_errors_need_2020_dollars(
+    compiler_raw: dict[str, Any], base: CANOEBaseConfig
+):
+    with pytest.raises(ValidationError, match="model_currency_year = 2020"):
+        _config(
+            compiler_raw,
+            base,
+            reproduce_previous_price_errors=True,
+            model_currency_year=2022,
+        )

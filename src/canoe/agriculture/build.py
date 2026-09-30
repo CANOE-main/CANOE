@@ -6,9 +6,9 @@ import pandas as pd
 from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
+from canoe.canoe_objects.fuel_imports import declare_fuel_imports
 from canoe.common import (
     CANOEFuel,
-    CANOEFuelImport,
     CANOEModuleOutput,
     CANOESector,
     atomic_transaction,
@@ -141,10 +141,10 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
         technology.build(db_conn)
 
     return CANOEModuleOutput(
-        fuel_imports=[
-            CANOEFuelImport(sector=CANOESector.Agriculture, fuel=fuel)
-            for fuel in technology.fuels
-        ]
+        # The fuels the technology takes, where it takes them
+        fuel_imports=declare_fuel_imports(
+            CANOESector.Agriculture, technology.to_technology_entities()
+        )
     )
 
 
