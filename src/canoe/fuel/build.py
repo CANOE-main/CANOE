@@ -11,8 +11,17 @@ from canoe.common import (
     CANOESector,
     atomic_transaction,
 )
+from canoe.common.loaders import get_exchange_and_inflation_tables
 from canoe.common.naming import DatasetIdentifier
 
+from .emission_factors import add_combustion_factor_proxies
+from .loaders import (
+    get_atb_fuel_prices,
+    get_combustion_emission_factors,
+    get_eia_energy_prices,
+    get_fixed_fuel_prices,
+    get_upstream_emission_factors,
+)
 from .validation import validate_db_against_config
 
 if TYPE_CHECKING:
@@ -69,9 +78,29 @@ def build_fuel(
 
         # Load and pre-process data sources
         # ----------------------------------
-        # TODO: EIA AEO Table 3 delivered prices by sector and fuel (real 2024
-        # $/MMBtu), NREL ATB biomass and uranium prices, fixed biofuel prices,
-        # exchange and inflation tables, combustion and upstream emission factors
+        # Prices, each in its own currency, year and units: EIA AEO Table 3
+        # delivered prices by sector and fuel (2024 USD/MMBtu), NREL ATB biomass and
+        # uranium (2022 USD/MMBtu), fixed report prices (2020 CAD/GJ)
+        eia_prices = get_eia_energy_prices(cfg.data_cache_config)
+        atb_prices = get_atb_fuel_prices(cfg.data_cache_config)
+        fixed_prices = get_fixed_fuel_prices()
+        # Exchange rates and inflation, to convert them to CAD of model_currency_year
+        exchange, inflation = get_exchange_and_inflation_tables()
+        # Emission factors (kt/PJ): combustion by sector and fuel, upstream by fuel
+        combustion_factors = get_combustion_emission_factors()
+        # Agriculture gasoline takes the transportation factors (none in the source)
+        combustion_factors = add_combustion_factor_proxies(
+            combustion_factors, cfg.reproduce_previous_emission_errors
+        )
+        upstream_factors = get_upstream_emission_factors()
+        logger.debug(
+            f"Loaded {len(eia_prices.prices)} EIA prices "
+            + f"({eia_prices.prices['year'].min()}-{eia_prices.prices['year'].max()}), "
+            + f"{len(atb_prices.prices)} ATB and {len(fixed_prices.prices)} fixed "
+            + f"prices, exchange and inflation for {len(exchange)} and "
+            + f"{len(inflation)} years, {len(combustion_factors)} combustion and "
+            + f"{len(upstream_factors)} upstream emission factors"
+        )
 
         # Compute parameters
         # ------------------

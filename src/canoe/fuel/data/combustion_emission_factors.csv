@@ -1,0 +1,147 @@
+﻿commodity,emission,value,units,notes,source
+I_ng,co2,51.8766756,kTonne/PJ,Converted from g/m3 to kTonne/PJ,F4
+I_ng,ch4,0.991957105,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+I_ng,n2o,0.884718499,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+I_ng,co2e,52.14597855,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+E_ng,co2,51.8766756,kTonne/PJ,Converted from g/m3 to kTonne/PJ,F4
+E_ng,ch4,13.13672922,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+E_ng,n2o,1.313672922,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+E_ng,co2e,52.60313673,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+A_ng,co2,51.8766756,kTonne/PJ,Converted from g/m3 to kTonne/PJ,F4
+A_ng,ch4,0.991957105,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+A_ng,n2o,0.938337802,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+A_ng,co2e,52.16061662,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+R_ng,co2,51.8766756,kTonne/PJ,Converted from g/m3 to kTonne/PJ,F4
+R_ng,ch4,0.991957105,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+R_ng,n2o,0.938337802,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+R_ng,co2e,52.16061662,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+C_ng,co2,51.8766756,kTonne/PJ,Converted from g/m3 to kTonne/PJ,F4
+C_ng,ch4,0.991957105,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+C_ng,n2o,0.938337802,Tonne/PJ,Converted from g/m3 to Tonne/PJ,F4
+C_ng,co2e,52.16061662,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+T_ng,co2,51.8766756,kTonne/PJ,"Converted from g/m3 to kTonne/PJ, using the industrial values",F4
+T_ng,ch4,0.991957105,Tonne/PJ,"Converted from g/m3 to Tonne/PJ, using the industrial values",F4
+T_ng,n2o,0.884718499,Tonne/PJ,"Converted from g/m3 to Tonne/PJ, using the industrial values",F4
+T_ng,co2e,52.14597855,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+E_bio_g,co2,49.4,kTonne/PJ,,F6
+E_bio_g,co2e,49.4,kTonne/PJ,Using the GWP100 values from IPCC AR6,F6
+E_bio_m,co2,93.71,kTonne/PJ,,F6
+E_bio_m,ch4,302,Tonne/PJ,,F6
+E_bio_m,n2o,42,Tonne/PJ,,F6
+E_bio_m,co2e,113.632,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+I_bio,co2,49.4,kTonne/PJ,,F6
+I_bio,co2e,49.4,kTonne/PJ,Using the GWP100 values from IPCC AR6,F6
+T_bio,co2,49.4,kTonne/PJ,,F6
+T_bio,co2e,49.4,kTonne/PJ,Using the GWP100 values from IPCC AR6,F6
+R_bio,co2,49.4,kTonne/PJ,,F6
+R_bio,co2e,49.4,kTonne/PJ,Using the GWP100 values from IPCC AR6,F6
+C_bio,co2,49.4,kTonne/PJ,,F6
+C_bio,co2e,49.4,kTonne/PJ,Using the GWP100 values from IPCC AR6,F6
+T_eth,co2,64.9,kTonne/PJ,,F6
+T_eth,co2e,64.9,kTonne/PJ,Using the GWP100 values from IPCC AR6,F6
+T_rdsl,co2,70,kTonne/PJ,,F6
+T_rdsl,co2e,70,kTonne/PJ,Using the GWP100 values from IPCC AR6,F6
+R_lpg,co2,59.66,kTonne/PJ,,F6
+R_lpg,ch4,1.067,Tonne/PJ,,F6
+R_lpg,n2o,4.267,Tonne/PJ,,F6
+R_lpg,co2e,60.854767,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+I_ngl,co2,59.66,kTonne/PJ,,F6
+I_ngl,ch4,1.067,Tonne/PJ,,F6
+I_ngl,n2o,4.267,Tonne/PJ,,F6
+I_ngl,co2e,60.854767,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+T_lpg,co2,59.66,kTonne/PJ,,F6
+T_lpg,ch4,0.948,Tonne/PJ,,F6
+T_lpg,n2o,4.267,Tonne/PJ,,F6
+T_lpg,co2e,60.851435,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+A_prop,co2,59.66,kTonne/PJ,,F6
+A_prop,ch4,0.948,Tonne/PJ,,F6
+A_prop,n2o,4.267,Tonne/PJ,,F6
+A_prop,co2e,60.851435,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+A_dsl,co2,69.43,kTonne/PJ,,F6
+A_dsl,ch4,3.474,Tonne/PJ,,F6
+A_dsl,n2o,10.44,Tonne/PJ,,F6
+A_dsl,co2e,72.377392,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+E_dsl,co2,69.43,kTonne/PJ,,F6
+E_dsl,ch4,3.474,Tonne/PJ,,F6
+E_dsl,n2o,10.44,Tonne/PJ,,F6
+E_dsl,co2e,72.377392,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+I_dsl,co2,69.43,kTonne/PJ,,F6
+I_dsl,ch4,3.474,Tonne/PJ,,F6
+I_dsl,n2o,10.44,Tonne/PJ,,F6
+I_dsl,co2e,72.377392,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+T_dsl,co2,69.43,kTonne/PJ,,F6
+T_dsl,ch4,3.474,Tonne/PJ,,F6
+T_dsl,n2o,10.44,Tonne/PJ,,F6
+T_dsl,co2e,72.377392,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+C_oil,co2,69.43,kTonne/PJ,"Chemically similar to diesel, therefore the values for diesel were used",F6
+C_oil,ch4,3.474,Tonne/PJ,,F6
+C_oil,n2o,10.44,Tonne/PJ,,F6
+C_oil,co2e,72.377392,kTonne/PJ,,F5
+R_oil,co2,69.43,kTonne/PJ,"Chemically similar to diesel, therefore the values for diesel were used",F6
+R_oil,ch4,3.474,Tonne/PJ,,F6
+R_oil,n2o,10.44,Tonne/PJ,,F6
+R_oil,co2e,72.377392,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+I_hfo,co2,73.51,kTonne/PJ,,F6
+I_hfo,ch4,0.67,Tonne/PJ,,F6
+I_hfo,n2o,0.799,Tonne/PJ,,F6
+I_hfo,co2e,73.746887,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+E_oil,co2,73.51,kTonne/PJ,,F6
+E_oil,ch4,0.67,Tonne/PJ,,F6
+E_oil,n2o,0.799,Tonne/PJ,,F6
+E_oil,co2e,73.746887,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+I_wood,co2,93.71,kTonne/PJ,,F6
+I_wood,ch4,302,Tonne/PJ,,F6
+I_wood,n2o,42,Tonne/PJ,,F6
+I_wood,co2e,113.632,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+E_coal,co2,86.02,kTonne/PJ,,F6
+E_coal,ch4,1.041,Tonne/PJ,,F6
+E_coal,n2o,0.694,Tonne/PJ,,F6
+E_coal,co2e,86.23861,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+I_coal,co2,86.02,kTonne/PJ,,F6
+I_coal,ch4,1.041,Tonne/PJ,,F6
+I_coal,n2o,0.694,Tonne/PJ,,F6
+I_coal,co2e,86.23861,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+I_coke,co2,82.55,kTonne/PJ,,F6
+I_coke,ch4,2.589,Tonne/PJ,,F6
+I_coke,n2o,0.575,Tonne/PJ,,F6
+I_coke,co2e,82.779467,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+I_pcoke,co2,86.12,kTonne/PJ,,F6
+I_pcoke,ch4,2.958,Tonne/PJ,,F6
+I_pcoke,n2o,0.569,Tonne/PJ,,F6
+I_pcoke,co2e,86.358161,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+R_wood,co2,93.71,kTonne/PJ,,F6
+R_wood,ch4,302,Tonne/PJ,,F6
+R_wood,n2o,42,Tonne/PJ,,F6
+R_wood,co2e,113.632,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+T_cng,co2,51.8766756,kTonne/PJ,"Converted from g/m3 to kTonne/PJ, using the industrial values",F4
+T_cng,ch4,0.991957105,Tonne/PJ,"Converted from g/m3 to Tonne/PJ, using the industrial values",F4
+T_cng,n2o,0.884718499,Tonne/PJ,"Converted from g/m3 to Tonne/PJ, using the industrial values",F4
+T_cng,co2e,52.14597855,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+T_gsl,co2,65.4,kTonne/PJ,,F6
+T_gsl,ch4,77.14,Tonne/PJ,,F6
+T_gsl,n2o,1.429,Tonne/PJ,,F6
+T_gsl,co2e,67.950037,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+E_gsl,co2,65.4,kTonne/PJ,,F6
+E_gsl,ch4,77.14,Tonne/PJ,,F6
+E_gsl,n2o,1.429,Tonne/PJ,,F6
+E_gsl,co2e,67.950037,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+T_hfo,co2,73.51,kTonne/PJ,,F6
+T_hfo,ch4,0.67,Tonne/PJ,,F6
+T_hfo,n2o,0.799,Tonne/PJ,,F6
+T_hfo,co2e,73.746887,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+T_jtf,co2,67.75,kTonne/PJ,,F6
+T_jtf,ch4,2.139,Tonne/PJ,,F6
+T_jtf,n2o,6.15,Tonne/PJ,,F6
+T_jtf,co2e,69.488842,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+T_lng,co2,51.8766756,kTonne/PJ,"Converted from g/m3 to kTonne/PJ, using the industrial values",F4
+T_lng,ch4,0.991957105,Tonne/PJ,"Converted from g/m3 to Tonne/PJ, using the industrial values",F4
+T_lng,n2o,0.884718499,Tonne/PJ,"Converted from g/m3 to Tonne/PJ, using the industrial values",F4
+T_lng,co2e,52.14597855,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5
+T_mdo,co2,72.11645566,kTonne/PJ,"Emission factor represents direct combustion emissions from vehicle operation. Obtained from GREET 2023 Fuel-cycle Model, this pathway represents SPK (HRJ). GREET assumes carbon neutrality from biomass-derived fuels, meaning that CO2 emissions from combustion are offset by CO2 uptake by plants.",
+T_mdo,ch4,1.112736,Tonne/PJ,"Emission factor represents direct combustion emissions from vehicle operation. Obtained from GREET 2023 Fuel-cycle Model, this pathway represents SPK (HRJ). GREET assumes carbon neutrality from biomass-derived fuels, meaning that CO2 emissions from combustion are offset by CO2 uptake by plants.",
+T_mdo,n2o,3.783304,Tonne/PJ,"Emission factor represents direct combustion emissions from vehicle operation. Obtained from GREET 2023 Fuel-cycle Model, this pathway represents SPK (HRJ). GREET assumes carbon neutrality from biomass-derived fuels, meaning that CO2 emissions from combustion are offset by CO2 uptake by plants.",
+T_mdo,co2e,73.18245712,kTonne/PJ,Using the GWP100 values from IPCC AR6,
+T_spk,co2,0,kTonne/PJ,"Emission factor represents direct combustion emissions from vehicle operation. Obtained from GREET 2023 Fuel-cycle Model, this pathway represents SPK (HRJ). GREET assumes carbon neutrality from biomass-derived fuels, meaning that CO2 emissions from combustion are offset by CO2 uptake by plants.",F7
+T_spk,ch4,0.032824,Tonne/PJ,"Emission factor represents direct combustion emissions from vehicle operation. Obtained from GREET 2023 Fuel-cycle Model, this pathway represents SPK (HRJ). GREET assumes carbon neutrality from biomass-derived fuels, meaning that CO2 emissions from combustion are offset by CO2 uptake by plants.",F7
+T_spk,n2o,0.064397,Tonne/PJ,"Emission factor represents direct combustion emissions from vehicle operation. Obtained from GREET 2023 Fuel-cycle Model, this pathway represents SPK (HRJ). GREET assumes carbon neutrality from biomass-derived fuels, meaning that CO2 emissions from combustion are offset by CO2 uptake by plants.",F7
+T_spk,co2e,0.01855845,kTonne/PJ,Using the GWP100 values from IPCC AR6,F5

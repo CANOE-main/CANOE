@@ -5,12 +5,12 @@ if TYPE_CHECKING:
 import pandas as pd
 
 from canoe.common import CANOEFuel, CANOEProvince, GoldConnectorConfig
+from canoe.common.loaders import get_exchange_and_inflation_tables
 
 from .end_uses import CommercialEndUse
 from .loaders import (
     get_aeo_data,
     get_ceud_table,
-    get_exchange_and_inflation_dfs,
     get_statcan_atlantic_fractions_table,
 )
 from .technology_catalog import NEW_TECHNOLOGIES, NewTechnology
@@ -318,7 +318,7 @@ def _aeo_conv_curr(
     """
 
     # Exchange rate and inflation tables
-    exchange, inflation = get_exchange_and_inflation_dfs()
+    exchange, inflation = get_exchange_and_inflation_tables()
 
     # Currency for final data, converting to this
     base_curr = "CAD"

@@ -52,9 +52,10 @@ class TestPipelineConfig:
 
 
 class TestDefaults:
-    def test_price_errors_fixed_by_default(self, base: CANOEBaseConfig):
+    def test_previous_errors_fixed_by_default(self, base: CANOEBaseConfig):
         config = CANOEFuelConfig.model_validate({}, context={"base": base})
         assert not config.reproduce_previous_price_errors
+        assert not config.reproduce_previous_emission_errors
 
     def test_can_override_inherited_price_options(
         self, compiler_raw: dict[str, Any], base: CANOEBaseConfig

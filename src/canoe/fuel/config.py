@@ -104,6 +104,13 @@ class CANOEFuelConfig(InheritsFromBase):
     and deflators (the 2025 deflator applied to 2024 dollars), and residential LPG
     priced as transportation propane. See `FUEL_MODULE_BUGS.md`. Temporary."""
 
+    # Emissions
+    reproduce_previous_emission_errors: bool = False
+    """Reproduce the emission errors of the previous fuel module, to compare with its
+    databases: agriculture gasoline without combustion factors (instead of the
+    transportation ones, see `canoe.fuel.emission_factors`). See
+    `FUEL_MODULE_BUGS.md`. Temporary."""
+
     # Runtime switches
     validation_behavior: ValidationBehavior = "error"
     """What to do when the database lacks the periods, regions or commodities this
