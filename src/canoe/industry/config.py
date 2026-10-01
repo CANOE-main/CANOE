@@ -228,8 +228,8 @@ class CANOEIndustryConfig(InheritsFromBase, CANOEModule):
 
     missing_data_behavior: ValidationBehavior = "warning"
     """What to do when data a modelled subsector needs is missing: energy use NRCan
-    does not publish, or no StatCan share for an Atlantic province where the Atlantic
-    table has energy use."""
+    does not publish, or energy use in the Atlantic table of a subsector with no
+    StatCan share in any Atlantic province."""
 
     @field_validator("fuels")
     @classmethod

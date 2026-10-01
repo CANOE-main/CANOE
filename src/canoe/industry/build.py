@@ -5,8 +5,17 @@ from typing import TYPE_CHECKING
 from loguru import logger
 
 from canoe.common import CANOEModuleOutput, CANOESector, atomic_transaction
+from canoe.common.loaders import get_cer_gdp
 from canoe.common.naming import DatasetIdentifier
 
+from .energy_use import (
+    check_atlantic_shares,
+    check_energy_use,
+    compute_energy_use,
+    compute_energy_use_by_source,
+    load_ceud_tables,
+)
+from .loaders import get_statcan_atlantic_industry_shares
 from .validation import validate_db_against_config
 
 if TYPE_CHECKING:
@@ -48,7 +57,29 @@ def build_industry(cfg: "CANOEIndustryConfig") -> CANOEModuleOutput:
 
         # Load and pre-process data sources
         # ----------------------------------
-        # TODO: NRCan CEUD industry tables, StatCan Atlantic shares, CER GDP
+        # NRCan CEUD: energy use (PJ) of each subsector, total and by energy source,
+        # with the Atlantic tables split among the Atlantic provinces by StatCan
+        # shares
+        ceud = load_ceud_tables(
+            cfg.provinces, subsectors, cfg.ceud_data_year, cfg.data_cache_config
+        )
+        atlantic_shares = get_statcan_atlantic_industry_shares()
+        check_atlantic_shares(ceud, atlantic_shares, cfg.missing_data_behavior)
+        energy_use = compute_energy_use(ceud, atlantic_shares)
+        energy_use_by_source = compute_energy_use_by_source(ceud, atlantic_shares)
+        check_energy_use(energy_use, cfg.missing_data_behavior)
+        # CER: GDP indexed to the year of the CEUD energy use it scales
+        gdp_projections_index = get_cer_gdp(
+            cfg.data_cache_config,
+            gdp_index_year=cfg.ceud_data_year,
+            scenario=cfg.gdp_scenario,
+        )
+        logger.debug(
+            f"Loaded industry energy use of {len(subsectors)} subsectors in "
+            + f"{len(cfg.provinces)} provinces ({energy_use['energy_use'].sum():.1f} "
+            + f"PJ in {cfg.ceud_data_year}, {len(energy_use_by_source)} rows by "
+            + f"source) and GDP projections for {len(gdp_projections_index)} years"
+        )
 
         # Compute parameters
         # ------------------
