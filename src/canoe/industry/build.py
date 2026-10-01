@@ -2,12 +2,15 @@
 
 from typing import TYPE_CHECKING
 
+from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
 from canoe.common import CANOEModuleOutput, CANOESector, atomic_transaction
+from canoe.common.gdp import CERScenario, GDPProjectionPoint, gdp_growth_by_period
 from canoe.common.loaders import get_cer_gdp
 from canoe.common.naming import DatasetIdentifier
 
+from .demand import OtherFuelsTreatment, align_demand_and_splits, compute_demand
 from .energy_use import (
     check_atlantic_shares,
     check_energy_use,
@@ -15,6 +18,8 @@ from .energy_use import (
     compute_energy_use_by_source,
     load_ceud_tables,
 )
+from .entities import build_industry_entities
+from .input_splits import compute_ceud_shares, compute_input_splits
 from .loaders import get_statcan_atlantic_industry_shares
 from .validation import validate_db_against_config
 
@@ -83,19 +88,109 @@ def build_industry(cfg: "CANOEIndustryConfig") -> CANOEModuleOutput:
 
         # Compute parameters
         # ------------------
-        # TODO: demand and input splits of each subsector ("Other" deducted from the
-        # demand or kept as a split, per cfg.other_fuels), in the shapes
-        # `entities.build_subsector_demand` and `build_subsector_technology` take:
-        # - demand_df: region, period, subsector, demand (PJ)
-        # - input_split_df: region, period, subsector, fuel, split (0-1)
+        # - Shares (province, subsector, fuel) of each source in the CEUD energy use,
+        #   with the sources NRCan does not publish sharing the rest
+        shares = compute_ceud_shares(energy_use_by_source)
+        # - Demand (region, period, subsector): CEUD energy use (less "Other" fuels
+        #   with other_fuels = "deduct") indexed to the projected gdp growth
+        demand_df = compute_demand(
+            energy_use,
+            energy_use_by_source,
+            shares,
+            gdp_growth_by_period(
+                gdp_projections_index,
+                cfg.future_periods,
+                cfg.period_step,
+                cfg.gdp_projection_point,
+            ),
+            cfg.other_fuels,
+        )
+        # - Input splits (region, period, subsector, fuel): the CEUD fuel mix, with
+        #   the share of the sources a subsector does not model spread over its fuels
+        input_fuels_of = {s: cfg.input_fuels_of(s) for s in subsectors}
+        input_split_df = compute_input_splits(
+            shares, input_fuels_of, cfg.future_periods
+        )
+        # Only where a subsector has both a demand and fuels to meet it
+        demand_df, input_split_df = align_demand_and_splits(
+            demand_df, input_split_df, cfg.missing_data_behavior
+        )
 
         # Build TEMOA Objects
         # -------------------
-        # TODO: data_id labels; then, per subsector with demand,
-        # build_subsector_demand(...).build(db_conn) and
-        # build_subsector_technology(...) with cfg.fuels_of(subsector) (+ OTH if
-        # cfg.other_fuels is "free"); then build_free_other_fuel_supply(technologies,
-        # cfg.period_step, sector_data_id), and return
-        # industry_fuel_imports(technologies) as the fuel imports
+        # Write data_id labels (first because they impact everything)
+        datasets = [
+            DataSet(data_id=sector_data_id.get_dataset_code(province=province))
+            for province in cfg.provinces + [None]
+        ]
+        sql, params = DataSet.bulk_insert_or_ignore_sql(
+            datasets, include_nulls=True, include_defaults=True
+        )
+        db_conn.executemany(sql, params)
 
-    return CANOEModuleOutput(fuel_imports=[])
+        # A demand and a technology per subsector (demands first: the technologies
+        # output them), then the free supply of "Other" fuels if they are inputs
+        entities = build_industry_entities(
+            demand_df,
+            input_split_df,
+            input_fuels_of,
+            cfg.provinces,
+            cfg.future_periods,
+            cfg.input_split_operator,
+            demand_notes=_demand_notes(
+                cfg.ceud_data_year,
+                cfg.gdp_scenario,
+                cfg.gdp_projection_point,
+                cfg.other_fuels,
+            ),
+            split_notes=_input_split_notes(cfg.ceud_data_year),
+            lifetime=cfg.period_step,
+            data_id=sector_data_id,
+        )
+        logger.info(
+            f"Building {len(entities.demands)} industry demands and technologies"
+            + (
+                ", and the free supply of other fuels"
+                if entities.free_other_supply is not None
+                else ""
+            )
+        )
+        entities.build(db_conn)
+
+    return CANOEModuleOutput(
+        # The fuels the technologies take, where they take them ("Other" fuels are
+        # supplied by the industry itself)
+        fuel_imports=entities.fuel_imports()
+    )
+
+
+def _demand_notes(
+    ceud_data_year: int,
+    gdp_scenario: CERScenario,
+    gdp_projection_point: GDPProjectionPoint,
+    other_fuels: OtherFuelsTreatment,
+) -> str:
+    point = {
+        GDPProjectionPoint.PeriodEnd: "at the end of each period",
+        GDPProjectionPoint.PeriodStart: "at the start of each period",
+        GDPProjectionPoint.Legacy: "at the start of each period, relative to the first",
+    }[gdp_projection_point]
+    other = {
+        OtherFuelsTreatment.Deduct: ", less its 'Other' fuels,",
+        OtherFuelsTreatment.Free: "",
+    }[other_fuels]
+    return (
+        f"Energy use of the industry subsector (NRCan, {ceud_data_year}){other} "
+        + f"indexed to projected gdp growth {point} ({gdp_scenario.value}, CER, "
+        + f"{2023}). Atlantic provinces split by their share of the subsector's "
+        + f"energy use (StatCan, {2023})"
+    )
+
+
+def _input_split_notes(ceud_data_year: int) -> str:
+    return (
+        f"Shares of the subsector's energy use by source (NRCan, {ceud_data_year}), "
+        + "rounded to 3 decimals; sources not published share the rest evenly, and "
+        + "the shares of the sources not modelled are spread over the modelled fuels "
+        + "in proportion"
+    )

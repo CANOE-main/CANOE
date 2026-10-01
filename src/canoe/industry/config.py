@@ -10,7 +10,6 @@ fuel shares.
 """
 
 from collections.abc import Callable
-from enum import StrEnum
 from pathlib import Path
 from typing import Any, ClassVar, Literal, Self, override
 
@@ -29,6 +28,7 @@ from canoe.common import (
 from canoe.common.gdp import CERScenario, GDPProjectionPoint
 from canoe.common.validation import ValidationBehavior
 from canoe.industry.build import build_industry
+from canoe.industry.demand import OtherFuelsTreatment
 from canoe.industry.loaders import CEUD_INDUSTRY_SOURCES
 from canoe.industry.subsectors import IndustrySubsector
 
@@ -41,26 +41,6 @@ SUPPORTED_FUELS: tuple[CANOEFuel, ...] = tuple(
 """Fuels with their own row in the NRCan CEUD industry tables, which the fuel module
 supplies: ELC, NG, DSL, HFO, PCK, NGL, COAL, COKE and WOOD. "Other" (`OTH`) is not
 listed in `fuels`; `other_fuels` decides what happens to it."""
-
-
-class OtherFuelsTreatment(StrEnum):
-    """
-    What happens to the NRCan CEUD "Other" energy source (`OTH`) of the industry
-    subsectors. It is a mix of non-standard fuels (e.g. waste fuels in cement) with no
-    price or emission factors in the fuel module, so it is never a fuel import. See
-    `INDUSTRY_MODULE_BUGS.md`, 1.
-    """
-
-    Deduct = "deduct"
-    """Leave "Other" out: its energy use is deducted from the demand of the
-    subsector, and the input splits are the shares of the rest of its energy use. The
-    modelled fuels meet only the energy use they met in the CEUD year."""
-
-    Free = "free"
-    """Keep "Other" as an input of the subsectors that use it (`I_oth`), with its
-    CEUD share as input split, supplied by the industry module at no cost and with no
-    emissions. The demand is all the energy use of the subsector. Reproduces the
-    previous module (free `F_I_OTH`)."""
 
 
 def _check_fuel_list(value: list[CANOEFuel]) -> list[CANOEFuel]:
@@ -150,6 +130,9 @@ class CANOEIndustryConfig(InheritsFromBase, CANOEModule):
     ['PULP', 'SMELT', 'REFINING', 'CEMENT', 'CHEM', 'STEEL', 'OTH_MAN', 'FOR', 'MINING']
     >>> config.fuels_of(IndustrySubsector.Cement), config.fuels_of(IndustrySubsector.Mining)
     ([Electricity, Coal], [Electricity, NaturalGas, Diesel])
+    >>> free = config.model_copy(update={"other_fuels": OtherFuelsTreatment.Free})
+    >>> free.input_fuels_of(IndustrySubsector.Cement)
+    [Electricity, Coal, Other]
     """
 
     model_config = ConfigDict(  # pyright: ignore[reportUnannotatedClassAttribute]
@@ -253,6 +236,14 @@ class CANOEIndustryConfig(InheritsFromBase, CANOEModule):
     def fuels_of(self, subsector: IndustrySubsector) -> list[CANOEFuel]:
         """Fuels of `subsector`: its own, or the sector's"""
         return self.subsector_config(subsector).fuels or self.fuels
+
+    def input_fuels_of(self, subsector: IndustrySubsector) -> list[CANOEFuel]:
+        """Inputs of the technology of `subsector`: its fuels, and "Other" fuels
+        (`OTH`) when they are supplied for free"""
+        other = (
+            [CANOEFuel.Other] if self.other_fuels == OtherFuelsTreatment.Free else []
+        )
+        return self.fuels_of(subsector) + other
 
     @override
     def get_dataset_code(self) -> str:

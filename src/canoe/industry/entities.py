@@ -312,3 +312,90 @@ def industry_fuel_imports(
         )
         if fuel_import.fuel != CANOEFuel.Other
     ]
+
+
+@dataclass
+class IndustryEntities:
+    """
+    Everything the industry sector writes, in build order: the subsector demands,
+    the subsector technologies and, if any technology takes "Other" fuels, their
+    free supply.
+    """
+
+    demands: list[DemandEntity]
+    technologies: list[FuelServingTechnologyEntity]
+    free_other_supply: FreeOtherFuelSupply | None
+
+    def build(self, db_conn: Connection):
+        """
+        Parameters
+        ----------
+        db_conn : Connection
+            Open connection; the caller manages the transaction.
+        """
+        for demand in self.demands:
+            demand.build(db_conn)
+        for technology in self.technologies:
+            technology.build(db_conn)
+        if self.free_other_supply is not None:
+            self.free_other_supply.build(db_conn)
+
+    def fuel_imports(self) -> list[CANOEFuelImport]:
+        """The fuels the fuel module supplies, see `industry_fuel_imports`"""
+        return industry_fuel_imports(self.technologies)
+
+
+def build_industry_entities(
+    demand: pd.DataFrame,
+    input_splits: pd.DataFrame,
+    input_fuels_of: dict[IndustrySubsector, list[CANOEFuel]],
+    provinces: list[CANOEProvince],
+    model_periods: list[int],
+    input_split_operator: OperatorCode,
+    demand_notes: str,
+    split_notes: str,
+    lifetime: float,
+    data_id: DatasetIdentifier,
+) -> IndustryEntities:
+    """
+    A demand and a technology for each subsector of `input_fuels_of` with a positive
+    demand somewhere (the others are left out), and the free supply of "Other"
+    fuels if some technology takes them.
+
+    params:
+    - demand, input_splits: see `build_subsector_demand` and
+      `build_subsector_technology`; every (region, subsector) with a positive demand
+      needs a positive split (see `demand.align_demand_and_splits`)
+    - input_fuels_of: inputs of each subsector's technology, in order
+    - demand_notes, split_notes: notes of the demand and input split rows
+    - lifetime: lifetime of the free supply of "Other" fuels (years), a period
+    """
+    modelled = [
+        subsector
+        for subsector in input_fuels_of
+        if (demand["subsector"].isin([subsector]) & (demand["demand"] > 0)).any()
+    ]
+    demands = [
+        build_subsector_demand(
+            subsector, demand, provinces, model_periods, demand_notes, data_id
+        )
+        for subsector in modelled
+    ]
+    technologies = [
+        build_subsector_technology(
+            subsector,
+            input_splits,
+            input_fuels_of[subsector],
+            provinces,
+            model_periods,
+            input_split_operator,
+            split_notes,
+            data_id,
+        )
+        for subsector in modelled
+    ]
+    return IndustryEntities(
+        demands=demands,
+        technologies=technologies,
+        free_other_supply=build_free_other_fuel_supply(technologies, lifetime, data_id),
+    )

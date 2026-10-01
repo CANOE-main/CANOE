@@ -8,11 +8,8 @@ from pydantic import ValidationError
 
 from canoe.common import CANOEFuel
 from canoe.common.gdp import CERScenario, GDPProjectionPoint
-from canoe.industry.config import (
-    SUPPORTED_FUELS,
-    CANOEIndustryConfig,
-    OtherFuelsTreatment,
-)
+from canoe.industry.config import SUPPORTED_FUELS, CANOEIndustryConfig
+from canoe.industry.demand import OtherFuelsTreatment
 from canoe.industry.subsectors import IndustrySubsector
 from canoe.initializer import CANOEBaseConfig
 from canoe.sector_config import resolve_sector_config
