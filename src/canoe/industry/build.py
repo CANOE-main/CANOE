@@ -84,11 +84,18 @@ def build_industry(cfg: "CANOEIndustryConfig") -> CANOEModuleOutput:
         # Compute parameters
         # ------------------
         # TODO: demand and input splits of each subsector ("Other" deducted from the
-        # demand or kept as a split, per cfg.other_fuels)
+        # demand or kept as a split, per cfg.other_fuels), in the shapes
+        # `entities.build_subsector_demand` and `build_subsector_technology` take:
+        # - demand_df: region, period, subsector, demand (PJ)
+        # - input_split_df: region, period, subsector, fuel, split (0-1)
 
         # Build TEMOA Objects
         # -------------------
-        # TODO: a demand and a technology per subsector, and the free supply of
-        # I_oth if cfg.other_fuels is "free"
+        # TODO: data_id labels; then, per subsector with demand,
+        # build_subsector_demand(...).build(db_conn) and
+        # build_subsector_technology(...) with cfg.fuels_of(subsector) (+ OTH if
+        # cfg.other_fuels is "free"); then build_free_other_fuel_supply(technologies,
+        # cfg.period_step, sector_data_id), and return
+        # industry_fuel_imports(technologies) as the fuel imports
 
     return CANOEModuleOutput(fuel_imports=[])
