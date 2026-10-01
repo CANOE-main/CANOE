@@ -148,7 +148,7 @@ def test_technologies_exist_where_they_have_a_cost(db: sqlite3.Connection):
     _ = _build(db)
     assert db.execute(
         "SELECT region, input_comm, tech, vintage, output_comm, efficiency"
-        " FROM efficiency ORDER BY tech, region, vintage"
+        + " FROM efficiency ORDER BY tech, region, vintage"
     ).fetchall() == [
         ("ON", "F_ng", "F_A_NG", 2025, "A_ng", 1.0),
         ("ON", "F_ng", "F_C_NG", 2025, "C_ng", 1.0),
@@ -163,7 +163,7 @@ def test_variable_costs_by_period_with_the_period_as_vintage(db: sqlite3.Connect
     _ = _build(db)
     assert db.execute(
         "SELECT region, period, tech, vintage, cost, units, notes, data_id"
-        " FROM cost_variable WHERE tech = 'F_IMP_NG' ORDER BY region, period"
+        + " FROM cost_variable WHERE tech = 'F_IMP_NG' ORDER BY region, period"
     ).fetchall() == [
         (
             "ON",
@@ -193,7 +193,7 @@ def test_upstream_emissions_on_imports_combustion_on_distribution(
     _ = _build(db)
     assert db.execute(
         "SELECT region, emis_comm, input_comm, tech, vintage, activity, units, notes"
-        " FROM emission_activity ORDER BY tech, emis_comm, region, vintage"
+        + " FROM emission_activity ORDER BY tech, emis_comm, region, vintage"
     ).fetchall() == [
         ("ON", "ch4", "F_ng", "F_C_NG", 2025, 0.00099, "kt/PJ", "ECCC"),
         ("ON", "ch4", "F_ng", "F_C_NG", 2030, 0.00099, "kt/PJ", None),

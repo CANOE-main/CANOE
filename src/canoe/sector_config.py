@@ -16,11 +16,12 @@ from pydantic import Field, TypeAdapter
 
 from .agriculture.config import CANOEAgricultureConfig
 from .commercial.config import CANOECommercialConfig
+from .industry.config import CANOEIndustryConfig
 from .initializer import CANOEBaseConfig
 
 # Add new sector configs here as they're implemented
 SectorConfig = Annotated[
-    CANOECommercialConfig | CANOEAgricultureConfig,
+    CANOECommercialConfig | CANOEAgricultureConfig | CANOEIndustryConfig,
     Field(discriminator="module_name"),
 ]
 

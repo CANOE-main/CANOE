@@ -1,3 +1,6 @@
+# ####################################################################################
+# COMPILER CONFIG
+# ####################################################################################
 [compiler.base]
 schema_version = "4.0"
 db_output_dir = "canoe-pwd/canoe.sqlite"
@@ -46,6 +49,7 @@ force_sync = false
 [compiler.sectors]
 commercial = "configuration/commercial-default.toml"
 agriculture = "configuration/agriculture-default.toml"
+industry = "configuration/industry-default.toml"
 
 # ####################################################################################
 # FUELS CONFIG
