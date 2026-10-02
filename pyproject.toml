@@ -12,8 +12,7 @@ dependencies = [
   "numpy==2.4.3",
   "pandas==3.0.1",
   "pydantic==2.13.4",
-  "temoa @ git+https://github.com/yamilbknsu/temoa.git@ac5fe15e082317247aa9f4d2165edabc74d0db1d",
-  # "temoa @ git+https://github.com/TemoaProject/temoa.git@4db1eaf52fef24697fa748e9228e97244ac56a38",
+  "temoa @ git+https://github.com/yamilbknsu/temoa.git@e69223976bd9bdfbdeb25f8f73cc32922108215b",
   "tsam @ git+https://github.com/CANOE-main/tsam.git@v3.2-patch",
   "typer==0.27.1",
 

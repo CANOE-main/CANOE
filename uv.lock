@@ -155,7 +155,7 @@ requires-dist = [
     { name = "pydantic", specifier = "==2.13.4" },
     { name = "pyomo-pounce", marker = "extra == 'solvers'" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "temoa", git = "https://github.com/yamilbknsu/temoa.git?rev=ac5fe15e082317247aa9f4d2165edabc74d0db1d" },
+    { name = "temoa", git = "https://github.com/yamilbknsu/temoa.git?rev=e69223976bd9bdfbdeb25f8f73cc32922108215b" },
     { name = "tsam", git = "https://github.com/CANOE-main/tsam.git?rev=v3.2-patch" },
     { name = "typer", specifier = "==0.27.1" },
 ]
@@ -2560,8 +2560,8 @@ wheels = [
 
 [[package]]
 name = "temoa"
-version = "4.0.0a2"
-source = { git = "https://github.com/yamilbknsu/temoa.git?rev=ac5fe15e082317247aa9f4d2165edabc74d0db1d#ac5fe15e082317247aa9f4d2165edabc74d0db1d" }
+version = "4.0.1"
+source = { git = "https://github.com/yamilbknsu/temoa.git?rev=e69223976bd9bdfbdeb25f8f73cc32922108215b#e69223976bd9bdfbdeb25f8f73cc32922108215b" }
 dependencies = [
     { name = "deprecated" },
     { name = "graphviz" },
