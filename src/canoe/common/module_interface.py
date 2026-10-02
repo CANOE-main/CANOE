@@ -3,13 +3,22 @@ from dataclasses import dataclass
 
 from .emissions import CANOEEmission
 from .fuels import CANOEFuel
+from .provinces import CANOEProvince
 from .sectors import CANOESector
 
 
-@dataclass
+@dataclass(frozen=True)
 class CANOEFuelImport:
+    """
+    A fuel a sector consumes, in the provinces where it consumes it: where some of
+    its technologies take the sector's fuel commodity (e.g. `C_ng`) as input. The
+    fuel module supplies it there. See
+    `canoe.canoe_objects.fuel_imports.declare_fuel_imports`.
+    """
+
     sector: CANOESector
     fuel: CANOEFuel
+    provinces: tuple[CANOEProvince, ...]
 
 
 @dataclass(frozen=True)

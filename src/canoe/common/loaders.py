@@ -6,6 +6,7 @@ knows its path and layout, so when the cache changes shape the error points to t
 function to fix. Sector-specific datasets have their own loaders in each sector.
 """
 
+from importlib.resources import files
 from pathlib import Path
 
 import pandas as pd
@@ -55,3 +56,29 @@ def get_cer_gdp(
     )
 
     return df_gdp / df_gdp.loc[gdp_index_year]
+
+
+def get_exchange_and_inflation_tables() -> tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Exchange rates and Canadian inflation by year, to convert costs to CAD of the
+    model currency year.
+
+    TODO: not in the cache yet; read from `canoe/common/data` until it is (see
+    `DATA_LAKE_REQUESTS.md`).
+
+    Returns
+    -------
+    tuple[pd.DataFrame, pd.DataFrame]
+        - Exchange rates by year (index), CAD per unit of each currency (columns
+          `CAD`, `USD`, `EUR`, `GBP`, `AUD`).
+        - Price indices by year (index), 1 in 2020 (columns `gdp_deflator`,
+          `general_cpi`, ...).
+    """
+    exchange_resource = files("canoe.common").joinpath("data/currency_exchange.csv")
+    with exchange_resource.open("rb") as f:
+        exchange_df = pd.read_csv(f, index_col=0)
+
+    inflation_resource = files("canoe.common").joinpath("data/cad_inflation.csv")
+    with inflation_resource.open("rb") as f:
+        inflation_df = pd.read_csv(f, index_col=0)
+    return exchange_df, inflation_df

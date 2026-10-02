@@ -1,0 +1,223 @@
+# Configuration for CANOE representative period aggregation
+
+# Can switch off plotting if not needed
+show_plots: false
+
+# Can use this to do e.g. representative day-pairs (2) or representative weeks (7)
+days_per_period: 1 # [integer]
+
+# If this is set to true, representative e.g. weeks will each just be seven representative days in a row
+# MUST BE TRUE as some Temoa constraints (e.g. StorageEnergy) implicitly assume time_of_day time slices
+# represent slices of a single day. Can set to false if those constraints are edited
+disaggregate_multiday: true # [boolean] MUST BE TRUE FOR NOW
+
+# Should we preserve hourly demand values or annual totals in absolute terms?
+# The clustering reduces the number of days and renormalises DSDs so can't preserve both
+# 'hourly' or 'annual'
+demand_preservation: "hourly" # [str]
+
+# This bottom percentile of DSDs is set to zero. Nice robust way to remove
+# all tiny DSDs while ensuring that error is small. If preserving hourly
+# demands, the annual total demand will be reduced by this factor.
+dsd_threshold: 0.01
+
+# Final number of representative periods to apply to the database
+final_periods: 64 # [integer]
+
+# Number of representative days to test and visualise. Should be several
+# Only one (selected above) will be applied to the database
+test_periods: # [list[integer]]
+  # - 1
+  # - 2
+  # - 4
+  # - 8
+  # - 16
+  # - 32
+  - 64
+  # - 128
+  # - 363
+
+# Principal component analysis
+use_pca: true
+pca_groups:
+  - name: "weather"
+    columns:
+      - ab_wind_speed
+      - bc_wind_speed
+      - mb_wind_speed
+      - sk_wind_speed
+      - ab_irradiance_surface
+      - bc_irradiance_surface
+      - mb_irradiance_surface
+      - sk_irradiance_surface
+      - ab_humidity
+      - bc_humidity
+      - mb_humidity
+      - sk_humidity
+      - ab_temperature
+      - bc_temperature
+      - mb_temperature
+      - sk_temperature
+      - nb_wind_speed
+      - nllab_wind_speed
+      - ns_wind_speed
+      - on_wind_speed
+      - pei_wind_speed
+      - qc_wind_speed
+      - nb_irradiance_surface
+      - nllab_irradiance_surface
+      - ns_irradiance_surface
+      - on_irradiance_surface
+      - pei_irradiance_surface
+      - qc_irradiance_surface
+      - nb_humidity
+      - nllab_humidity
+      - ns_humidity
+      - on_humidity
+      - pei_humidity
+      - qc_humidity
+      - nb_temperature
+      - nllab_temperature
+      - ns_temperature
+      - on_temperature
+      - pei_temperature
+      - qc_temperature
+    n_components: 6
+
+# Which days to force as cluster centres
+# TSAM will perform clustering then recalculate clusters with these new centres,
+# moving some days into these clusters instead. 1-index form i.e. D185 -> 185, D007 -> 7
+force_days: # [list[integer]]
+  #- 185
+
+# Configures TSAM autoselection of extreme periods
+# Under each type, add a list of the names of timeseries vectors being clustered over
+# which should apply that extreme period selection
+extreme_periods: # dict[list[str]]
+  max_peak: # day with highest single value
+    # - load
+    #- net_load
+  min_peak: # day with lowest single value
+  max_mean: # day with highest mean value
+    #- synthetic_net_load_ws
+    #- temperature
+  min_mean: # day with lowest mean value
+    #- temperature
+
+# Additional feature periods to add programatically. Given as a list of dictionaries where
+# each dictionary calls a method of feature_identification.py and passes relevant
+# parameters. The name of each dictionary does not matter.
+custom_features: # list[dict[any]]
+  #- method: max_mean_period
+  #  days_in_period: 2
+  #  timeseries: ontario/net_load
+
+# Translation between 1-indexed days (e.g. D007) and in-timeseries days
+# Initially, going from 1-indexing to 0-indexing and omitting Jan 1 so -2
+day_to_index: -1 # [integer]
+
+# Which clustering algorithm to use. Default to hierarchical
+# averaging, k_means, k_medoids, k_maxoids, hierarchical, adjacent_periods
+clustering_method: hierarchical # [string]
+
+# Which timeseries data vectors to cluster over NOTE! COLUMN NAME IN CSV MUST MATCH FILENAME
+# Should be a nested dictionary representing directories of all csv timeseries
+# files to be clustered over. Final csv files should be in list form. Do not nest
+# further dictionaries within final lists.
+timeseries: # [dict[dict[...[list[string]]]]]
+  ab:
+    - ab_irradiance_surface # solar irradiance at surface
+    - ab_humidity # humidity
+    - ab_temperature # temperature
+    - ab_wind_speed # wind speed
+  bc:
+    - bc_irradiance_surface # solar irradiance at surface
+    - bc_humidity # humidity
+    - bc_temperature # temperature
+    - bc_wind_speed # wind speed
+  mb:
+    - mb_irradiance_surface # solar irradiance at surface
+    - mb_humidity # humidity
+    - mb_temperature # temperature
+    - mb_wind_speed # wind speed
+  nb:
+    - nb_irradiance_surface # solar irradiance at surface
+    - nb_humidity # humidity
+    - nb_temperature # temperature
+    - nb_wind_speed # wind speed
+  nllab:
+    - nllab_irradiance_surface # solar irradiance at surface
+    - nllab_humidity # humidity
+    - nllab_temperature # temperature
+    - nllab_wind_speed # wind speed
+  ns:
+    - ns_irradiance_surface # solar irradiance at surface
+    - ns_humidity # humidity
+    - ns_temperature # temperature
+    - ns_wind_speed # wind speed
+  "on":
+    - on_irradiance_surface # solar irradiance at surface
+    - on_humidity # humidity
+    - on_temperature # temperature
+    - on_wind_speed # wind speed
+  pei:
+    - pei_irradiance_surface # solar irradiance at surface
+    - pei_humidity # humidity
+    - pei_temperature # temperature
+    - pei_wind_speed # wind speed
+  qc:
+    - qc_irradiance_surface # solar irradiance at surface
+    - qc_humidity # humidity
+    - qc_temperature # temperature
+    - qc_wind_speed # wind speed
+  sk:
+    - sk_irradiance_surface # solar irradiance at surface
+    - sk_humidity # humidity
+    - sk_temperature # temperature
+    - sk_wind_speed # wind speed
+  ontario: # all are population-weighted
+    # - cf_hydro # capacity factor of existing hydroelectric (daily and run-of-river)
+    # - cf_solar # capacity factor of existing solar PV
+    # - cf_wind # capacity factor of existing onshore wind
+    # - cf_new_solar # capacity factor of new solar PV
+    # - cf_new_wind # capacity factor of new onshore wind
+    # - cloud_cover # percentage cloud cover (fraction covered)
+    # - humidity # relative humidity
+    # - irradiance_surface # solar irradiance at surface
+    - ldv_charging # demand for electricity for light duty vehicle charging
+    # - load # historical demand for electricity within the province of Ontario
+    # - load_2021
+    # - load_2025
+    # - load_2030
+    # - load_2035
+    # - load_2040
+    # - load_2045
+    # - load_2050
+    # - market_demand # market demand for electricity, including exchange along regional interties
+    # - humidity # humidity
+    # - temperature # temperature
+    # - wind_speed # wind speed
+    # - net_load
+    # - synthetic_net_load_ws # load * (1 - 0.3*cf_new_wind - 0.15*cf_new_solar)
+  temoa-canada:
+    #- random # random numbers 0-1
+
+model_years:
+  - 2025
+  - 2030
+  - 2035
+  - 2040
+  - 2045
+  # - 2050
+
+# Example of how the timeseries parameter can be nested, reflecting the directory structure
+# Directories -> dictionaries, CSVs in the bottom as a list (which can be empty)
+#timeseries:
+#  alberta:
+#    - temperature
+#    - ldv_charging
+#  other:
+#    global:
+#      - cf_solar
+#      - cf_wind
+#    economic:

@@ -12,6 +12,7 @@ dependencies = [
   "numpy==2.4.3",
   "pandas==3.0.1",
   "pydantic==2.13.4",
+  "pyyaml",
   "temoa @ git+https://github.com/TemoaProject/temoa.git@4db1eaf52fef24697fa748e9228e97244ac56a38",
   "tsam @ git+https://github.com/CANOE-main/tsam.git@v3.2-patch",
   "typer==0.27.1",
@@ -69,7 +70,8 @@ dependencies = [
 
 [tool.pytest.ini_options]
 # Doctests are collected from canoe_objects (see src/canoe/canoe_objects/conftest.py),
-# the commercial and agriculture configurations, and the gdp and emissions modules
+# the commercial and agriculture configurations, the fuel module, and the gdp, periods,
+# fuels, sectors and emissions modules
 testpaths = [
   "tests",
   "src/canoe/canoe_objects",
@@ -81,7 +83,11 @@ testpaths = [
   "src/canoe/common/emissions.py",
   "src/canoe/common/gdp.py",
   "src/canoe/common/naming.py",
+  "src/canoe/common/periods.py",
+  "src/canoe/common/fuels.py",
+  "src/canoe/common/sectors.py",
   "src/canoe/emissions",
+  "src/canoe/fuel",
 ]
 addopts = "--doctest-modules"
 

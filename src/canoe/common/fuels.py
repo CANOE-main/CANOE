@@ -1,6 +1,8 @@
 from enum import StrEnum
 from typing import Any, override
 
+from .sectors import CANOESector
+
 
 class CANOEFuel(StrEnum):
     """Fuels of the model. Configs take the value (e.g. `"ELC"`) or the name."""
@@ -72,23 +74,62 @@ class CANOEFuel(StrEnum):
         }
         return CANOE_FUEL_TO_NAME[self]
 
-    def get_price_fuel(self) -> "CANOEFuel":
+    def get_eia_fuel(self, sector: CANOESector) -> str | None:
         """
-        Maps a fuel to the fuel whose price series it actually uses.
+        Fuel of the EIA AEO Table 3 'Energy Prices' series of this fuel in `sector`,
+        if EIA has one. Whether EIA has the series for that sector is up to the data.
+
+        Coal is the metallurgical coal series and oil the residual fuel series.
+
+        Examples
+        --------
+        >>> CANOEFuel.Diesel.get_eia_fuel(CANOESector.Transportation)
+        'Diesel Fuel'
+        >>> CANOEFuel.Diesel.get_eia_fuel(CANOESector.Industry)
+        'Distillate Fuel Oil'
+        >>> CANOEFuel.Ethanol.get_eia_fuel(CANOESector.Transportation) is None
+        True
         """
-        CANOE_FUEL_PRICE_OVERRIDES: dict[CANOEFuel, CANOEFuel] = {
-            CANOEFuel.CompressedNaturalGas: CANOEFuel.NaturalGas,
-            CANOEFuel.LiquifiedNaturalGas: CANOEFuel.NaturalGas,
-            CANOEFuel.Wood: CANOEFuel.BioEnergy,
-            CANOEFuel.NaturalGasLiquids: CANOEFuel.Propane,
-            CANOEFuel.LiquifiedPretroleumGas: CANOEFuel.Propane,
-            CANOEFuel.PetroleumCoke: CANOEFuel.Coal,
-            CANOEFuel.Coke: CANOEFuel.Coal,
-            CANOEFuel.GaseousBioenergy: CANOEFuel.BioEnergy,
-            CANOEFuel.SolidBioenergy: CANOEFuel.BioEnergy,
-            CANOEFuel.MarineDieselOil: CANOEFuel.Diesel,
+        # EIA names two fuels differently depending on the sector
+        if self == CANOEFuel.Diesel:
+            if sector == CANOESector.Transportation:
+                return "Diesel Fuel"
+            return "Distillate Fuel Oil"
+        if self == CANOEFuel.Oil:
+            if sector == CANOESector.Commercial:
+                return "Residual Fuel"
+            return "Residual Fuel Oil"
+        EIA_FUELS: dict[CANOEFuel, str] = {
+            CANOEFuel.Coal: "Metallurgical Coal",
+            CANOEFuel.Gasoline: "Motor Gasoline",
+            CANOEFuel.NaturalGas: "Natural Gas",
+            CANOEFuel.Hydrogen: "Hydrogen",
+            CANOEFuel.Propane: "Propane",
+            CANOEFuel.HeavyFuelOil: "Residual Fuel Oil",
+            CANOEFuel.JetFuel: "Jet Fuel",
         }
-        return CANOE_FUEL_PRICE_OVERRIDES.get(self, self)
+        return EIA_FUELS.get(self)
+
+    def get_atb_technology(self) -> str | None:
+        """
+        NREL ATB technology whose fuel cost is the price of this fuel, if any.
+
+        Examples
+        --------
+        >>> CANOEFuel.Wood.get_atb_technology()
+        'Biopower'
+        >>> CANOEFuel.NaturalGas.get_atb_technology() is None
+        True
+        """
+        ATB_TECHNOLOGIES: dict[CANOEFuel, str] = {
+            CANOEFuel.BioEnergy: "Biopower",
+            CANOEFuel.GaseousBioenergy: "Biopower",
+            CANOEFuel.SolidBioenergy: "Biopower",
+            CANOEFuel.Wood: "Biopower",
+            CANOEFuel.NaturalUranium: "Nuclear",
+            CANOEFuel.EnrichedUranium: "Nuclear",
+        }
+        return ATB_TECHNOLOGIES.get(self)
 
     @classmethod
     def from_str(cls, name: str) -> "CANOEFuel":

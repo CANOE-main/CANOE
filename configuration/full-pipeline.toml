@@ -3,8 +3,11 @@ schema_version = "4.0"
 db_output_dir = "canoe-pwd/canoe.sqlite"
 # Version in the data set codes (e.g. COMHR003), inherited by the sectors
 data_version = "003"
-existing_periods = [2005, 2010, 2015, 2020, 2024, 2022]
-future_periods = [2025, 2030, 2035, 2040, 2045, 2050]  # TODO: Maybe make the code automatically add one period more, and treat this as the actual future periods
+existing_periods = [2005, 2010, 2015, 2020, 2022, 2024]
+# Model periods, the ones the modules write data for. The end of the horizon
+# (last period + period_step, here 2050) is added to time_period with no data
+future_periods = [2025, 2030, 2035, 2040, 2045]
+period_step = 5
 provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
 # provinces = ["ON", "AB"]
 global_discount_rate = 0.03
@@ -15,21 +18,58 @@ gdp_scenario = "Global Net-zero"
 # gdp_projection_point: "period_end", "period_start" or "legacy"
 gdp_projection_point = "period_end"
 
+# Year of each period at which projected prices (e.g. fuel prices) are read, inherited
+# by the modules: "period_end" or "period_start"
+price_projection_point = "period_end"
+
+# Year of the Canadian dollars model costs are written in, inherited by the modules
+model_currency_year = 2020
+
 # Emission commodities (CO2, CH4, N2O and CO2e) are always registered
 # [compiler.base.emissions]
 # gwp = "AR5-100"          # weights of the gases in the CO2e rows
 # cost_of_co2e = 0.1       # cost of CO2e emissions in every region and model period
 # cost_units = "M$/ktCO2e"
 
+# ####################################################################################
+# CACHE CONFIG
+# ####################################################################################
 [compiler.base.data_cache_config]
 cache_dir = ".cache"
 cache_date = "2026-08-10"
 force_sync = false
 
+
+# ####################################################################################
+# END-USE SECTORS CONFIG
+# ####################################################################################
 [compiler.sectors]
 commercial = "configuration/commercial-default.toml"
 agriculture = "configuration/agriculture-default.toml"
 
+# ####################################################################################
+# FUELS CONFIG
+# ####################################################################################
+# Fuel supply of the fuels the sectors import (electricity is left to the electricity
+# module): an import technology F_IMP_<FUEL> per fuel and a distribution technology
+# F_<S>_<FUEL> per consuming sector. The import costs the lowest delivered price of
+# the fuel and each distribution technology the rest of its sector's price (see
+# canoe.fuel.prices).
+[compiler.fuel]
+# Temporary: reproduce the price errors of the previous fuel module (unit conversion,
+# fixed exchange rate and deflators, residential LPG price) to compare with its
+# databases. See FUEL_MODULE_BUGS.md.
+reproduce_previous_price_errors = true
+# Temporary: reproduce the emission errors of the previous fuel module (agriculture
+# gasoline without combustion factors). See FUEL_MODULE_BUGS.md.
+reproduce_previous_emission_errors = false
+# "error" or "warning"
+validation_behavior = "error"      # database lacks periods, regions or commodities
+missing_data_behavior = "warning"  # a fuel imported by a sector has no price or emission factors
+
+# ####################################################################################
+# TEMOA CONFIG
+# ####################################################################################
 # [temoa_config]
 # solver_name = "gurobi"
 # scenario_mode = "perfect_foresight"

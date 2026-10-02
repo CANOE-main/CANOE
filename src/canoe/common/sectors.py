@@ -9,6 +9,7 @@ class CANOESector(StrEnum):
     Transportation = "TRP"
     Agriculture = "AGR"
     Electricity = "ELC"
+    Fuel = "FUEL"
 
     @classmethod
     @override
@@ -28,8 +29,29 @@ class CANOESector(StrEnum):
             "TRP": "T",
             "AGR": "A",
             "ELC": "E",
+            "FUEL": "F",
         }
         return _TAGS[self.value]
+
+    def get_eia_sector(self) -> str | None:
+        """
+        Sector of the EIA AEO Table 3 'Energy Prices' series, if EIA has one.
+
+        Examples
+        --------
+        >>> CANOESector.Electricity.get_eia_sector()
+        'Electric Power'
+        >>> CANOESector.Agriculture.get_eia_sector() is None
+        True
+        """
+        EIA_SECTORS: dict[CANOESector, str] = {
+            CANOESector.Commercial: "Commercial",
+            CANOESector.Residential: "Residential",
+            CANOESector.Industry: "Industrial",
+            CANOESector.Transportation: "Transportation",
+            CANOESector.Electricity: "Electric Power",
+        }
+        return EIA_SECTORS.get(self)
 
     @override
     def __str__(self):

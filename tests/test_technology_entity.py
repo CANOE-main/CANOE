@@ -124,6 +124,38 @@ class TestTechnologyEntityValidation:
         with pytest.raises(ValueError, match="end of life"):
             technology.validate()
 
+    def test_variable_cost_without_efficiency(self):
+        technology = (
+            _technology()
+            .with_efficiency("IN", _efficiency([2020]))
+            .with_variable_cost(
+                RegionVintagePeriodArray(REGIONS, [2025], [2025], fill=1)
+            )
+        )
+        with pytest.raises(ValueError, match="variable cost without efficiency"):
+            technology.validate()
+
+    def test_variable_cost_after_end_of_life(self):
+        technology = (
+            _technology()
+            .with_efficiency("IN", _efficiency([2020]))
+            .with_lifetime(RegionalValuesArray(REGIONS, fill=5))
+            .with_variable_cost(
+                RegionVintagePeriodArray(REGIONS, [2020], [2025], fill=1)
+            )
+        )
+        with pytest.raises(ValueError, match="variable cost for period 2025 after"):
+            technology.validate()
+
+    def test_variable_cost_set_but_empty(self):
+        technology = (
+            _technology()
+            .with_efficiency("IN", _efficiency([2020]))
+            .with_variable_cost(RegionVintagePeriodArray(REGIONS, [2020], [2020]))
+        )
+        with pytest.raises(ValueError, match="variable cost was set but has no values"):
+            technology.validate()
+
 
 FUELS = [CANOEFuel.Electricity, CANOEFuel.NaturalGas]
 

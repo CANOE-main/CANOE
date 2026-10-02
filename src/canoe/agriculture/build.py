@@ -6,9 +6,9 @@ import pandas as pd
 from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
+from canoe.canoe_objects.fuel_imports import declare_fuel_imports
 from canoe.common import (
     CANOEFuel,
-    CANOEFuelImport,
     CANOEModuleOutput,
     CANOESector,
     atomic_transaction,
@@ -84,7 +84,10 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
         demand_df = _compute_demand(
             total_energy_use,
             gdp_growth_by_period(
-                gdp_projections_index, cfg.future_periods, cfg.gdp_projection_point
+                gdp_projections_index,
+                cfg.future_periods,
+                cfg.period_step,
+                cfg.gdp_projection_point,
             ),
         )
         # - Input splits (region, period, fuel, split): the data-year fuel mix
@@ -93,7 +96,7 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
             cfg.fuels,
             cfg.input_split_strategy,
             cfg.remainder_fuel,
-            cfg.model_periods,
+            cfg.future_periods,
         )
 
         # Build TEMOA Objects
@@ -113,7 +116,7 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
         build_agriculture_demand(
             demand_df,
             cfg.provinces,
-            cfg.model_periods,
+            cfg.future_periods,
             notes=_demand_notes(
                 cfg.ceud_data_year, cfg.gdp_scenario, cfg.gdp_projection_point
             ),
@@ -125,7 +128,7 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
             input_split_df,
             cfg.fuels,
             cfg.provinces,
-            cfg.model_periods,
+            cfg.future_periods,
             cfg.input_split_operator,
             split_notes=_input_split_notes(
                 cfg.ceud_data_year, cfg.input_split_strategy, cfg.remainder_fuel
@@ -138,10 +141,10 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
         technology.build(db_conn)
 
     return CANOEModuleOutput(
-        fuel_imports=[
-            CANOEFuelImport(sector=CANOESector.Agriculture, fuel=fuel)
-            for fuel in technology.fuels
-        ]
+        # The fuels the technology takes, where it takes them
+        fuel_imports=declare_fuel_imports(
+            CANOESector.Agriculture, technology.to_technology_entities()
+        )
     )
 
 
