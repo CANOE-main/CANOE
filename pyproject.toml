@@ -12,8 +12,8 @@ dependencies = [
   "numpy==2.4.3",
   "pandas==3.0.1",
   "pydantic==2.13.4",
+  "temoa @ git+https://github.com/yamilbknsu/temoa.git@e69223976bd9bdfbdeb25f8f73cc32922108215b",
   "pyyaml",
-  "temoa @ git+https://github.com/TemoaProject/temoa.git@4db1eaf52fef24697fa748e9228e97244ac56a38",
   "tsam @ git+https://github.com/CANOE-main/tsam.git@v3.2-patch",
   "typer==0.27.1",
 
@@ -29,7 +29,7 @@ canoe-compiler = "canoe.cli:main"
 all = ["canoe[dev]", "canoe[docs]", "canoe[solvers]"]
 dev = ["ruff", "matplotlib", "marimo", "plotly"]
 docs = ["mkdocs-material>=9.5", "mkdocs-git-revision-date-localized-plugin>=1.2", "mike", "mkdocstrings[python]", "griffe-pydantic"]
-solvers = ["gurobipy"]
+solvers = ["gurobipy", "pyomo-pounce"]
 
 [dependency-groups]
 dev = [
