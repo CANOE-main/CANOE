@@ -11,6 +11,7 @@ from canoe.canoe_objects.demand import (
     DemandSeriesArray,
     DemandSpecificDistributionArray,
 )
+from canoe.canoe_objects.fuel_imports import declare_fuel_imports
 from canoe.canoe_objects.fuel_serving_tech import FuelServingTechnologyEntity
 from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.commercial.comstock_processing import load_and_process_comstock
@@ -34,7 +35,6 @@ from canoe.common import (
     CANOEEmission,
     CANOEEmissionDeclaration,
     CANOEFuel,
-    CANOEFuelImport,
     CANOEModuleOutput,
     CANOEProvince,
     CANOESector,
@@ -51,6 +51,7 @@ from canoe.common.naming import (
     hour_str,
     season_str,
 )
+from canoe.common.periods import period_end_years
 
 from .validation import validate_db_against_config
 
@@ -78,7 +79,8 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         code_description="HR",
         version=cfg.data_version,
     )
-    fuel_imports: list[CANOEFuelImport] = []
+    # Technologies built, to declare the fuel imports from their inputs
+    technologies: list[TechnologyEntity] = []
 
     # Wrap everything in an atomic transaction
     with atomic_transaction(cfg.database_file) as db_conn:
@@ -104,10 +106,14 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             cfg.ceud_config,
             cfg.data_cache_config,
             cfg.aeo_config,
+            cfg.model_currency_year,
         )
         new_technologies = cfg.end_uses.new_technologies()
         new_tech_params = load_new_technology_params(
-            new_technologies, cfg.provinces, cfg.aeo_config.us_census_mapping
+            new_technologies,
+            cfg.provinces,
+            cfg.aeo_config.us_census_mapping,
+            cfg.model_currency_year,
         )
         # GDP indexed to the year of the CEUD energy use it scales
         gdp_projections_index = get_cer_gdp(
@@ -149,7 +155,10 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         demand_df = _compute_end_use_demand(
             base_demand,
             gdp_growth_by_period(
-                gdp_projections_index, cfg.future_periods, cfg.gdp_projection_point
+                gdp_projections_index,
+                cfg.future_periods,
+                cfg.period_step,
+                cfg.gdp_projection_point,
             ),
         )
 
@@ -202,7 +211,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             # Demand values
             # -------------
             demand_series = DemandSeriesArray(
-                region=cfg.provinces, period=cfg.model_periods, fill=0.0
+                region=cfg.provinces, period=cfg.future_periods, fill=0.0
             ).fill_from_df(
                 demand_df.loc[end_use.get_full_name()],
                 dims=["region", "period"],
@@ -222,7 +231,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 # -------------
                 dsd_series = DemandSpecificDistributionArray(
                     region=cfg.provinces,
-                    period=cfg.model_periods,
+                    period=cfg.future_periods,
                     season=seasons,
                     tod=tods,
                 ).fill_from_df(
@@ -254,7 +263,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 for end_use, end_use_config in cfg.end_uses.space_conditioning().items()
             },
             cfg.provinces,
-            cfg.model_periods,
+            cfg.future_periods,
             cfg.capacity_min_tolerance,
             cfg.missing_data_behavior,
             sector_data_id,
@@ -267,12 +276,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 fuel_serving_technologies, emission_factors
             )
             fuel_serving_technologies.build(db_conn)
-
-            # Add fuel imports declaration
-            fuel_imports += [
-                CANOEFuelImport(sector=CANOESector.Commercial, fuel=f)
-                for f in fuel_serving_technologies.fuels
-            ]
+            technologies += fuel_serving_technologies.to_technology_entities()
 
         # New Capacity (SPH and SPC)
         if new_technologies:
@@ -281,22 +285,18 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 new_technologies, sector_data_id
             ):
                 fuel_commodity.build(db_conn)
-                fuel_imports.append(
-                    CANOEFuelImport(
-                        sector=CANOESector.Commercial, fuel=fuel_commodity.fuel
-                    )
-                )
             for technology in build_new_technologies(
                 new_technologies,
                 new_tech_params,
                 existing_techs[["province", "end_use", "fuel", "acf"]],  # pyright: ignore[reportArgumentType]
                 cfg.provinces,
-                cfg.model_periods,
+                cfg.future_periods,
                 sector_data_id,
             ):
                 logger.debug(f"Writing new technology `{technology.name}` to database")
                 technology = _with_technology_emissions(technology, emission_factors)
                 technology.build(db_conn)
+                technologies.append(technology)
 
         # Other
         if other_config is not None and other_sec is not None:
@@ -304,8 +304,8 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 other_sec,
                 other_config,
                 cfg.provinces,
-                cfg.model_periods,
-                cfg.period_end_years,
+                cfg.future_periods,
+                period_end_years(cfg.future_periods, cfg.period_step),
                 cfg.ceud_config.data_year,
                 sector_data_id,
             )
@@ -314,14 +314,11 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 other_technologies, emission_factors
             )
             other_technologies.build(db_conn)
-
-            fuel_imports += [
-                CANOEFuelImport(sector=CANOESector.Commercial, fuel=f)
-                for f in other_technologies.fuels
-            ]
+            technologies += other_technologies.to_technology_entities()
 
     return CANOEModuleOutput(
-        fuel_imports=fuel_imports,
+        # The fuels the technologies take, where they take them
+        fuel_imports=declare_fuel_imports(CANOESector.Commercial, technologies),
         emissions=[
             CANOEEmissionDeclaration(sector=CANOESector.Commercial, emission=emission)
             for emission in emission_factors

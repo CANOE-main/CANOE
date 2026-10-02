@@ -55,7 +55,8 @@ class CANOEAgricultureConfig(InheritsFromBase, CANOEModule):
     ...         "data_version": "001",
     ...         "database_file": "canoe.sqlite",
     ...         "data_cache_config": {"cache_date": "2026-08-10"},
-    ...         "future_periods": [2025, 2030, 2035],
+    ...         "future_periods": [2025, 2030],
+    ...         "period_step": 5,
     ...         "provinces": ["ON", "PEI"],
     ...         "gdp_scenario": "Global Net-zero",
     ...         "gdp_projection_point": "period_end",
@@ -65,8 +66,6 @@ class CANOEAgricultureConfig(InheritsFromBase, CANOEModule):
     ... )
     >>> config.remainder_fuel, config.input_split_strategy.value
     (Diesel, 'nrcan_percent_with_remainder')
-    >>> config.model_periods
-    [2025, 2030]
     """
 
     model_config = ConfigDict(  # pyright: ignore[reportUnannotatedClassAttribute]
@@ -94,7 +93,11 @@ class CANOEAgricultureConfig(InheritsFromBase, CANOEModule):
 
     # Model scope
     future_periods: list[int] = inherit()
-    """Temoa's `time_future`, see `model_periods`. Inherited."""
+    """Model periods, the ones written. Inherited."""
+
+    period_step: int = inherit()
+    """Length of the last period, in years; the GDP of its end year scales its
+    demand. Inherited."""
 
     provinces: list[CANOEProvince] = inherit()
     """Regions written. Inherited."""
@@ -167,17 +170,6 @@ class CANOEAgricultureConfig(InheritsFromBase, CANOEModule):
                 + f"{[f.value for f in self.fuels]}"
             )
         return self
-
-    @property
-    def model_periods(self) -> list[int]:
-        """
-        Periods we write parameters for.
-
-        `future_periods` is Temoa's time_future: its last year marks the end of the
-        horizon and is not a period itself, e.g. [2025, ..., 2045, 2050] has model
-        periods 2025-2045, the last one ending in 2050.
-        """
-        return self.future_periods[:-1]
 
     @override
     def get_dataset_code(self) -> str:

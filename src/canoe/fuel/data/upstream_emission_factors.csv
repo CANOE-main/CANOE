@@ -1,0 +1,16 @@
+﻿commodity,emission,value,units,notes,source
+F_ng,co2,10.26193926,kTonne/PJ,Upstream emissions ,F7
+F_cng,co2,13.48584639,kTonne/PJ,Upstream emissions ,F7
+F_coal,co2,5.867527302,kTonne/PJ,Upstream emissions ,F7
+F_gsl,co2,24.32277258,kTonne/PJ,Upstream emissions ,F7
+F_lpg,co2,25.48476626,kTonne/PJ,Upstream emissions ,F7
+F_ngl,co2,21.24194648,kTonne/PJ,Upstream emissions ,F7
+F_prop,co2,8.743223624,kTonne/PJ,Upstream emissions ,F7
+F_hfo,co2,19.14050714,kTonne/PJ,Upstream emissions ,F7
+F_oil,co2,21.80993688,kTonne/PJ,Upstream emissions ,F7
+F_coke,co2,17.22076714,kTonne/PJ,Upstream emissions ,F7
+F_pcoke,co2,17.22076714,kTonne/PJ,Upstream emissions ,F7
+F_jtf,co2,18.3730119,kTonne/PJ,Upstream emissions ,F7
+F_spk,co2,18.32534958,kTonne/PJ,Upstream emissions ,F7
+F_mdo,co2,12.4,kTonne/PJ,Upstream emissions ,F8
+F_dsl,co2,22.13680973,kTonne/PJ,Upstream emissions ,F7

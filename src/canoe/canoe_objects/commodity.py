@@ -1,5 +1,5 @@
 """
-Fuel commodities of a sector.
+Fuel and source commodities.
 
 Examples in this module run against `db`, an in-memory CANOE database prepared in
 `canoe_objects/conftest.py` (data sets `COMDOC*`).
@@ -80,6 +80,61 @@ class FuelCommodityEntity:
             name=self.name,
             flag=self.flag,
             description=f"{self.fuel.get_desc_name()} fuel for {self.sector.name} sector",
+            data_id=self.data_id.get_dataset_code(),
+        )
+        sql, params = Commodity.to_insert_or_ignore_sql(commodity)
+        write_label(db_conn, commodity)
+        db_conn.execute(sql, params)
+
+
+class SourceCommodityEntity:
+    """
+    A source commodity (flag `s`): the starting point of supply chains, e.g. the
+    `F_ethos` the fuel imports take as input. Temoa's source trace starts from these
+    commodities.
+
+    Technologies take it as input, so it must be built before them. Building it
+    twice is harmless (insert or ignore).
+
+    Parameters
+    ----------
+    name : str
+        Commodity name.
+    description : str
+        Description in the `commodity` table.
+    data_id : DatasetIdentifier
+        Data set of the `commodity` row (sector-wide, no region).
+
+    Examples
+    --------
+    >>> from canoe.common.naming import DatasetIdentifier
+    >>> SourceCommodityEntity(
+    ...     name="C_ethos",
+    ...     description="supply point of the commercial fuels",
+    ...     data_id=DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+    ... ).build(db)
+    >>> db.execute("SELECT name, flag, description, data_id FROM commodity").fetchall()
+    [('C_ethos', 's', 'supply point of the commercial fuels', 'COMDOC001')]
+    """
+
+    def __init__(self, name: str, description: str, data_id: DatasetIdentifier) -> None:
+        self.name: str = name
+        self.description: str = description
+        self.data_id: DatasetIdentifier = data_id
+
+    def build(self, db_conn: Connection):
+        """
+        Write the `commodity` row and its `commodity_label`.
+
+        Parameters
+        ----------
+        db_conn : Connection
+            Open connection; the caller manages the transaction.
+        """
+        commodity = Commodity(
+            name=self.name,
+            flag=CommodityTypeCode.S,
+            description=self.description,
             data_id=self.data_id.get_dataset_code(),
         )
         sql, params = Commodity.to_insert_or_ignore_sql(commodity)

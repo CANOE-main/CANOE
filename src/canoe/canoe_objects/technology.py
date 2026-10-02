@@ -20,6 +20,7 @@ from canoe_schema.v4_0 import (
     CapacityToActivity,
     CostFixed,
     CostInvest,
+    CostVariable,
     Efficiency,
     EmissionActivity,
     ExistingCapacity,
@@ -122,7 +123,8 @@ class TechnologyEntity:
     - input splits for commodities that are not inputs, or adding up to more than 1
     - existing capacity or investment costs for a (region, vintage) without any
       efficiency
-    - fixed costs for periods before the vintage or after the end of its lifetime
+    - fixed or variable costs for periods before the vintage or after the end of its
+      lifetime, and variable costs for a (region, vintage) without any efficiency
     - capacity factor limits for commodities that are not outputs
     - emission factors for commodities that are not inputs, or for a (region, vintage)
       without efficiency for that input
@@ -229,6 +231,7 @@ class TechnologyEntity:
         self.existing_capacity: Parameter[RegionVintageArray] | None = None
         self.investment_cost: Parameter[RegionVintageArray] | None = None
         self.fixed_cost: Parameter[RegionVintagePeriodArray] | None = None
+        self.variable_cost: Parameter[RegionVintagePeriodArray] | None = None
         # output commodity -> capacity factor limit
         self.capacity_factor_limits: dict[str, CapacityFactorLimit] = {}
         # (emission commodity, input commodity) -> emission factor
@@ -243,6 +246,36 @@ class TechnologyEntity:
     def outputs(self) -> list[str]:
         """Output commodities, in the order they were added with `with_efficiency`"""
         return list(dict.fromkeys(o for _, o in self.efficiencies))
+
+    def input_regions(self, input_commodity: str) -> list[CANOEProvince]:
+        """
+        Regions where the technology takes `input_commodity` as input: those with an
+        efficiency for it (any output or vintage), in order of first appearance.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> furnace = TechnologyEntity(
+        ...     "C_NG_FRN", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ... ).with_efficiency(
+        ...     "C_ng",
+        ...     RegionVintageArray([CANOEProvince.ONTARIO, CANOEProvince.QUEBEC], [2025]),
+        ... )
+        >>> furnace.input_regions("C_ng")
+        []
+        >>> furnace.efficiencies[("C_ng", "C_D_DOC")].values.set(
+        ...     0.9, region=CANOEProvince.QUEBEC, vintage=2025
+        ... )
+        >>> furnace.input_regions("C_ng")
+        [<CANOEProvince.QUEBEC: 'Quebec'>]
+        """
+        regions = (
+            record["region"]
+            for (i, _), efficiency in self.efficiencies.items()
+            if i == input_commodity
+            for record in efficiency.values.to_records()
+        )
+        return list(dict.fromkeys(regions))
 
     def set_annual(self, annual: bool = True):
         """
@@ -536,6 +569,56 @@ class TechnologyEntity:
         )
         return self
 
+    def with_variable_cost(
+        self,
+        variable_cost: RegionVintagePeriodArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        """
+        Set the variable cost per unit of activity (output), e.g. the price of a fuel
+        supplied.
+
+        Writes `cost_variable`: one row per (region, vintage, period) with a value.
+        Every (region, vintage) with a cost needs an efficiency for at least one
+        input, and only periods in which the vintage is alive are allowed (checked
+        by `validate`).
+
+        Parameters
+        ----------
+        variable_cost : RegionVintagePeriodArray
+            Cost by region, vintage and period.
+
+        Examples
+        --------
+        A 2025 furnace whose operation costs 0.5 per unit of heat in 2025 and 0.6 in
+        2030:
+
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> cost = RegionVintagePeriodArray(regions, [2025], [2025, 2030])
+        >>> cost.set(0.5, region=CANOEProvince.ONTARIO, vintage=2025, period=2025)
+        >>> cost.set(0.6, region=CANOEProvince.ONTARIO, vintage=2025, period=2030)
+        >>> furnace = (
+        ...     TechnologyEntity(
+        ...         "C_NG_FRN", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025], fill=0.9))
+        ...     .with_variable_cost(cost, units="M$/PJ")
+        ... )
+        >>> furnace.build(db)
+        >>> db.execute(
+        ...     "SELECT region, period, tech, vintage, cost, units FROM cost_variable"
+        ... ).fetchall()
+        [('ON', 2025, 'C_NG_FRN', 2025, 0.5, 'M$/PJ'), ('ON', 2030, 'C_NG_FRN', 2025, 0.6, 'M$/PJ')]
+        """
+        self.variable_cost = Parameter(
+            variable_cost, ParameterMetadata(notes, reference_code, data_quality, units)
+        )
+        return self
+
     def with_limit_annual_capacity_factor(
         self,
         capacity_factors: RegionVintageArray,
@@ -676,6 +759,7 @@ class TechnologyEntity:
             "existing capacity": self.existing_capacity,
             "investment cost": self.investment_cost,
             "fixed cost": self.fixed_cost,
+            "variable cost": self.variable_cost,
             **{
                 f"annual capacity factor limit ({o})": limit.parameter
                 for o, limit in self.capacity_factor_limits.items()
@@ -773,29 +857,44 @@ class TechnologyEntity:
                         + f"at {record['region']}, {record['vintage']}"
                     )
 
-        # Fixed costs
-        if self.fixed_cost:
-            lifetimes: dict[CANOEProvince, float] = (
-                {
-                    r["region"]: np.round(r["value"])
-                    for r in self.lifetime.values.to_records()
-                }
-                if self.lifetime
-                else {}
-            )
-            for record in self.fixed_cost.values.to_records():
+        # Variable costs need an efficiency for their vintage
+        if self.variable_cost:
+            for record in self.variable_cost.values.to_records():
+                if (record["region"], record["vintage"]) not in efficiency_cells:
+                    raise ValueError(
+                        f"Technology {self.name}: variable cost without efficiency "
+                        + f"at {record['region']}, {record['vintage']}"
+                    )
+
+        # Fixed and variable costs only while the vintage is alive
+        lifetimes: dict[CANOEProvince, float] = (
+            {
+                r["region"]: np.round(r["value"])
+                for r in self.lifetime.values.to_records()
+            }
+            if self.lifetime
+            else {}
+        )
+        period_parameters = {
+            "fixed cost": self.fixed_cost,
+            "variable cost": self.variable_cost,
+        }
+        for parameter_name, parameter in period_parameters.items():
+            if parameter is None:
+                continue
+            for record in parameter.values.to_records():
                 region = record["region"]
                 vintage = record["vintage"]
                 period = record["period"]
                 if period < vintage:
                     raise ValueError(
-                        f"Technology {self.name}: fixed cost for period {period} "
+                        f"Technology {self.name}: {parameter_name} for period {period} "
                         + f"before vintage {vintage} at {region}"
                     )
                 if region in lifetimes and vintage + lifetimes[region] <= period:
                     raise ValueError(
-                        f"Technology {self.name}: fixed cost for period {period} after "
-                        + f"the end of life of vintage {vintage} at {region}"
+                        f"Technology {self.name}: {parameter_name} for period {period} "
+                        + f"after the end of life of vintage {vintage} at {region}"
                     )
 
     def build(self, db_conn: Connection):
@@ -971,6 +1070,29 @@ class TechnologyEntity:
             ]
             sql, params = CostFixed.bulk_insert_or_ignore_sql(
                 fixed_costs, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Variable costs
+        if self.variable_cost:
+            meta = self.variable_cost.metadata
+            variable_costs = [
+                CostVariable(
+                    region=row["region"].short(),
+                    period=row["period"],
+                    tech=self.name,
+                    vintage=row["vintage"],
+                    cost=row["value"],
+                    units=meta.units,
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(self.variable_cost.values.to_records())
+            ]
+            sql, params = CostVariable.bulk_insert_or_ignore_sql(
+                variable_costs, include_nulls=True
             )
             db_conn.executemany(sql, params)
 

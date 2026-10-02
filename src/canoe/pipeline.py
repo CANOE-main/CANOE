@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_va
 from canoe.common import CANOEModuleOutput, CANOESector, atomic_transaction
 from canoe.common.naming import DatasetIdentifier
 from canoe.emissions import processing as emissions_processing
+from canoe.fuel.config import CANOEFuelConfig
 from canoe.representative_periods.config import RepresentativePeriodsConfig
 from canoe.representative_periods.process_all import run_representative_periods
 
@@ -19,6 +20,8 @@ from .temoa_protocol import CANOETemoaConfig, run_temoa
 class CANOECompilerConfig(BaseModel):
     base: CANOEBaseConfig
     sectors: dict[str, SectorConfig] = Field(default_factory=dict)
+    fuel: CANOEFuelConfig | None = None
+    """Supplies the fuels the sectors import; none supplied if left out."""
 
     @field_validator("sectors", mode="before")
     @classmethod
@@ -27,6 +30,15 @@ class CANOECompilerConfig(BaseModel):
             return value
         base = (info.data or {}).get("base")
         return {key: resolve_sector_config(item, base) for key, item in value.items()}
+
+    @field_validator("fuel", mode="before")
+    @classmethod
+    def _resolve_fuel(cls, value: Any, info: ValidationInfo) -> Any:
+        # Inline table: validated with `base` in context so inherited fields resolve
+        if not isinstance(value, dict):
+            return value
+        base = (info.data or {}).get("base")
+        return CANOEFuelConfig.model_validate(value, context={"base": base})
 
 
 class CANOEPipelineConfig(BaseModel):
@@ -75,13 +87,12 @@ def run(config: CANOEPipelineConfig):
         run_initializer(base)
 
         with atomic_transaction(base.db_output_dir) as db_conn:
-            # Emission commodities, before the sectors write emission activities.
-            # The last future period is the end of the horizon, not a model period.
+            # Emission commodities, before the sectors write emission activities
             emissions_processing.init(
                 db_conn,
                 base.emissions,
                 base.provinces,
-                base.future_periods[:-1],
+                base.future_periods,
                 DatasetIdentifier(
                     sector=CANOESector.Electricity,
                     code_description="HR",
@@ -90,15 +101,23 @@ def run(config: CANOEPipelineConfig):
             )
 
         # Run each sector
-        sector_outputs: list[CANOEModuleOutput] = []
+        module_outputs: list[CANOEModuleOutput] = []
         for sector_name, sector_config in config.compiler.sectors.items():
             logger.info(f"Running sector: {sector_name}")
             sector_output = sector_config.run()
             logger.info(f"Sector {sector_name} output: {sector_output}")
-            sector_outputs.append(sector_output)
+            module_outputs.append(sector_output)
 
-        # Fuel imports
-        # sector_output.fuel_imports
+        # Fuel supply: imports and distribution of the fuels the sectors consume
+        fuel_imports = [i for output in module_outputs for i in output.fuel_imports]
+        if config.compiler.fuel is not None:
+            logger.info("Running fuel supply")
+            module_outputs.append(config.compiler.fuel.run(fuel_imports))
+        elif fuel_imports:
+            logger.warning(
+                f"No [compiler.fuel] configured: {len(fuel_imports)} fuel imports of "
+                + "the sectors are not supplied"
+            )
 
         logger.info("Processing emissions...")
         with atomic_transaction(base.db_output_dir) as db_conn:
@@ -106,7 +125,7 @@ def run(config: CANOEPipelineConfig):
             emissions_processing.finalize(
                 db_conn,
                 base.emissions,
-                [d for output in sector_outputs for d in output.emissions],
+                [d for output in module_outputs for d in output.emissions],
             )
 
     # Representative periods
