@@ -132,6 +132,11 @@ class AppliancesConfig(_EndUseConfig):
     """Arbitrary share of the year appliances run, so the existing stock can meet the
     peak demand. The demand is the existing stock times this factor."""
 
+    other_appliances_lifetime: float | None = Field(default=None, gt=0)
+    """Lifetime (years) of other electrical appliances and devices (`R_APP_OTH`),
+    whose single vintage is the first model period. None (default) writes no
+    lifetime, as the previous module: Temoa's default lifetime applies."""
+
 
 class EndUsesConfig(BaseModel):
     """

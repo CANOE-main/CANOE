@@ -140,6 +140,18 @@ class TestEndUses:
         with pytest.raises(ValidationError):
             _with_end_uses(base, {"appliances": {"annual_capacity_factor": 1.5}})
 
+    def test_other_appliances_lifetime_is_optional(self, base: CANOEBaseConfig):
+        appliances = _with_end_uses(base, {"appliances": {}}).end_uses.appliances
+        assert appliances is not None
+        assert appliances.other_appliances_lifetime is None
+        appliances = _with_end_uses(
+            base, {"appliances": {"other_appliances_lifetime": 30}}
+        ).end_uses.appliances
+        assert appliances is not None
+        assert appliances.other_appliances_lifetime == 30
+        with pytest.raises(ValidationError):
+            _with_end_uses(base, {"appliances": {"other_appliances_lifetime": 0}})
+
 
 class TestSectorOptions:
     def test_gdp_driver(self, base: CANOEBaseConfig):

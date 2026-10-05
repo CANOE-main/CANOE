@@ -6,8 +6,9 @@ turns them into `canoe_objects` entities. Nothing in here touches the database; 
 caller decides when to `.build()` the returned entities (the demands first, as the
 technologies output them).
 
-Built in stages: the demands, the existing and the new technologies (here), then
-lighting and other appliances.
+The demands, the existing technologies (NRCan stock, existing lamps included), the
+new technologies (AEO equipment and lamps) and the other appliances, gathered in
+`ResidentialEntities` with the fuel imports they need.
 """
 
 from dataclasses import dataclass
@@ -28,12 +29,19 @@ from canoe.canoe_objects.demand import (
     DemandSeriesArray,
     DemandSpecificDistributionArray,
 )
+from canoe.canoe_objects.fuel_imports import declare_fuel_imports
 from canoe.canoe_objects.fuel_serving_tech import (
     FuelGrouping,
     FuelServingTechnologyEntity,
 )
 from canoe.canoe_objects.technology import TechnologyEntity
-from canoe.common import CANOEFuel, CANOEProvince, CANOESector, DataQualityProfile
+from canoe.common import (
+    CANOEFuel,
+    CANOEFuelImport,
+    CANOEProvince,
+    CANOESector,
+    DataQualityProfile,
+)
 from canoe.common.naming import (
     DatasetIdentifier,
     TechnologyCapacityScope,
@@ -374,11 +382,15 @@ class NewTechnologyParameters:
         rows has no fixed cost.
     lifetime : pd.DataFrame
         Columns `region`, `technology` and `lifetime` (years).
+    lifetime_process : pd.DataFrame
+        Columns `region`, `technology`, `vintage` and `lifetime` (years), for
+        technologies whose lifetime changes between vintages (lamps); where given, it
+        overrides `lifetime`. Every technology needs rows in `lifetime` or here.
     capacity_factor : pd.DataFrame
         Columns `region`, `technology`, `vintage`, `end_use`, `operator`
         (`OperatorCode`) and `factor` (0-1), for each end use the technology serves.
     efficiency_notes, investment_cost_notes, fixed_cost_notes, lifetime_notes,
-    capacity_factor_notes : str
+    lifetime_process_notes, capacity_factor_notes : str
         Notes of the rows of each parameter.
     """
 
@@ -386,20 +398,22 @@ class NewTechnologyParameters:
     investment_cost: pd.DataFrame
     fixed_cost: pd.DataFrame
     lifetime: pd.DataFrame
+    lifetime_process: pd.DataFrame
     capacity_factor: pd.DataFrame
     efficiency_notes: str
     investment_cost_notes: str
     fixed_cost_notes: str
     lifetime_notes: str
+    lifetime_process_notes: str
     capacity_factor_notes: str
 
 
 @dataclass
 class NewTechnologyEntity:
     """
-    A new residential technology and the commodity it takes, in build order: the
-    sector's fuel commodity (e.g. `R_ng`), or the free source commodity `R_ethos` of
-    the solar water heater.
+    A new residential technology (AEO equipment or lamp) and the commodity it takes,
+    in build order: the sector's fuel commodity (e.g. `R_elc`), or the free source
+    commodity `R_ethos` of the solar water heater.
     """
 
     input_commodity: FuelCommodityEntity | SourceCommodityEntity
@@ -428,7 +442,8 @@ def build_new_technology(
     limited capacity, a capacity to activity of 1 and one output per end use it
     serves (heat pumps serve space heating and cooling, with an efficiency each).
     Its input is the residential commodity of its fuel, or `R_ethos` for the solar
-    water heater (no fuel, see `RESIDENTIAL_MODULE_BUGS.md`).
+    water heater (no fuel, see `RESIDENTIAL_MODULE_BUGS.md`). Lamps have a lifetime
+    per vintage (`lifetime_process`) rather than a technology lifetime.
 
     The technology is written in the regions with an efficiency and a capacity
     factor for every end use it serves (rows of `parameters` in other regions are
@@ -443,11 +458,10 @@ def build_new_technology(
     Raises
     ------
     ValueError
-        For lamps, which also need lifetimes by vintage (stage 4).
+        If the technology has neither a lifetime nor lifetimes by vintage in its
+        regions (Temoa would silently use its default lifetime).
     """
     spec = technology.spec()
-    if spec.lamp is not None:
-        raise ValueError(f"{technology.value} is a lamp: lamps are not built here")
 
     # NOTE: enum columns are filtered with `isin` (see `build_end_use_demand`)
     def rows_of(frame: pd.DataFrame) -> pd.DataFrame:
@@ -484,6 +498,9 @@ def build_new_technology(
     investment_cost = in_regions(rows_of(parameters.investment_cost))
     fixed_cost = in_regions(rows_of(parameters.fixed_cost))
     lifetime = in_regions(rows_of(parameters.lifetime))
+    lifetime_process = in_regions(rows_of(parameters.lifetime_process))
+    if lifetime.empty and lifetime_process.empty:
+        raise ValueError(f"{spec.name}: no lifetime, nor lifetimes by vintage")
 
     input_commodity = (
         SourceCommodityEntity(
@@ -520,13 +537,6 @@ def build_new_technology(
         .with_capacity_to_activity(
             RegionalValuesArray(regions, fill=1.0),
             units=f"{spec.end_uses[0].demand_units()}/{capacity_units}.y",
-        )
-        .with_lifetime(
-            RegionalValuesArray(regions).fill_from_df(
-                lifetime, dims=["region"], value_col="lifetime"
-            ),
-            notes=parameters.lifetime_notes,
-            data_quality=DataQualityProfile(cred=1, geog=2, struc=2, tech=2, time=3),
         )
         .with_investment_cost(
             RegionVintageArray(regions, model_periods).fill_from_df(
@@ -569,6 +579,22 @@ def build_new_technology(
                     cred=1, geog=1, struc=3, tech=3, time=3
                 ),
             )
+    if not lifetime.empty:
+        entity = entity.with_lifetime(
+            RegionalValuesArray(regions).fill_from_df(
+                lifetime, dims=["region"], value_col="lifetime"
+            ),
+            notes=parameters.lifetime_notes,
+            data_quality=DataQualityProfile(cred=1, geog=2, struc=2, tech=2, time=3),
+        )
+    if not lifetime_process.empty:
+        entity = entity.with_lifetime_process(
+            RegionVintageArray(regions, model_periods).fill_from_df(
+                lifetime_process, dims=["region", "vintage"], value_col="lifetime"
+            ),
+            notes=parameters.lifetime_process_notes,
+            data_quality=DataQualityProfile(cred=1, geog=3, struc=3, tech=1, time=2),
+        )
     if not fixed_cost.empty:
         entity = entity.with_fixed_cost(
             RegionVintagePeriodArray(
@@ -604,3 +630,120 @@ def build_new_technologies(
             continue
         entities.append(entity)
     return entities
+
+
+def build_other_appliances(
+    efficiency: pd.DataFrame,
+    provinces: list[CANOEProvince],
+    first_period: int,
+    notes: str,
+    data_id: DatasetIdentifier,
+    lifetime: float | None = None,
+) -> FuelServingTechnologyEntity | None:
+    """
+    Other electrical appliances and devices (`R_APP_OTH`): no stock data, so
+    unlimited capacity, annual, with a single vintage in the first model period, an
+    efficiency and a capacity to activity of 1. Written in the regions with a
+    positive efficiency; None if none.
+
+    params:
+    - efficiency: columns `region` (`CANOEProvince`) and `efficiency` (Munity per PJ
+      of electricity). Not modified.
+    - first_period: the vintage
+    - notes: notes of the efficiency rows
+    - lifetime: lifetime (years) in every region; None writes none, as the previous
+      module: Temoa's default lifetime applies (see
+      `AppliancesConfig.other_appliances_lifetime`)
+    """
+    technology = ExistingTechnology.OtherAppliances
+    spec = technology.spec()
+    end_use = spec.end_use
+    rows = efficiency.loc[efficiency["efficiency"] > 0]
+    if rows.empty:
+        return None
+    regions = [p for p in provinces if p in set(rows["region"])]
+
+    entity = (
+        FuelServingTechnologyEntity(
+            sector=CANOESector.Residential,
+            short_desc=end_use.short_desc(),
+            fuels=list(spec.fuels),
+            fuel_import_flag={f: fuel_commodity_flag(f) for f in spec.fuels},
+            output_commodity_name=end_use_demand_name(end_use),
+            data_id=data_id,
+            description=end_use.get_desc_name(),
+            grouping=FuelGrouping.Shared,
+        )
+        .set_annual()
+        .set_unlimited_capacity()
+        .with_efficiencies(
+            {
+                fuel: RegionVintageArray(regions, [first_period]).fill_from_df(
+                    rows, dims=["region"], value_col="efficiency"
+                )
+                for fuel in spec.fuels
+            },
+            notes=notes,
+            data_quality=DataQualityProfile(cred=1, geog=1, struc=1, tech=1, time=3),
+            units=f"{end_use.demand_units()}/PJ",
+        )
+        .with_capacity_to_activity(
+            RegionalValuesArray(regions, fill=1.0),
+            units=f"{end_use.demand_units()}/{end_use.capacity_units()}.y",
+        )
+    )
+    if lifetime is not None:
+        entity = entity.with_lifetimes(
+            RegionalValuesArray(regions, fill=lifetime),
+            notes="Lifetime of other appliances set in the configuration",
+        )
+    name = entity.to_technology_entities()[0].name
+    assert name == technology.value, f"{technology.value} would be named {name}"
+    return entity
+
+
+@dataclass
+class ResidentialEntities:
+    """
+    Everything the residential sector writes, in build order: the end use demands,
+    then the technologies that output them (existing, other appliances, new).
+    """
+
+    demands: list[DemandEntity]
+    existing_technologies: list[FuelServingTechnologyEntity]
+    other_appliances: FuelServingTechnologyEntity | None
+    new_technologies: list[NewTechnologyEntity]
+
+    def build(self, db_conn: Connection):
+        """
+        Parameters
+        ----------
+        db_conn : Connection
+            Open connection; the caller manages the transaction.
+        """
+        for demand in self.demands:
+            demand.build(db_conn)
+        for technology in self.existing_technologies:
+            technology.build(db_conn)
+        if self.other_appliances is not None:
+            self.other_appliances.build(db_conn)
+        for new_technology in self.new_technologies:
+            new_technology.build(db_conn)
+
+    def technology_entities(self) -> list[TechnologyEntity]:
+        """Every technology written, in build order"""
+        fuel_serving = [
+            *self.existing_technologies,
+            *([self.other_appliances] if self.other_appliances is not None else []),
+        ]
+        return [
+            *(e for t in fuel_serving for e in t.to_technology_entities()),
+            *(t.technology for t in self.new_technologies),
+        ]
+
+    def fuel_imports(self) -> list[CANOEFuelImport]:
+        """
+        The fuels the technologies take, where they take them, for the fuel module
+        to supply (`R_ethos` is not a fuel: the solar water heater's energy is free).
+        """
+        return declare_fuel_imports(CANOESector.Residential, self.technology_entities())
