@@ -6,20 +6,23 @@ turns them into `canoe_objects` entities. Nothing in here touches the database; 
 caller decides when to `.build()` the returned entities (the demands first, as the
 technologies output them).
 
-Built in stages: the demands and the existing technologies (here), then the new
-technologies and lighting.
+Built in stages: the demands, the existing and the new technologies (here), then
+lighting and other appliances.
 """
 
 from dataclasses import dataclass
+from sqlite3 import Connection
 
 import pandas as pd
 from canoe_schema.v4_0 import CommodityTypeCode, OperatorCode
+from loguru import logger
 
 from canoe.canoe_objects.array_types import (
     RegionalValuesArray,
     RegionVintageArray,
     RegionVintagePeriodArray,
 )
+from canoe.canoe_objects.commodity import FuelCommodityEntity, SourceCommodityEntity
 from canoe.canoe_objects.demand import (
     DemandEntity,
     DemandSeriesArray,
@@ -29,6 +32,7 @@ from canoe.canoe_objects.fuel_serving_tech import (
     FuelGrouping,
     FuelServingTechnologyEntity,
 )
+from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.common import CANOEFuel, CANOEProvince, CANOESector, DataQualityProfile
 from canoe.common.naming import (
     DatasetIdentifier,
@@ -38,7 +42,7 @@ from canoe.common.naming import (
 from canoe.common.time_slices import TimeSlice
 
 from .end_uses import ResidentialEndUse
-from .technology_catalog import ExistingTechnology
+from .technology_catalog import ExistingTechnology, NewTechnology
 
 
 def end_use_demand_name(end_use: ResidentialEndUse) -> str:
@@ -53,6 +57,33 @@ def end_use_demand_name(end_use: ResidentialEndUse) -> str:
     return get_commodity_name(
         CANOESector.Residential, end_use.short_desc(), is_demand=True
     )
+
+
+def fuel_commodity_flag(fuel: CANOEFuel) -> CommodityTypeCode:
+    """
+    Type of the residential commodity of `fuel`: physical (`p`) for electricity,
+    annual (`a`) for the other fuels.
+
+    Examples
+    --------
+    >>> fuel_commodity_flag(CANOEFuel.Electricity), fuel_commodity_flag(CANOEFuel.Wood)
+    (<CommodityTypeCode.P: 'p'>, <CommodityTypeCode.A: 'a'>)
+    """
+    if fuel == CANOEFuel.Electricity:
+        return CommodityTypeCode.P
+    return CommodityTypeCode.A
+
+
+def source_commodity_name() -> str:
+    """
+    Name of the free source commodity the solar water heater takes.
+
+    Examples
+    --------
+    >>> source_commodity_name()
+    'R_ethos'
+    """
+    return f"{CANOESector.Residential.get_tag()}_ethos"
 
 
 def build_end_use_demand(
@@ -318,3 +349,257 @@ def build_existing_technologies(
         for technology in technologies
     ]
     return [entity for entity in entities if entity is not None]
+
+
+@dataclass(frozen=True)
+class NewTechnologyParameters:
+    """
+    Parameters of new technologies (any number of them), one long frame per
+    parameter with a `technology` column (`NewTechnology`), and the notes of each
+    parameter's rows. Every frame has a `region` column (`CANOEProvince`); vintages
+    are model periods.
+
+    Parameters
+    ----------
+    efficiency : pd.DataFrame
+        Columns `region`, `technology`, `vintage`, `end_use` (`ResidentialEndUse`)
+        and `efficiency`: output (in the demand units of the end use) per PJ of
+        input, one row per end use the technology serves.
+    investment_cost : pd.DataFrame
+        Columns `region`, `technology`, `vintage` and `cost` (M$ per unit of
+        capacity).
+    fixed_cost : pd.DataFrame
+        Columns `region`, `technology`, `vintage`, `period` and `cost` (M$ per unit of
+        capacity and year); periods while the vintage is alive. A technology without
+        rows has no fixed cost.
+    lifetime : pd.DataFrame
+        Columns `region`, `technology` and `lifetime` (years).
+    capacity_factor : pd.DataFrame
+        Columns `region`, `technology`, `vintage`, `end_use`, `operator`
+        (`OperatorCode`) and `factor` (0-1), for each end use the technology serves.
+    efficiency_notes, investment_cost_notes, fixed_cost_notes, lifetime_notes,
+    capacity_factor_notes : str
+        Notes of the rows of each parameter.
+    """
+
+    efficiency: pd.DataFrame
+    investment_cost: pd.DataFrame
+    fixed_cost: pd.DataFrame
+    lifetime: pd.DataFrame
+    capacity_factor: pd.DataFrame
+    efficiency_notes: str
+    investment_cost_notes: str
+    fixed_cost_notes: str
+    lifetime_notes: str
+    capacity_factor_notes: str
+
+
+@dataclass
+class NewTechnologyEntity:
+    """
+    A new residential technology and the commodity it takes, in build order: the
+    sector's fuel commodity (e.g. `R_ng`), or the free source commodity `R_ethos` of
+    the solar water heater.
+    """
+
+    input_commodity: FuelCommodityEntity | SourceCommodityEntity
+    technology: TechnologyEntity
+
+    def build(self, db_conn: Connection):
+        """
+        Parameters
+        ----------
+        db_conn : Connection
+            Open connection; the caller manages the transaction.
+        """
+        self.input_commodity.build(db_conn)
+        self.technology.build(db_conn)
+
+
+def build_new_technology(
+    technology: NewTechnology,
+    parameters: NewTechnologyParameters,
+    provinces: list[CANOEProvince],
+    model_periods: list[int],
+    data_id: DatasetIdentifier,
+) -> NewTechnologyEntity | None:
+    """
+    The new technology `technology`, buildable in every model period: annual, with
+    limited capacity, a capacity to activity of 1 and one output per end use it
+    serves (heat pumps serve space heating and cooling, with an efficiency each).
+    Its input is the residential commodity of its fuel, or `R_ethos` for the solar
+    water heater (no fuel, see `RESIDENTIAL_MODULE_BUGS.md`).
+
+    The technology is written in the regions with an efficiency and a capacity
+    factor for every end use it serves (rows of `parameters` in other regions are
+    ignored); regions with an efficiency but no capacity factor are logged (their
+    equivalent existing technology has no stock there). None if no region is left.
+
+    params:
+    - parameters: see `NewTechnologyParameters`; only the rows of `technology` are
+      read. Not modified.
+    - model_periods: vintages, and periods of the fixed costs
+
+    Raises
+    ------
+    ValueError
+        For lamps, which also need lifetimes by vintage (stage 4).
+    """
+    spec = technology.spec()
+    if spec.lamp is not None:
+        raise ValueError(f"{technology.value} is a lamp: lamps are not built here")
+
+    # NOTE: enum columns are filtered with `isin` (see `build_end_use_demand`)
+    def rows_of(frame: pd.DataFrame) -> pd.DataFrame:
+        return frame.loc[frame["technology"].isin([technology])]
+
+    def regions_with(frame: pd.DataFrame) -> set[CANOEProvince]:
+        """Regions with rows for every end use of the technology"""
+        return set.intersection(
+            *(
+                set(frame.loc[frame["end_use"].isin([end_use]), "region"])
+                for end_use in spec.end_uses
+            )
+        )
+
+    efficiency = rows_of(parameters.efficiency)
+    capacity_factor = rows_of(parameters.capacity_factor)
+    with_efficiency = regions_with(efficiency)
+    with_capacity_factor = regions_with(capacity_factor)
+    regions = [p for p in provinces if p in with_efficiency & with_capacity_factor]
+    left_out = [p for p in provinces if p in with_efficiency - with_capacity_factor]
+    if left_out:
+        logger.info(
+            f"{spec.name} left out of {', '.join(p.short() for p in left_out)}: no "
+            + "annual capacity factor (no stock of its equivalent existing technology)"
+        )
+    if not regions:
+        return None
+
+    def in_regions(frame: pd.DataFrame) -> pd.DataFrame:
+        return frame.loc[frame["region"].isin(regions)]
+
+    efficiency = in_regions(efficiency)
+    capacity_factor = in_regions(capacity_factor)
+    investment_cost = in_regions(rows_of(parameters.investment_cost))
+    fixed_cost = in_regions(rows_of(parameters.fixed_cost))
+    lifetime = in_regions(rows_of(parameters.lifetime))
+
+    input_commodity = (
+        SourceCommodityEntity(
+            name=source_commodity_name(),
+            description="dummy input - residential",
+            data_id=data_id,
+        )
+        if spec.fuel is None
+        else FuelCommodityEntity(
+            sector=CANOESector.Residential,
+            fuel=spec.fuel,
+            flag=fuel_commodity_flag(spec.fuel),
+            data_id=data_id,
+        )
+    )
+    # Capacity is in the units of the end uses it serves (heat pumps: kunit for both)
+    capacity_units = spec.end_uses[0].capacity_units()
+    entity = (
+        TechnologyEntity(
+            name=spec.name,
+            output_commodity=end_use_demand_name(spec.end_uses[0]),
+            data_id=data_id,
+            description=" - ".join(
+                [
+                    "+".join(e.get_desc_name() for e in spec.end_uses),
+                    technology.value,
+                    "new",
+                ]
+            ),
+            sector=CANOESector.Residential,
+        )
+        .set_annual()
+        .with_capacity_to_activity(
+            RegionalValuesArray(regions, fill=1.0),
+            units=f"{spec.end_uses[0].demand_units()}/{capacity_units}.y",
+        )
+        .with_lifetime(
+            RegionalValuesArray(regions).fill_from_df(
+                lifetime, dims=["region"], value_col="lifetime"
+            ),
+            notes=parameters.lifetime_notes,
+            data_quality=DataQualityProfile(cred=1, geog=2, struc=2, tech=2, time=3),
+        )
+        .with_investment_cost(
+            RegionVintageArray(regions, model_periods).fill_from_df(
+                investment_cost, dims=["region", "vintage"], value_col="cost"
+            ),
+            notes=parameters.investment_cost_notes,
+            data_quality=DataQualityProfile(cred=1, geog=2, struc=2, tech=2, time=3),
+            units=f"M$/{capacity_units}",
+        )
+    )
+    for end_use in spec.end_uses:
+        output = end_use_demand_name(end_use)
+        entity = entity.with_efficiency(
+            input_commodity.name,
+            RegionVintageArray(regions, model_periods).fill_from_df(
+                efficiency.loc[efficiency["end_use"].isin([end_use])],
+                dims=["region", "vintage"],
+                value_col="efficiency",
+            ),
+            output_commodity=output,
+            notes=parameters.efficiency_notes,
+            data_quality=DataQualityProfile(cred=1, geog=2, struc=2, tech=2, time=3),
+            units=f"{end_use.demand_units()}/PJ",
+        )
+        for operator in (OperatorCode.GE, OperatorCode.LE):
+            factors = capacity_factor.loc[
+                capacity_factor["end_use"].isin([end_use])
+                & capacity_factor["operator"].isin([operator])
+            ]
+            if factors.empty:
+                continue
+            entity = entity.with_limit_annual_capacity_factor(
+                RegionVintageArray(regions, model_periods).fill_from_df(
+                    factors, dims=["region", "vintage"], value_col="factor"
+                ),
+                operator=operator,
+                output_commodity=output,
+                notes=parameters.capacity_factor_notes,
+                data_quality=DataQualityProfile(
+                    cred=1, geog=1, struc=3, tech=3, time=3
+                ),
+            )
+    if not fixed_cost.empty:
+        entity = entity.with_fixed_cost(
+            RegionVintagePeriodArray(
+                regions, model_periods, model_periods
+            ).fill_from_df(
+                fixed_cost, dims=["region", "vintage", "period"], value_col="cost"
+            ),
+            notes=parameters.fixed_cost_notes,
+            data_quality=DataQualityProfile(cred=1, geog=2, struc=2, tech=2, time=3),
+            units=f"M$/{capacity_units}.y",
+        )
+    return NewTechnologyEntity(input_commodity=input_commodity, technology=entity)
+
+
+def build_new_technologies(
+    technologies: list[NewTechnology],
+    parameters: NewTechnologyParameters,
+    provinces: list[CANOEProvince],
+    model_periods: list[int],
+    data_id: DatasetIdentifier,
+) -> list[NewTechnologyEntity]:
+    """
+    The new technologies of `technologies` written in some region, in order (see
+    `build_new_technology`); those left out of every region are logged.
+    """
+    entities: list[NewTechnologyEntity] = []
+    for technology in technologies:
+        entity = build_new_technology(
+            technology, parameters, provinces, model_periods, data_id
+        )
+        if entity is None:
+            logger.info(f"{technology.spec().name} left out: no region has its data")
+            continue
+        entities.append(entity)
+    return entities

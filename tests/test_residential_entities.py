@@ -12,12 +12,15 @@ from canoe.common.time_slices import TimeSlice
 from canoe.residential.end_uses import ResidentialEndUse
 from canoe.residential.entities import (
     ExistingTechnologyParameters,
+    NewTechnologyParameters,
     build_end_use_demand,
     build_existing_technologies,
     build_existing_technology,
+    build_new_technologies,
+    build_new_technology,
     end_use_demand_name,
 )
-from canoe.residential.technology_catalog import ExistingTechnology
+from canoe.residential.technology_catalog import ExistingTechnology, NewTechnology
 
 ON, QC = CANOEProvince.ONTARIO, CANOEProvince.QUEBEC
 SPH, LGT = ResidentialEndUse.SpaceHeating, ResidentialEndUse.Lighting
@@ -328,4 +331,190 @@ class TestExistingTechnology:
                 [ON],
                 PERIODS,
                 DATA_ID,
+            )
+
+
+ASHP = NewTechnology.AirSourceHeatPump
+SOLAR = NewTechnology.SolarWaterHeater
+SPC, WAH = ResidentialEndUse.SpaceCooling, ResidentialEndUse.WaterHeating
+
+
+def _new_parameters() -> NewTechnologyParameters:
+    """
+    An air-source heat pump in Ontario and Quebec, without a space cooling capacity
+    factor in Quebec, and a solar water heater in Ontario
+    """
+    return NewTechnologyParameters(
+        efficiency=pd.DataFrame(
+            [
+                (r, ASHP, v, e, x)
+                for r in (ON, QC)
+                for v in PERIODS
+                for e, x in ((SPH, 2.7), (SPC, 4.7))
+            ]
+            + [(ON, SOLAR, v, WAH, 1.0) for v in PERIODS],
+            columns=["region", "technology", "vintage", "end_use", "efficiency"],
+        ),
+        investment_cost=pd.DataFrame(
+            [(r, ASHP, v, 7.3) for r in (ON, QC) for v in PERIODS]
+            + [(ON, SOLAR, v, 5.0) for v in PERIODS],
+            columns=["region", "technology", "vintage", "cost"],
+        ),
+        fixed_cost=pd.DataFrame(
+            [(ON, ASHP, 2025, 2025, 0.09), (ON, ASHP, 2025, 2030, 0.09)]
+            + [(ON, ASHP, 2030, 2030, 0.09)],
+            columns=["region", "technology", "vintage", "period", "cost"],
+        ),
+        lifetime=pd.DataFrame(
+            [(ON, ASHP, 14.0), (QC, ASHP, 14.0), (ON, SOLAR, 20.0)],
+            columns=["region", "technology", "lifetime"],
+        ),
+        capacity_factor=pd.DataFrame(
+            [
+                (ON, ASHP, v, e, o, f)
+                for v in PERIODS
+                for e, f in ((SPH, 0.04), (SPC, 0.016))
+                for o, f in ((OperatorCode.GE, 0.95 * f), (OperatorCode.LE, f))
+            ]
+            + [(QC, ASHP, v, SPH, OperatorCode.LE, 0.05) for v in PERIODS]
+            + [(ON, SOLAR, v, WAH, OperatorCode.LE, 0.1) for v in PERIODS],
+            columns=[
+                "region",
+                "technology",
+                "vintage",
+                "end_use",
+                "operator",
+                "factor",
+            ],
+        ),
+        efficiency_notes="AEO",
+        investment_cost_notes="AEO",
+        fixed_cost_notes="EIA",
+        lifetime_notes="Weibull",
+        capacity_factor_notes="equivalent existing technology",
+    )
+
+
+def _build_new(db: sqlite3.Connection) -> None:
+    demand = pd.DataFrame(
+        [(ON, 2025, e, 1.0) for e in (SPH, SPC, WAH)],
+        columns=["region", "period", "end_use", "demand"],
+    )
+    for end_use in (SPH, SPC, WAH):  # The demands they output
+        build_end_use_demand(
+            end_use, demand, None, [ON, QC], PERIODS, [], "", "", DATA_ID
+        ).build(db)
+    for entity in build_new_technologies(
+        [ASHP, SOLAR, NewTechnology.OilFurnace],
+        _new_parameters(),
+        [ON, QC],
+        PERIODS,
+        DATA_ID,
+    ):
+        entity.build(db)
+
+
+class TestNewTechnology:
+    def test_heat_pump_serves_both_end_uses(self, db: sqlite3.Connection):
+        _build_new(db)
+        assert db.execute(
+            "SELECT tech, unlim_cap, annual, description FROM technology ORDER BY tech"
+        ).fetchall() == [
+            (
+                "R_SPHC_AIR_HP-TYP-NEW",
+                0,
+                1,
+                "space heating+space cooling - air-source heat pump - new",
+            ),
+            ("R_WAH_SOLAR-TYP-NEW", 0, 1, "water heating - solar water heater - new"),
+        ]
+        assert db.execute(
+            "SELECT region, input_comm, vintage, output_comm, efficiency, units "
+            + "FROM efficiency WHERE tech = 'R_SPHC_AIR_HP-TYP-NEW' "
+            + "ORDER BY vintage, output_comm"
+        ).fetchall() == [
+            ("ON", "R_elc", 2025, "R_D_SPC", 4.7, "PJ/PJ"),
+            ("ON", "R_elc", 2025, "R_D_SPH", 2.7, "PJ/PJ"),
+            ("ON", "R_elc", 2030, "R_D_SPC", 4.7, "PJ/PJ"),
+            ("ON", "R_elc", 2030, "R_D_SPH", 2.7, "PJ/PJ"),
+        ]
+        assert db.execute(
+            "SELECT output_comm, operator, factor FROM limit_annual_capacity_factor "
+            + "WHERE tech_or_group = 'R_SPHC_AIR_HP-TYP-NEW' AND vintage = 2025 "
+            + "ORDER BY output_comm, operator"
+        ).fetchall() == [
+            ("R_D_SPC", "ge", pytest.approx(0.95 * 0.016)),
+            ("R_D_SPC", "le", 0.016),
+            ("R_D_SPH", "ge", pytest.approx(0.95 * 0.04)),
+            ("R_D_SPH", "le", 0.04),
+        ]
+        assert db.execute(
+            "SELECT region, vintage, cost, units FROM cost_invest "
+            + "WHERE tech = 'R_SPHC_AIR_HP-TYP-NEW'"
+        ).fetchall() == [("ON", 2025, 7.3, "M$/kunit"), ("ON", 2030, 7.3, "M$/kunit")]
+        assert db.execute(
+            "SELECT period, vintage, cost, units FROM cost_fixed ORDER BY period, vintage"
+        ).fetchall() == [
+            (2025, 2025, 0.09, "M$/kunit.y"),
+            (2030, 2025, 0.09, "M$/kunit.y"),
+            (2030, 2030, 0.09, "M$/kunit.y"),
+        ]
+        assert db.execute(
+            "SELECT region, tech, lifetime, units FROM lifetime_tech ORDER BY tech"
+        ).fetchall() == [
+            ("ON", "R_SPHC_AIR_HP-TYP-NEW", 14.0, "year"),
+            ("ON", "R_WAH_SOLAR-TYP-NEW", 20.0, "year"),
+        ]
+        assert db.execute(
+            "SELECT tech, c2a, units FROM capacity_to_activity ORDER BY tech"
+        ).fetchall() == [
+            ("R_SPHC_AIR_HP-TYP-NEW", 1.0, "PJ/kunit.y"),
+            ("R_WAH_SOLAR-TYP-NEW", 1.0, "PJ/kunit.y"),
+        ]
+
+    def test_solar_water_heater_takes_the_free_source(self, db: sqlite3.Connection):
+        _build_new(db)
+        assert db.execute(
+            "SELECT name, flag, description FROM commodity WHERE flag != 'd' "
+            + "ORDER BY name"
+        ).fetchall() == [
+            ("R_elc", "p", "electricity fuel for Residential sector"),
+            ("R_ethos", "s", "dummy input - residential"),
+        ]
+        assert db.execute(
+            "SELECT DISTINCT input_comm, output_comm, efficiency FROM efficiency "
+            + "WHERE tech = 'R_WAH_SOLAR-TYP-NEW'"
+        ).fetchall() == [("R_ethos", "R_D_WAH", 1.0)]
+        assert db.execute(
+            "SELECT count(*) FROM cost_fixed WHERE tech = 'R_WAH_SOLAR-TYP-NEW'"
+        ).fetchone() == (0,)
+
+    def test_left_out_of_regions_without_capacity_factor(
+        self, caplog: pytest.LogCaptureFixture
+    ):
+        from loguru import logger
+
+        handler = logger.add(caplog.handler, level="INFO", format="{message}")
+        try:
+            entity = build_new_technology(
+                ASHP, _new_parameters(), [ON, QC], PERIODS, DATA_ID
+            )
+        finally:
+            logger.remove(handler)
+        assert entity is not None
+        assert entity.technology.input_regions("R_elc") == [ON]
+        assert "R_SPHC_AIR_HP-TYP-NEW left out of QC" in caplog.text
+
+    def test_left_out_without_data(self):
+        assert (
+            build_new_technology(
+                NewTechnology.OilFurnace, _new_parameters(), [ON, QC], PERIODS, DATA_ID
+            )
+            is None
+        )
+
+    def test_lamps_are_not_built_here(self):
+        with pytest.raises(ValueError, match="lamp"):
+            build_new_technology(
+                NewTechnology.LEDBulb, _new_parameters(), [ON], PERIODS, DATA_ID
             )
