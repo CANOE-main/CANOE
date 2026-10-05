@@ -408,15 +408,15 @@ def get_aeo_technology_menu() -> AEOTechnologyMenu:
     The AEO residential technology menu, see `AEOTechnologyMenu`.
 
     Each sheet has a table under a header row, followed by rows of the model's
-    variable names; tables are found by their header and rows kept where the end
-    use is a number.
+    variable names; tables are found by their header, and rows kept where the end
+    use is a number and the row has a name.
     """
     dataset = "rsmess.xlsx"
     resource = files("canoe.residential").joinpath(f"data/{dataset}")
     with resource.open("rb") as f:
         sheets = pd.read_excel(f, sheet_name=["RSCLASS", "RSMEQP"], header=None)
 
-    def table(sheet: str, header_cell: str) -> pd.DataFrame:
+    def table(sheet: str, header_cell: str, name_column: str) -> pd.DataFrame:
         raw = sheets[sheet]
         header_rows = raw.index[(raw == header_cell).any(axis=1)]
         if len(header_rows) != 1:
@@ -428,13 +428,18 @@ def get_aeo_technology_menu() -> AEOTechnologyMenu:
         body = raw.loc[header_rows[0] + 1 :, named].set_axis(
             header[named].tolist(), axis=1
         )
-        is_row = pd.Series(
-            pd.to_numeric(body["End Use"], errors="coerce"), index=body.index
-        ).notna()
+        # Rows of the table: a numeric end use and a name (notes below the tables
+        # have numbers but no name)
+        is_row = (
+            pd.Series(
+                pd.to_numeric(body["End Use"], errors="coerce"), index=body.index
+            ).notna()
+            & body[name_column].notna()
+        )
         return body[is_row].reset_index(drop=True)
 
-    classes = table("RSCLASS", "Weibull K")
-    equipment = table("RSMEQP", "Tech Name")
+    classes = table("RSCLASS", "Weibull K", "Equipment Class Name")
+    equipment = table("RSMEQP", "Tech Name", "Tech Name")
 
     # "<year> | Equipment cost dollar year" above the RSMEQP table
     raw = sheets["RSMEQP"]

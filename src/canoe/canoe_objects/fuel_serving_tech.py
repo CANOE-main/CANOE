@@ -253,10 +253,10 @@ class FuelServingTechnologyEntity:
         )
         self.existing_capacities: TechnologyParameter[RegionVintageArray] | None = None
         self.fixed_costs: TechnologyParameter[RegionVintagePeriodArray] | None = None
-        self.limit_annual_capacity_factors: (
-            TechnologyParameter[RegionVintageArray] | None
-        ) = None
-        self.lacf_operator: OperatorCode = OperatorCode.LE
+        # operator -> annual capacity factor limit
+        self.limit_annual_capacity_factors: dict[
+            OperatorCode, TechnologyParameter[RegionVintageArray]
+        ] = {}
         # emission commodity -> fuel -> emission factor
         self.input_emission_factors: dict[
             str, dict[CANOEFuel, InputEmissionFactor]
@@ -464,7 +464,9 @@ class FuelServingTechnologyEntity:
     ):
         """
         Limit the annual capacity factors (`limit_annual_capacity_factor`), see
-        `TechnologyEntity.with_limit_annual_capacity_factor`.
+        `TechnologyEntity.with_limit_annual_capacity_factor`. One limit per operator
+        (e.g. a lower and an upper bound); calling it again with the same operator
+        replaces that limit.
 
         Parameters
         ----------
@@ -474,11 +476,10 @@ class FuelServingTechnologyEntity:
         operator : OperatorCode
             Upper bound (`le`), lower bound (`ge`) or exact factor (`e`).
         """
-        self.limit_annual_capacity_factors = TechnologyParameter(
+        self.limit_annual_capacity_factors[operator] = TechnologyParameter(
             self._check_technology_values(capacity_factors, "capacity_factors"),
             ParameterMetadata(notes, reference_code, data_quality),
         )
-        self.lacf_operator = operator
         return self
 
     def with_capacity_to_activity(
@@ -703,14 +704,13 @@ class FuelServingTechnologyEntity:
                 self.fixed_costs.for_technology(fuel_key),
                 **_metadata_kwargs(self.fixed_costs.metadata),
             )
-        if self.limit_annual_capacity_factors:
-            meta = self.limit_annual_capacity_factors.metadata
+        for operator, limit in self.limit_annual_capacity_factors.items():
             technology.with_limit_annual_capacity_factor(
-                self.limit_annual_capacity_factors.for_technology(fuel_key),
-                operator=self.lacf_operator,
-                notes=meta.notes,
-                data_quality=meta.data_quality,
-                reference_code=meta.reference_code,
+                limit.for_technology(fuel_key),
+                operator=operator,
+                notes=limit.metadata.notes,
+                data_quality=limit.metadata.data_quality,
+                reference_code=limit.metadata.reference_code,
             )
         return technology
 

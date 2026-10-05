@@ -147,6 +147,9 @@ def build_residential(cfg: "CANOEResidentialConfig") -> CANOEModuleOutput:
 
         # Build TEMOA Objects
         # -------------------
-        # TODO: demands, existing technologies, new technologies, lighting
+        # TODO: data sets; a demand per modelled end use
+        # (`entities.build_end_use_demand`, from demand_df: region, period, end_use,
+        # demand and dsd_df: region, end_use, season, tod, dsd); then the existing
+        # technologies, new technologies and lighting
 
     return CANOEModuleOutput(fuel_imports=[])

@@ -54,6 +54,76 @@ class ResidentialEndUse(StrEnum):
         }
         return SHORT_DESCS[self]
 
+    def get_desc_name(self) -> str:
+        """
+        Name of the end use in descriptions and notes.
+
+        Examples
+        --------
+        >>> ResidentialEndUse.OtherAppliances.get_desc_name()
+        'other electrical appliances and devices'
+        """
+        if self == ResidentialEndUse.OtherAppliances:
+            return "other electrical appliances and devices"
+        return self.value
+
+    def demand_units(self) -> str:
+        """
+        Units of the demand: energy services in PJ, light in Glmy (giga lumen-years),
+        appliances in use in Munity (million unit-years).
+
+        Examples
+        --------
+        >>> [e.demand_units() for e in (ResidentialEndUse.SpaceHeating, ResidentialEndUse.Lighting, ResidentialEndUse.Freezers)]
+        ['PJ', 'Glmy', 'Munity']
+        """
+        if self == ResidentialEndUse.Lighting:
+            return "Glmy"
+        if self.is_appliance():
+            return "Munity"
+        return "PJ"
+
+    def capacity_units(self) -> str:
+        """
+        Units of the capacity of the technologies serving the end use: thousand units
+        (kunit) of space and water heating and cooling equipment, giga lumens (Glm)
+        of lamps, million units (Munit) of appliances. With a capacity to activity
+        of 1, a unit of capacity running all year serves a unit of demand.
+
+        Examples
+        --------
+        >>> [e.capacity_units() for e in (ResidentialEndUse.SpaceHeating, ResidentialEndUse.Lighting, ResidentialEndUse.Freezers)]
+        ['kunit', 'Glm', 'Munit']
+        """
+        if self == ResidentialEndUse.Lighting:
+            return "Glm"
+        if self.is_appliance():
+            return "Munit"
+        return "kunit"
+
+    def get_aeo_end_use(self) -> int | None:
+        """
+        Number of the end use in the AEO residential technology menu; None for those
+        it does not cover (lighting, other appliances).
+
+        Examples
+        --------
+        >>> ResidentialEndUse.WaterHeating.get_aeo_end_use()
+        5
+        """
+        AEO_END_USES: dict[ResidentialEndUse, int] = {
+            ResidentialEndUse.SpaceHeating: 1,
+            ResidentialEndUse.SpaceCooling: 2,
+            ResidentialEndUse.ClothesWashers: 3,
+            ResidentialEndUse.DishWashers: 4,
+            ResidentialEndUse.WaterHeating: 5,
+            ResidentialEndUse.CookingRanges: 6,
+            ResidentialEndUse.ClothesDryers: 7,
+            ResidentialEndUse.Refrigerators: 8,
+            ResidentialEndUse.Freezers: 9,
+        }
+        return AEO_END_USES.get(self)
+
     def is_appliance(self) -> bool:
         """
         Examples
