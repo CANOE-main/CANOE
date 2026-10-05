@@ -6,12 +6,13 @@ import pytest
 from pydantic import ValidationError
 
 from canoe.common import CANOEProvince
+from canoe.common.census_divisions import USCensusDivision
 from canoe.common.gdp import GDPProjectionPoint
 from canoe.initializer import CANOEBaseConfig
 from canoe.residential.config import CANOEResidentialConfig
 from canoe.residential.demand import DemandDriver
 from canoe.residential.end_uses import APPLIANCES, ResidentialEndUse
-from canoe.residential.technology_catalog import CensusDivision, NewTechnology
+from canoe.residential.technology_catalog import NewTechnology
 from canoe.sector_config import resolve_sector_config
 
 CONFIGURATION = Path(__file__).parents[1] / "configuration"
@@ -75,9 +76,9 @@ class TestDefaultConfig:
     def test_province_mappings(self, base: CANOEBaseConfig):
         config = _config(base)
         assert config.resstock_us_states[CANOEProvince.ONTARIO] == "MI"
-        assert config.aeo_census_divisions[CANOEProvince.ONTARIO].aeo_number() == 3
+        assert config.aeo_census_divisions[CANOEProvince.ONTARIO].get_aeo_number() == 3
         assert config.aeo_census_divisions[CANOEProvince.SASKATCHEWAN] == (
-            CensusDivision.WestNorthCentral
+            USCensusDivision.WestNorthCentral
         )
 
 
