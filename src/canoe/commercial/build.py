@@ -264,6 +264,7 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             },
             cfg.provinces,
             cfg.future_periods,
+            cfg.period_step,
             cfg.capacity_min_tolerance,
             cfg.missing_data_behavior,
             sector_data_id,

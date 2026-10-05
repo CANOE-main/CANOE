@@ -18,10 +18,14 @@ from .agriculture.config import CANOEAgricultureConfig
 from .commercial.config import CANOECommercialConfig
 from .industry.config import CANOEIndustryConfig
 from .initializer import CANOEBaseConfig
+from .residential.config import CANOEResidentialConfig
 
 # Add new sector configs here as they're implemented
 SectorConfig = Annotated[
-    CANOECommercialConfig | CANOEAgricultureConfig | CANOEIndustryConfig,
+    CANOECommercialConfig
+    | CANOEAgricultureConfig
+    | CANOEIndustryConfig
+    | CANOEResidentialConfig,
     Field(discriminator="module_name"),
 ]
 
@@ -42,7 +46,7 @@ def resolve_sector_config(value: Any, base: CANOEBaseConfig | None) -> Any:
         with Path(value).open("rb") as f:
             raw = tomllib.load(f)
     elif isinstance(value, dict):
-        raw = value  # pyright: ignore[reportUnknownVariableType]
+        raw = value
     else:
         return value
 

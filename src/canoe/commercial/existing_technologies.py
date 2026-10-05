@@ -35,6 +35,7 @@ from canoe.common.naming import (
     TechnologyCapacityScope,
     get_commodity_name,
 )
+from canoe.common.periods import existing_stock_vintages
 
 if TYPE_CHECKING:
     from .end_uses import CommercialEndUse
@@ -45,6 +46,7 @@ def build_existing_technologies(
     existing_technologies_fuels: dict["CommercialEndUse", list[CANOEFuel]],
     provinces: list[CANOEProvince],
     model_periods: list[int],
+    period_step: int,
     capacity_min_tolerance: float,
     missing_data_behavior: Literal["error", "warning"],
     data_id: DatasetIdentifier,
@@ -58,6 +60,8 @@ def build_existing_technologies(
       Not modified.
     - existing_technologies_fuels: fuels we expect to have existing stock for, per end use
     - model_periods: periods fixed costs are written for
+    - period_step: years between existing vintages, see
+      `canoe.common.periods.existing_stock_vintages`
     - capacity_min_tolerance: existing capacity is dropped for rows whose share of their
       province's total existing-stock demand is below this fraction
 
@@ -80,12 +84,12 @@ def build_existing_technologies(
             provinces,
             tech_lifetimes,
             first_period,
-            first_period,
+            period_step,
             stock,
         )
     )
     tech_fixed_costs = _compute_tech_fixed_costs(
-        model_periods, first_period, provinces, stock
+        model_periods, period_step, provinces, stock
     )
 
     entities: dict[CommercialEndUse, FuelServingTechnologyEntity] = {}
@@ -294,47 +298,11 @@ def _compute_tech_capacity_to_activity(
     return tech_c2a
 
 
-def _stock_vintages(
-    lifetime: int,
-    vint_interval: int,
-    stock_year: int,
-    first_period: int,
-) -> tuple[list[int], list[float]]:
-
-    vint_last = stock_year - stock_year % vint_interval  # first stepped back vint
-
-    # Return any stepped back vintages that are feasible
-    vints = list(range(int(vint_last), int(stock_year - lifetime), -int(vint_interval)))
-    vints.sort()
-
-    if stock_year not in vints:
-        vints.append(stock_year)
-
-    # Has to be an existing vintage but we often use e.g. 2024 to represent end of 2025
-    # because Temoa traps us into start-of-period indexing
-    if vints[-1] >= first_period:
-        vints[-1] = first_period - 1
-
-    # Only one vintage so all weight in there
-    if len(vints) == 1:
-        weights = [1.0]
-    # Stock year lands on a stepped vintage so divide evenly
-    elif stock_year == vint_last:
-        weights = [1 / len(vints)] * len(vints)
-    # Stock year is after last stepped vintage so give it a lesser weighting proportional to time interval
-    else:
-        weights = [vint_interval / (vints[-1] - vints[0])] * (len(vints) - 1) + [
-            stock_year % vint_interval / (vints[-1] - vints[0])
-        ]
-
-    return vints, weights
-
-
 def _compute_tech_vintage_params(
     provinces: list[CANOEProvince],
     tech_lifetimes: dict[str, dict[CANOEFuel, RegionalValuesArray]],
-    stock_year: int,
     first_period: int,
+    period_step: int,
     existing_techs: pd.DataFrame,
 ) -> tuple[
     dict[str, dict[CANOEFuel, RegionVintageArray]],
@@ -366,13 +334,10 @@ def _compute_tech_vintage_params(
             # re-group into region, vintage, weight df
             vint_rows = []
             for record in lifetimes:
-                vintages, weights = _stock_vintages(
-                    record["value"],
-                    vint_interval=5,  # TODO: Hard-coded
-                    stock_year=stock_year,
-                    first_period=first_period,
+                vintage_shares = existing_stock_vintages(
+                    record["value"], first_period, period_step
                 )
-                for vintage, weight in zip(vintages, weights):
+                for vintage, weight in vintage_shares.items():
                     vint_rows.append((record["region"], vintage, weight))
             vint_df = pd.DataFrame(vint_rows, columns=["region", "vintage", "weight"])
             vint_df["efficiency"] = tech_params.loc[vint_df["region"]]["avg_eff"].values
@@ -402,18 +367,13 @@ def _compute_tech_vintage_params(
 
 def _compute_tech_fixed_costs(
     periods: list[int],
-    stock_year: int,
+    period_step: int,
     provinces: list[CANOEProvince],
     existing_techs: pd.DataFrame,
 ) -> dict[str, dict[CANOEFuel, RegionVintagePeriodArray]]:
     tech_fixed_costs: dict[str, dict[CANOEFuel, RegionVintagePeriodArray]] = {}
     existing_vintages = [
-        _stock_vintages(
-            life,
-            vint_interval=5,  # TODO: Hard-coded
-            stock_year=stock_year,
-            first_period=periods[0],
-        )[0]
+        list(existing_stock_vintages(life, periods[0], period_step))
         for life in existing_techs["avg_life"]
     ]
     re_indexed_df = (
