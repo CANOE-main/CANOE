@@ -61,7 +61,20 @@ class ResidentialEndUse(StrEnum):
         >>> ResidentialEndUse.Freezers.is_appliance(), ResidentialEndUse.Lighting.is_appliance()
         (True, False)
         """
-        return self in APPLIANCES
+        return self in ResidentialEndUse.appliances()
+
+    @classmethod
+    def appliances(cls) -> tuple["ResidentialEndUse", ...]:
+        """End uses of the appliances table of the configuration"""
+        return (
+            cls.Refrigerators,
+            cls.Freezers,
+            cls.DishWashers,
+            cls.ClothesWashers,
+            cls.ClothesDryers,
+            cls.CookingRanges,
+            cls.OtherAppliances,
+        )
 
     @override
     def __str__(self):
@@ -70,15 +83,3 @@ class ResidentialEndUse(StrEnum):
     @override
     def __repr__(self):
         return str(self.name)
-
-
-APPLIANCES: tuple[ResidentialEndUse, ...] = (
-    ResidentialEndUse.Refrigerators,
-    ResidentialEndUse.Freezers,
-    ResidentialEndUse.DishWashers,
-    ResidentialEndUse.ClothesWashers,
-    ResidentialEndUse.ClothesDryers,
-    ResidentialEndUse.CookingRanges,
-    ResidentialEndUse.OtherAppliances,
-)
-"""End uses of the appliances table of the configuration."""

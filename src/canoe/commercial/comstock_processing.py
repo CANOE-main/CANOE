@@ -5,11 +5,13 @@ import numpy as np
 import pandas as pd
 from loguru import logger
 
-from canoe.common import CANOEProvince, GoldConnectorConfig
+from canoe.common import CANOEProvince
 
 if TYPE_CHECKING:
     from .config import CANOECommercialConfig
-from .loaders import get_comstock_map, get_comstock_table, get_usca_weather_map
+from canoe.common.weather_maps import load_weather_maps, map_to_canadian_weather
+
+from .loaders import get_comstock_map, get_comstock_table
 
 
 def load_and_process_comstock(
@@ -19,7 +21,7 @@ def load_and_process_comstock(
     NREL Comstock is used for estimating DSD for each end use in each province.
     """
     # Pre-load all weather maps. It is too slow otherwise
-    weather_maps = _load_all_weather_maps(cfg.provinces, cfg.data_cache_config)
+    weather_maps = load_weather_maps(cfg.provinces, cfg.data_cache_config)
     province_comstock = _load_provinces_comstock(cfg)
     weather_mapping = cfg.end_uses.weather_mapping()
 
@@ -61,29 +63,10 @@ def _apply_weather_mapping(
     """
     Applies the US-CA weather mapping to the Comstock data for the given province.
     """
-    weather_map = weather_maps[province]
-    ca_data = pd.Series(np.matmul(weather_map, comstock_df)).interpolate(
-        method="linear"
-    )
+    ca_data = map_to_canadian_weather(weather_maps[province], comstock_df)
     dsd = np.clip(ca_data, 0, np.inf)
     dsd = dsd / dsd.sum()
     return dsd
-
-
-def _load_all_weather_maps(
-    provinces: list[CANOEProvince],
-    cache_config: "GoldConnectorConfig",
-) -> dict[CANOEProvince, np.ndarray]:
-    """
-    Weather maps from US matched to canadian provinces
-    """
-    weather_maps: dict[CANOEProvince, np.ndarray] = {}
-    for province in provinces:
-        weather_map = get_usca_weather_map(cache_config, province)
-        # TODO this is a patch for the silver layer
-        utc_aligned_to_est = np.roll(weather_map, shift=(-5, -5), axis=(0, 1))
-        weather_maps[province] = utc_aligned_to_est
-    return weather_maps
 
 
 def _load_provinces_comstock(

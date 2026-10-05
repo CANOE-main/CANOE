@@ -69,6 +69,31 @@ class CANOEProvince(StrEnum):
             CANOEProvince.NEWFOUNDLAND_AND_LABRADOR,
         ]
 
+    def get_nrcan_province_code(self) -> str:
+        """
+        NRCan's code of the province itself, as in the names of the CEUD tables
+        published per province (e.g. residential `res_pe_e_8`), where the Atlantic
+        provinces have their own.
+
+        Examples
+        --------
+        >>> CANOEProvince.PRINCE_EDWARD_ISLAND.get_nrcan_province_code()
+        'PE'
+        """
+        NRCAN_CODES = {
+            CANOEProvince.ALBERTA: "AB",
+            CANOEProvince.BRITISH_COLUMBIA: "BC",
+            CANOEProvince.MANITOBA: "MB",
+            CANOEProvince.NEW_BRUNSWICK: "NB",
+            CANOEProvince.NEWFOUNDLAND_AND_LABRADOR: "NL",
+            CANOEProvince.NOVA_SCOTIA: "NS",
+            CANOEProvince.ONTARIO: "ON",
+            CANOEProvince.PRINCE_EDWARD_ISLAND: "PE",
+            CANOEProvince.QUEBEC: "QC",
+            CANOEProvince.SASKATCHEWAN: "SK",
+        }
+        return NRCAN_CODES[self]
+
     def get_nrcan_code(self) -> str:
         if self.is_atlantic():
             return "ATL"

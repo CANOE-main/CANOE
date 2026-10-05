@@ -11,7 +11,7 @@ from canoe.common.gdp import GDPProjectionPoint
 from canoe.initializer import CANOEBaseConfig
 from canoe.residential.config import CANOEResidentialConfig
 from canoe.residential.demand import DemandDriver
-from canoe.residential.end_uses import APPLIANCES, ResidentialEndUse
+from canoe.residential.end_uses import ResidentialEndUse
 from canoe.residential.technology_catalog import NewTechnology
 from canoe.sector_config import resolve_sector_config
 
@@ -85,7 +85,10 @@ class TestDefaultConfig:
 class TestEndUses:
     def test_missing_table_leaves_end_uses_out(self, base: CANOEBaseConfig):
         config = _with_end_uses(base, {"lighting": {}, "appliances": {}})
-        assert config.end_uses.enabled() == [ResidentialEndUse.Lighting, *APPLIANCES]
+        assert config.end_uses.enabled() == [
+            ResidentialEndUse.Lighting,
+            *ResidentialEndUse.appliances(),
+        ]
 
     def test_heat_pump_under_one_table_serves_only_it(self, base: CANOEBaseConfig):
         config = _with_end_uses(

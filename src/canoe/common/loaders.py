@@ -9,11 +9,13 @@ function to fix. Sector-specific datasets have their own loaders in each sector.
 from importlib.resources import files
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 from loguru import logger
 
 from canoe.common.cache_connector import GoldConnectorConfig
 from canoe.common.gdp import CERScenario
+from canoe.common.provinces import CANOEProvince
 
 
 def get_cer_gdp(
@@ -82,3 +84,23 @@ def get_exchange_and_inflation_tables() -> tuple[pd.DataFrame, pd.DataFrame]:
     with inflation_resource.open("rb") as f:
         inflation_df = pd.read_csv(f, index_col=0)
     return exchange_df, inflation_df
+
+
+def get_usca_weather_map(
+    cache_config: GoldConnectorConfig, province: CANOEProvince
+) -> np.ndarray:
+    """
+    Weather map from the US state of a province's profiles to the province (cached as
+    `weather_maps_<province>`): an 8760 x 8760 matrix whose row h averages the hours
+    of the US year with the temperature and humidity of hour h in the province, as
+    stored (see `canoe.common.weather_maps.load_weather_maps` for the time zone).
+    """
+    cache_path = (
+        cache_config.cache_dir
+        / Path("silver")
+        / cache_config.cache_date
+        / Path(f"weather_maps_{province.short()}")
+        / Path(f"weather_maps_{province.short()}_{cache_config.cache_date}.npz")
+    )
+    logger.debug(f"Loading cached weather map for {province}")
+    return np.load(cache_path)["arr_0"]

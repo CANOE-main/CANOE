@@ -93,95 +93,93 @@ class NewTechnology(StrEnum):
         >>> NewTechnology.AirSourceHeatPump.end_uses()
         (SpaceHeating, SpaceCooling)
         """
-        return _END_USES[self]
-
-
-_T = NewTechnology
-_E = ResidentialEndUse
-_END_USES: dict[NewTechnology, tuple[ResidentialEndUse, ...]] = {
-    **{
-        t: (_E.SpaceHeating,)
-        for t in (
-            _T.ElectricRadiator,
-            _T.NaturalGasFurnace,
-            _T.NaturalGasFurnaceHighEfficiency,
-            _T.NaturalGasBoiler,
-            _T.NaturalGasBoilerHighEfficiency,
-            _T.OilFurnace,
-            _T.OilFurnaceHighEfficiency,
-            _T.OilBoiler,
-            _T.OilBoilerHighEfficiency,
-            _T.LPGFurnace,
-            _T.LPGFurnaceHighEfficiency,
-            _T.WoodStove,
-            _T.WoodStoveHighEfficiency,
-        )
-    },
-    **{
-        t: (_E.SpaceHeating, _E.SpaceCooling)
-        for t in (
-            _T.AirSourceHeatPump,
-            _T.AirSourceHeatPumpHighEfficiency,
-            _T.GeoExchangeHeatPump,
-            _T.GeoExchangeHeatPumpHighEfficiency,
-            _T.NaturalGasHeatPump,
-        )
-    },
-    **{
-        t: (_E.SpaceCooling,)
-        for t in (
-            _T.CentralAirConditioner,
-            _T.CentralAirConditionerHighEfficiency,
-            _T.RoomAirConditioner,
-            _T.RoomAirConditionerHighEfficiency,
-        )
-    },
-    **{
-        t: (_E.WaterHeating,)
-        for t in (
-            _T.ElectricWaterHeater,
-            _T.ElectricWaterHeaterHighEfficiency,
-            _T.HeatPumpWaterHeater,
-            _T.HeatPumpWaterHeaterHighEfficiency,
-            _T.NaturalGasWaterHeater,
-            _T.NaturalGasWaterHeaterHighEfficiency,
-            _T.OilWaterHeater,
-            _T.OilWaterHeaterHighEfficiency,
-            _T.LPGWaterHeater,
-            _T.LPGWaterHeaterHighEfficiency,
-            _T.SolarWaterHeater,
-        )
-    },
-    **{
-        t: (_E.Lighting,)
-        for t in (
-            _T.IncandescentBulb,
-            _T.HalogenBulb,
-            _T.CompactFluorescentBulb,
-            _T.CompactFluorescentBulbHighEfficiency,
-            _T.LEDBulb,
-            _T.LEDBulbHighEfficiency,
-            _T.LinearFluorescentLamp,
-        )
-    },
-    _T.Refrigerator: (_E.Refrigerators,),
-    _T.RefrigeratorHighEfficiency: (_E.Refrigerators,),
-    _T.Freezer: (_E.Freezers,),
-    _T.FreezerHighEfficiency: (_E.Freezers,),
-    _T.DishWasher: (_E.DishWashers,),
-    _T.DishWasherHighEfficiency: (_E.DishWashers,),
-    _T.ClothesWasher: (_E.ClothesWashers,),
-    _T.ClothesWasherHighEfficiency: (_E.ClothesWashers,),
-    _T.ElectricClothesDryer: (_E.ClothesDryers,),
-    _T.ElectricClothesDryerHighEfficiency: (_E.ClothesDryers,),
-    _T.NaturalGasClothesDryer: (_E.ClothesDryers,),
-    _T.NaturalGasClothesDryerHighEfficiency: (_E.ClothesDryers,),
-    _T.ElectricCookingRange: (_E.CookingRanges,),
-    _T.NaturalGasCookingRange: (_E.CookingRanges,),
-    _T.NaturalGasCookingRangeHighEfficiency: (_E.CookingRanges,),
-    _T.LPGCookingRange: (_E.CookingRanges,),
-    _T.LPGCookingRangeHighEfficiency: (_E.CookingRanges,),
-}
+        T = NewTechnology
+        E = ResidentialEndUse
+        END_USES: dict[NewTechnology, tuple[ResidentialEndUse, ...]] = {
+            **{
+                t: (E.SpaceHeating,)
+                for t in (
+                    T.ElectricRadiator,
+                    T.NaturalGasFurnace,
+                    T.NaturalGasFurnaceHighEfficiency,
+                    T.NaturalGasBoiler,
+                    T.NaturalGasBoilerHighEfficiency,
+                    T.OilFurnace,
+                    T.OilFurnaceHighEfficiency,
+                    T.OilBoiler,
+                    T.OilBoilerHighEfficiency,
+                    T.LPGFurnace,
+                    T.LPGFurnaceHighEfficiency,
+                    T.WoodStove,
+                    T.WoodStoveHighEfficiency,
+                )
+            },
+            **{
+                t: (E.SpaceHeating, E.SpaceCooling)
+                for t in (
+                    T.AirSourceHeatPump,
+                    T.AirSourceHeatPumpHighEfficiency,
+                    T.GeoExchangeHeatPump,
+                    T.GeoExchangeHeatPumpHighEfficiency,
+                    T.NaturalGasHeatPump,
+                )
+            },
+            **{
+                t: (E.SpaceCooling,)
+                for t in (
+                    T.CentralAirConditioner,
+                    T.CentralAirConditionerHighEfficiency,
+                    T.RoomAirConditioner,
+                    T.RoomAirConditionerHighEfficiency,
+                )
+            },
+            **{
+                t: (E.WaterHeating,)
+                for t in (
+                    T.ElectricWaterHeater,
+                    T.ElectricWaterHeaterHighEfficiency,
+                    T.HeatPumpWaterHeater,
+                    T.HeatPumpWaterHeaterHighEfficiency,
+                    T.NaturalGasWaterHeater,
+                    T.NaturalGasWaterHeaterHighEfficiency,
+                    T.OilWaterHeater,
+                    T.OilWaterHeaterHighEfficiency,
+                    T.LPGWaterHeater,
+                    T.LPGWaterHeaterHighEfficiency,
+                    T.SolarWaterHeater,
+                )
+            },
+            **{
+                t: (E.Lighting,)
+                for t in (
+                    T.IncandescentBulb,
+                    T.HalogenBulb,
+                    T.CompactFluorescentBulb,
+                    T.CompactFluorescentBulbHighEfficiency,
+                    T.LEDBulb,
+                    T.LEDBulbHighEfficiency,
+                    T.LinearFluorescentLamp,
+                )
+            },
+            T.Refrigerator: (E.Refrigerators,),
+            T.RefrigeratorHighEfficiency: (E.Refrigerators,),
+            T.Freezer: (E.Freezers,),
+            T.FreezerHighEfficiency: (E.Freezers,),
+            T.DishWasher: (E.DishWashers,),
+            T.DishWasherHighEfficiency: (E.DishWashers,),
+            T.ClothesWasher: (E.ClothesWashers,),
+            T.ClothesWasherHighEfficiency: (E.ClothesWashers,),
+            T.ElectricClothesDryer: (E.ClothesDryers,),
+            T.ElectricClothesDryerHighEfficiency: (E.ClothesDryers,),
+            T.NaturalGasClothesDryer: (E.ClothesDryers,),
+            T.NaturalGasClothesDryerHighEfficiency: (E.ClothesDryers,),
+            T.ElectricCookingRange: (E.CookingRanges,),
+            T.NaturalGasCookingRange: (E.CookingRanges,),
+            T.NaturalGasCookingRangeHighEfficiency: (E.CookingRanges,),
+            T.LPGCookingRange: (E.CookingRanges,),
+            T.LPGCookingRangeHighEfficiency: (E.CookingRanges,),
+        }
+        return END_USES[self]
 
 
 def technologies_for(end_uses: tuple[ResidentialEndUse, ...]) -> list[NewTechnology]:

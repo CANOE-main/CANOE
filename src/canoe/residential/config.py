@@ -33,7 +33,7 @@ from canoe.common.time_slices import AllTimeSlices, CANOETimeSliceSet
 from canoe.common.validation import ValidationBehavior
 from canoe.residential.build import build_residential
 from canoe.residential.demand import DemandDriver
-from canoe.residential.end_uses import APPLIANCES, ResidentialEndUse
+from canoe.residential.end_uses import ResidentialEndUse
 from canoe.residential.technology_catalog import (
     NewTechnology,
     technologies_for,
@@ -126,7 +126,7 @@ class AppliancesConfig(_EndUseConfig):
     appliances in use (Munity, Munit).
     """
 
-    END_USES: ClassVar[tuple[ResidentialEndUse, ...]] = APPLIANCES
+    END_USES: ClassVar[tuple[ResidentialEndUse, ...]] = ResidentialEndUse.appliances()
 
     annual_capacity_factor: float = Field(default=0.15, gt=0, le=1)
     """Arbitrary share of the year appliances run, so the existing stock can meet the
