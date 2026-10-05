@@ -490,6 +490,7 @@ def build_new_technology(
             name=source_commodity_name(),
             description="dummy input - residential",
             data_id=data_id,
+            units="PJ",
         )
         if spec.fuel is None
         else FuelCommodityEntity(

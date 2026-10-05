@@ -86,6 +86,7 @@ def build_other_technology(
         .with_efficiencies(
             efficiencies,
             notes="Dummy tech. Demand equal to secondary energy consumption",
+            units="PJ/PJ",
         )
     )
 

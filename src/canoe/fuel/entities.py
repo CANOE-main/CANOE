@@ -175,6 +175,7 @@ def build_fuel_supply(
             name=SOURCE_COMMODITY,
             description="supply point of the fuels imported into the fuel sector",
             data_id=data_id,
+            units="PJ",
         )
     )
     emissions: set[tuple[CANOESector, CANOEEmission]] = set()
@@ -291,6 +292,7 @@ def _transfer_technology(
             input_commodity,
             efficiency,
             notes="Transfer technology, efficiency 1",
+            units="PJ/PJ",
         )
         .with_lifetime(
             RegionalValuesArray(regions, fill=lifetime),

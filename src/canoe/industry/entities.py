@@ -200,6 +200,7 @@ def build_subsector_technology(
         .with_efficiencies(
             efficiencies,
             notes=f"Dummy tech. Demand equal to {subsector.get_desc_name()} energy use",
+            units="PJ/PJ",
         )
         .with_input_splits(
             splits,
@@ -272,6 +273,7 @@ def build_free_other_fuel_supply(
             name=SOURCE_COMMODITY,
             description="supply point of the industry fuels with no fuel import",
             data_id=data_id,
+            units="PJ",
         ),
         technology=TechnologyEntity(
             name=FREE_OTHER_SUPPLY,
@@ -288,6 +290,7 @@ def build_free_other_fuel_supply(
             efficiency,
             notes="Free supply of NRCan CEUD 'Other' industry fuels: the fuel module "
             + "has no price or emission factors for them (see INDUSTRY_MODULE_BUGS.md)",
+            units="PJ/PJ",
         )
         .with_lifetime(
             RegionalValuesArray(regions, fill=lifetime),

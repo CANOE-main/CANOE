@@ -475,11 +475,11 @@ class TestNewTechnology:
     def test_solar_water_heater_takes_the_free_source(self, db: sqlite3.Connection):
         _build_new(db)
         assert db.execute(
-            "SELECT name, flag, description FROM commodity WHERE flag != 'd' "
+            "SELECT name, flag, description, units FROM commodity WHERE flag != 'd' "
             + "ORDER BY name"
         ).fetchall() == [
-            ("R_elc", "p", "electricity fuel for Residential sector"),
-            ("R_ethos", "s", "dummy input - residential"),
+            ("R_elc", "p", "electricity fuel for Residential sector", "PJ"),
+            ("R_ethos", "s", "dummy input - residential", "PJ"),
         ]
         assert db.execute(
             "SELECT DISTINCT input_comm, output_comm, efficiency FROM efficiency "

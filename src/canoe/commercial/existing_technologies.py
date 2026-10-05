@@ -229,6 +229,7 @@ def _existing_fuel_serving_technology(
             efficiencies,
             data_quality=DataQualityProfile(cred=1, geog=2, struc=3, tech=2, time=2),
             notes=efficiency_notes,
+            units="PJ/PJ",
         )
         .with_existing_capacities(
             capacities,
