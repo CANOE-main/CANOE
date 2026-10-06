@@ -101,6 +101,24 @@ class ResidentialEndUse(StrEnum):
             return "Munit"
         return "kunit"
 
+    def cost_factor(self) -> float:
+        """
+        Factor from the source's costs (USD per unit for equipment and appliances,
+        USD per klm for lamps) to millions per unit of capacity (M$/kunit, M$/Munit,
+        M$/Glm).
+
+        Examples
+        --------
+        >>> [e.cost_factor() for e in (ResidentialEndUse.SpaceHeating, ResidentialEndUse.Lighting, ResidentialEndUse.Freezers)]
+        [0.001, 1.0, 1.0]
+        """
+        COST_FACTORS: dict[str, float] = {
+            "kunit": 1e3 / 1e6,  # thousand units, millions of dollars
+            "Glm": 1e6 / 1e6,  # million klm, millions of dollars
+            "Munit": 1e6 / 1e6,  # million units, millions of dollars
+        }
+        return COST_FACTORS[self.capacity_units()]
+
     def get_aeo_end_use(self) -> int | None:
         """
         Number of the end use in the AEO residential technology menu; None for those

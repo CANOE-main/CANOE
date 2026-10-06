@@ -11,7 +11,7 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from canoe.common import CANOEProvince
+from canoe.common import CANOEFuel, CANOEProvince
 
 from .loaders import (
     get_ceud_appliance_energy_use,
@@ -141,3 +141,21 @@ def load_ceud_tables(provinces: list[CANOEProvince], data_year: int) -> Resident
             {p: get_ceud_appliance_stock(p, data_year) for p in provinces}
         ),
     )
+
+
+def ceud_fuel(label: str) -> CANOEFuel:
+    """
+    The fuel of a CEUD energy source label (dual heating systems, appliance stock).
+
+    Examples
+    --------
+    >>> ceud_fuel("heating oil")
+    Oil
+    """
+    FUELS: dict[str, CANOEFuel] = {
+        "electricity": CANOEFuel.Electricity,
+        "natural gas": CANOEFuel.NaturalGas,
+        "heating oil": CANOEFuel.Oil,
+        "wood": CANOEFuel.Wood,
+    }
+    return FUELS[label]

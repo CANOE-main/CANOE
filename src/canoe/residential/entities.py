@@ -372,7 +372,8 @@ class NewTechnologyParameters:
     efficiency : pd.DataFrame
         Columns `region`, `technology`, `vintage`, `end_use` (`ResidentialEndUse`)
         and `efficiency`: output (in the demand units of the end use) per PJ of
-        input, one row per end use the technology serves.
+        input, one row per end use the technology serves (a heat pump selected for
+        space heating only serves space heating).
     investment_cost : pd.DataFrame
         Columns `region`, `technology`, `vintage` and `cost` (M$ per unit of
         capacity).
@@ -440,7 +441,8 @@ def build_new_technology(
     """
     The new technology `technology`, buildable in every model period: annual, with
     limited capacity, a capacity to activity of 1 and one output per end use it
-    serves (heat pumps serve space heating and cooling, with an efficiency each).
+    serves, those with efficiencies (heat pumps can serve space heating and cooling,
+    with an efficiency each).
     Its input is the residential commodity of its fuel, or `R_ethos` for the solar
     water heater (no fuel, see `RESIDENTIAL_MODULE_BUGS.md`). Lamps have a lifetime
     per vintage (`lifetime_process`) rather than a technology lifetime.
@@ -467,16 +469,20 @@ def build_new_technology(
     def rows_of(frame: pd.DataFrame) -> pd.DataFrame:
         return frame.loc[frame["technology"].isin([technology])]
 
+    efficiency = rows_of(parameters.efficiency)
+    end_uses = [e for e in spec.end_uses if efficiency["end_use"].isin([e]).any()]
+    if not end_uses:
+        return None
+
     def regions_with(frame: pd.DataFrame) -> set[CANOEProvince]:
-        """Regions with rows for every end use of the technology"""
+        """Regions with rows for every end use the technology serves"""
         return set.intersection(
             *(
                 set(frame.loc[frame["end_use"].isin([end_use]), "region"])
-                for end_use in spec.end_uses
+                for end_use in end_uses
             )
         )
 
-    efficiency = rows_of(parameters.efficiency)
     capacity_factor = rows_of(parameters.capacity_factor)
     with_efficiency = regions_with(efficiency)
     with_capacity_factor = regions_with(capacity_factor)
@@ -518,15 +524,15 @@ def build_new_technology(
         )
     )
     # Capacity is in the units of the end uses it serves (heat pumps: kunit for both)
-    capacity_units = spec.end_uses[0].capacity_units()
+    capacity_units = end_uses[0].capacity_units()
     entity = (
         TechnologyEntity(
             name=spec.name,
-            output_commodity=end_use_demand_name(spec.end_uses[0]),
+            output_commodity=end_use_demand_name(end_uses[0]),
             data_id=data_id,
             description=" - ".join(
                 [
-                    "+".join(e.get_desc_name() for e in spec.end_uses),
+                    "+".join(e.get_desc_name() for e in end_uses),
                     technology.value,
                     "new",
                 ]
@@ -536,7 +542,7 @@ def build_new_technology(
         .set_annual()
         .with_capacity_to_activity(
             RegionalValuesArray(regions, fill=1.0),
-            units=f"{spec.end_uses[0].demand_units()}/{capacity_units}.y",
+            units=f"{end_uses[0].demand_units()}/{capacity_units}.y",
         )
         .with_investment_cost(
             RegionVintageArray(regions, model_periods).fill_from_df(
@@ -547,7 +553,7 @@ def build_new_technology(
             units=f"M$/{capacity_units}",
         )
     )
-    for end_use in spec.end_uses:
+    for end_use in end_uses:
         output = end_use_demand_name(end_use)
         entity = entity.with_efficiency(
             input_commodity.name,
