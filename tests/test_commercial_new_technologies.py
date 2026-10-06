@@ -67,7 +67,10 @@ class TestBuildNewTechnologies:
         assert heat_pump.name == "C_SPHC_HP_AIR-NEW"
         assert heat_pump.inputs == ["C_elc"]
         assert heat_pump.outputs == ["C_D_SPH", "C_D_SPC"]
-        assert list(heat_pump.capacity_factor_limits) == ["C_D_SPH", "C_D_SPC"]
+        assert [o for o, _ in heat_pump.capacity_factor_limits] == [
+            "C_D_SPH",
+            "C_D_SPC",
+        ]
         heat_pump.validate()
 
     def test_technology_listed_under_one_end_use_serves_only_that_one(self):

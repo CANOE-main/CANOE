@@ -1,0 +1,681 @@
+import sqlite3
+from dataclasses import replace
+
+import pandas as pd
+import pytest
+from canoe_schema.sql import get_sql_schema
+from canoe_schema.v4_0 import OperatorCode
+
+from canoe.common import CANOEFuel, CANOEProvince, CANOESector
+from canoe.common.naming import DatasetIdentifier
+from canoe.common.time_slices import TimeSlice
+from canoe.residential.end_uses import ResidentialEndUse
+from canoe.residential.entities import (
+    ExistingTechnologyParameters,
+    NewTechnologyParameters,
+    ResidentialEntities,
+    build_end_use_demand,
+    build_existing_technologies,
+    build_existing_technology,
+    build_new_technologies,
+    build_new_technology,
+    build_other_appliances,
+    end_use_demand_name,
+)
+from canoe.residential.technology_catalog import ExistingTechnology, NewTechnology
+
+ON, QC = CANOEProvince.ONTARIO, CANOEProvince.QUEBEC
+SPH, LGT = ResidentialEndUse.SpaceHeating, ResidentialEndUse.Lighting
+WOOD_ELC = ExistingTechnology.SpaceHeatingWoodElectric
+PERIODS = [2025, 2030]
+DATA_ID = DatasetIdentifier(CANOESector.Residential, "HR", "000")
+TIME_SLICES = [
+    TimeSlice(hour=0, season="D001", tod="H01"),
+    TimeSlice(hour=1, season="D001", tod="H02"),
+]
+
+
+@pytest.fixture
+def db() -> sqlite3.Connection:
+    """Base database with the rows canoe-base would have seeded"""
+    db = sqlite3.connect(":memory:")
+    db.executescript(get_sql_schema("4.0"))
+    db.executemany(
+        "INSERT INTO data_set (data_id) VALUES (?)",
+        [("RESHR000",), ("RESHRON000",), ("RESHRQC000",)],
+    )
+    db.executemany("INSERT INTO region (region) VALUES (?)", [("ON",), ("QC",)])
+    db.executemany(
+        "INSERT INTO time_period (sequence, period, flag) VALUES (?, ?, ?)",
+        [
+            (0, 2015, "e"),
+            (1, 2020, "e"),
+            (2, 2025, "f"),
+            (3, 2030, "f"),
+            (4, 2035, "f"),
+        ],
+    )
+    db.execute(
+        "INSERT INTO time_season (sequence, season, segment_fraction) VALUES (0, 'D001', 1.0)"
+    )
+    db.executemany(
+        "INSERT INTO time_of_day (sequence, tod, hours) VALUES (?, ?, 12)",
+        [(0, "H01"), (1, "H02")],
+    )
+    return db
+
+
+def _demand() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            (ON, 2025, SPH, 300.0),
+            (ON, 2030, SPH, 310.0),
+            (QC, 2025, SPH, 0.0),
+            (ON, 2025, LGT, 50.0),
+        ],
+        columns=["region", "period", "end_use", "demand"],
+    )
+
+
+def _dsd() -> pd.DataFrame:
+    return pd.DataFrame(
+        [
+            (ON, SPH, "D001", "H01", 0.75),
+            (ON, SPH, "D001", "H02", 0.25),
+            (ON, LGT, "D001", "H01", 0.0),
+            (ON, LGT, "D001", "H02", 1.0),
+        ],
+        columns=["region", "end_use", "season", "tod", "dsd"],
+    )
+
+
+def _build(
+    end_use: ResidentialEndUse, dsd: pd.DataFrame | None, db: sqlite3.Connection
+):
+    build_end_use_demand(
+        end_use,
+        _demand(),
+        dsd,
+        [ON, QC],
+        PERIODS,
+        TIME_SLICES,
+        demand_notes="population",
+        dsd_notes="ResStock",
+        data_id=DATA_ID,
+    ).build(db)
+
+
+class TestEndUseDemand:
+    def test_names_follow_the_naming_conventions(self):
+        assert [end_use_demand_name(e) for e in ResidentialEndUse] == [
+            "R_D_SPH",
+            "R_D_SPC",
+            "R_D_WAH",
+            "R_D_LGT",
+            "R_D_APP_REF",
+            "R_D_APP_FRZ",
+            "R_D_APP_DSH",
+            "R_D_APP_CWSH",
+            "R_D_APP_CDRY",
+            "R_D_APP_COOK_RNG",
+            "R_D_APP_OTH",
+        ]
+
+    def test_writes_positive_demand_in_its_units(self, db: sqlite3.Connection):
+        _build(SPH, None, db)
+        assert db.execute(
+            "SELECT region, period, commodity, demand, units FROM demand"
+        ).fetchall() == [
+            ("ON", 2025, "R_D_SPH", 300.0, "PJ"),
+            ("ON", 2030, "R_D_SPH", 310.0, "PJ"),
+        ]
+        assert db.execute(
+            "SELECT name, flag, units, description FROM commodity"
+        ).fetchall() == [("R_D_SPH", "d", "PJ", "demand for residential space heating")]
+        assert db.execute(
+            "SELECT count(*) FROM demand_specific_distribution"
+        ).fetchone() == (0,)
+
+    def test_distribution_in_every_period_zeros_included(self, db: sqlite3.Connection):
+        _build(LGT, _dsd(), db)
+        assert db.execute("SELECT units FROM demand").fetchall() == [("Glmy",)]
+        assert db.execute(
+            "SELECT region, period, tod, dsd FROM demand_specific_distribution "
+            + "ORDER BY period, tod"
+        ).fetchall() == [
+            ("ON", 2025, "H01", 0.0),
+            ("ON", 2025, "H02", 1.0),
+            ("ON", 2030, "H01", 0.0),
+            ("ON", 2030, "H02", 1.0),
+        ]
+
+
+def _existing_parameters() -> ExistingTechnologyParameters:
+    """Dual wood-electric heating in Ontario (none in Quebec), two vintages"""
+    vintages = [2015, 2020]
+    return ExistingTechnologyParameters(
+        efficiency=pd.DataFrame(
+            [
+                (r, WOOD_ELC, v, f, e)
+                for r in (ON, QC)
+                for v in vintages
+                for f, e in ((CANOEFuel.Wood, 0.5), (CANOEFuel.Electricity, 1.0))
+            ],
+            columns=["region", "technology", "vintage", "fuel", "efficiency"],
+        ),
+        existing_capacity=pd.DataFrame(
+            [
+                (ON, WOOD_ELC, 2015, 10.0),
+                (ON, WOOD_ELC, 2020, 12.0),
+                (QC, WOOD_ELC, 2015, 0.0),
+            ],
+            columns=["region", "technology", "vintage", "capacity"],
+        ),
+        capacity_factor=pd.DataFrame(
+            [
+                (ON, WOOD_ELC, v, o, f)
+                for v in vintages
+                for o, f in ((OperatorCode.GE, 0.19), (OperatorCode.LE, 0.2))
+            ],
+            columns=["region", "technology", "vintage", "operator", "factor"],
+        ),
+        lifetime=pd.DataFrame(
+            [(ON, WOOD_ELC, 15.0), (QC, WOOD_ELC, 15.0)],
+            columns=["region", "technology", "lifetime"],
+        ),
+        fixed_cost=pd.DataFrame(
+            [
+                (ON, WOOD_ELC, 2015, 2025, 0.2),
+                (ON, WOOD_ELC, 2020, 2025, 0.2),
+                (ON, WOOD_ELC, 2020, 2030, 0.2),
+            ],
+            columns=["region", "technology", "vintage", "period", "cost"],
+        ),
+        efficiency_notes="t26",
+        existing_capacity_notes="t21",
+        capacity_factor_notes="activity / stock",
+        lifetime_notes="AEO",
+        fixed_cost_notes="EIA",
+    )
+
+
+def _build_existing(
+    parameters: ExistingTechnologyParameters, db: sqlite3.Connection
+) -> None:
+    _build(SPH, None, db)  # The demand they output
+    for entity in build_existing_technologies(
+        [WOOD_ELC, ExistingTechnology.SpaceHeatingOil],
+        parameters,
+        [ON, QC],
+        PERIODS,
+        DATA_ID,
+    ):
+        entity.build(db)
+
+
+class TestExistingTechnology:
+    def test_names_are_the_catalog_names(self):
+        frame = pd.DataFrame(
+            columns=["region", "technology", "vintage", "fuel", "efficiency"]
+        )
+        for technology in ExistingTechnology:
+            if technology == ExistingTechnology.OtherAppliances:
+                continue
+            parameters = replace(
+                _existing_parameters(),
+                existing_capacity=pd.DataFrame(
+                    [(ON, technology, 2020, 1.0)],
+                    columns=["region", "technology", "vintage", "capacity"],
+                ),
+                efficiency=frame,
+            )
+            entity = build_existing_technology(
+                technology, parameters, [ON], PERIODS, DATA_ID
+            )
+            assert entity is not None
+            assert entity.to_technology_entities()[0].name == technology.value
+
+    def test_dual_system_takes_both_fuels_where_it_has_stock(
+        self, db: sqlite3.Connection
+    ):
+        _build_existing(_existing_parameters(), db)
+        assert db.execute(
+            "SELECT tech, unlim_cap, annual, description FROM technology"
+        ).fetchall() == [
+            (
+                "R_SPH_WOOD-ELC-EXS",
+                0,
+                1,
+                "space heating - dual wood-electric - existing",
+            )
+        ]
+        assert db.execute(
+            "SELECT name, flag FROM commodity WHERE flag != 'd' ORDER BY name"
+        ).fetchall() == [("R_elc", "p"), ("R_wood", "a")]
+        assert db.execute(
+            "SELECT region, input_comm, vintage, output_comm, efficiency, units "
+            + "FROM efficiency ORDER BY input_comm, vintage"
+        ).fetchall() == [
+            ("ON", "R_elc", 2015, "R_D_SPH", 1.0, "PJ/PJ"),
+            ("ON", "R_elc", 2020, "R_D_SPH", 1.0, "PJ/PJ"),
+            ("ON", "R_wood", 2015, "R_D_SPH", 0.5, "PJ/PJ"),
+            ("ON", "R_wood", 2020, "R_D_SPH", 0.5, "PJ/PJ"),
+        ]
+        assert db.execute(
+            "SELECT region, vintage, capacity, units FROM existing_capacity"
+        ).fetchall() == [("ON", 2015, 10.0, "kunit"), ("ON", 2020, 12.0, "kunit")]
+        assert db.execute(
+            "SELECT region, c2a, units FROM capacity_to_activity"
+        ).fetchall() == [("ON", 1.0, "PJ/kunit.y")]
+        assert db.execute("SELECT region, lifetime FROM lifetime_tech").fetchall() == [
+            ("ON", 15.0)
+        ]
+        assert db.execute(
+            "SELECT vintage, output_comm, operator, factor "
+            + "FROM limit_annual_capacity_factor ORDER BY vintage, operator"
+        ).fetchall() == [
+            (2015, "R_D_SPH", "ge", 0.19),
+            (2015, "R_D_SPH", "le", 0.2),
+            (2020, "R_D_SPH", "ge", 0.19),
+            (2020, "R_D_SPH", "le", 0.2),
+        ]
+        assert db.execute(
+            "SELECT period, vintage, cost, units FROM cost_fixed ORDER BY period, vintage"
+        ).fetchall() == [
+            (2025, 2015, 0.2, "M$/kunit.y"),
+            (2025, 2020, 0.2, "M$/kunit.y"),
+            (2030, 2020, 0.2, "M$/kunit.y"),
+        ]
+
+    def test_left_out_without_stock(self):
+        assert (
+            build_existing_technology(
+                ExistingTechnology.SpaceHeatingOil,
+                _existing_parameters(),
+                [ON, QC],
+                PERIODS,
+                DATA_ID,
+            )
+            is None
+        )
+
+    def test_no_fixed_cost_rows_without_fixed_cost(self, db: sqlite3.Connection):
+        parameters = replace(
+            _existing_parameters(),
+            fixed_cost=pd.DataFrame(
+                columns=["region", "technology", "vintage", "period", "cost"]
+            ),
+        )
+        _build_existing(parameters, db)
+        assert db.execute("SELECT count(*) FROM cost_fixed").fetchone() == (0,)
+        assert db.execute("SELECT count(*) FROM existing_capacity").fetchone() == (2,)
+
+    def test_missing_efficiency_of_a_fuel_fails(self):
+        parameters = _existing_parameters()
+        parameters = replace(
+            parameters,
+            efficiency=parameters.efficiency.loc[
+                parameters.efficiency["fuel"].isin([CANOEFuel.Wood])
+            ],
+        )
+        entity = build_existing_technology(
+            WOOD_ELC, parameters, [ON, QC], PERIODS, DATA_ID
+        )
+        assert entity is not None
+        with pytest.raises(ValueError, match="was set but has no values"):
+            entity.to_technology_entities()[0].validate()
+
+    def test_existing_lamps_in_lighting_units(self):
+        lamp = ExistingTechnology.LEDBulb
+        parameters = replace(
+            _existing_parameters(),
+            efficiency=pd.DataFrame(
+                [(ON, lamp, 2020, CANOEFuel.Electricity, 2.76)],
+                columns=["region", "technology", "vintage", "fuel", "efficiency"],
+            ),
+            existing_capacity=pd.DataFrame(
+                [(ON, lamp, 2020, 37.7)],
+                columns=["region", "technology", "vintage", "capacity"],
+            ),
+            lifetime=pd.DataFrame(
+                [(ON, lamp, 36.0)], columns=["region", "technology", "lifetime"]
+            ),
+        )
+        entity = build_existing_technology(lamp, parameters, [ON], PERIODS, DATA_ID)
+        assert entity is not None
+        technology = entity.to_technology_entities()[0]
+        assert technology.name == "R_LGT_LED-EXS"
+        assert technology.description == "lighting - led - existing"
+        assert technology.existing_capacity is not None
+        assert technology.existing_capacity.metadata.units == "Glm"
+        assert [p.metadata.units for p in technology.efficiencies.values()] == [
+            "Glmy/PJ"
+        ]
+
+    def test_other_appliances_are_not_existing_capacity(self):
+        with pytest.raises(ValueError, match="unlimited capacity"):
+            build_existing_technology(
+                ExistingTechnology.OtherAppliances,
+                _existing_parameters(),
+                [ON],
+                PERIODS,
+                DATA_ID,
+            )
+
+
+ASHP = NewTechnology.AirSourceHeatPump
+SOLAR = NewTechnology.SolarWaterHeater
+LED = NewTechnology.LEDBulb
+SPC, WAH = ResidentialEndUse.SpaceCooling, ResidentialEndUse.WaterHeating
+
+
+def _new_parameters() -> NewTechnologyParameters:
+    """
+    An air-source heat pump in Ontario and Quebec, without a space cooling capacity
+    factor in Quebec, a solar water heater and LED bulbs in Ontario
+    """
+    return NewTechnologyParameters(
+        efficiency=pd.DataFrame(
+            [
+                (r, ASHP, v, e, x)
+                for r in (ON, QC)
+                for v in PERIODS
+                for e, x in ((SPH, 2.7), (SPC, 4.7))
+            ]
+            + [(ON, SOLAR, v, WAH, 1.0) for v in PERIODS]
+            + [(ON, LED, v, LGT, 2.85) for v in PERIODS],
+            columns=["region", "technology", "vintage", "end_use", "efficiency"],
+        ),
+        investment_cost=pd.DataFrame(
+            [(r, ASHP, v, 7.3) for r in (ON, QC) for v in PERIODS]
+            + [(ON, SOLAR, v, 5.0) for v in PERIODS]
+            + [(ON, LED, 2025, 5.2), (ON, LED, 2030, 4.3)],
+            columns=["region", "technology", "vintage", "cost"],
+        ),
+        fixed_cost=pd.DataFrame(
+            [(ON, ASHP, 2025, 2025, 0.09), (ON, ASHP, 2025, 2030, 0.09)]
+            + [(ON, ASHP, 2030, 2030, 0.09)],
+            columns=["region", "technology", "vintage", "period", "cost"],
+        ),
+        lifetime=pd.DataFrame(
+            [(ON, ASHP, 14.0), (QC, ASHP, 14.0), (ON, SOLAR, 20.0)],
+            columns=["region", "technology", "lifetime"],
+        ),
+        lifetime_process=pd.DataFrame(
+            [(ON, LED, 2025, 24.0), (ON, LED, 2030, 18.0)],
+            columns=["region", "technology", "vintage", "lifetime"],
+        ),
+        capacity_factor=pd.DataFrame(
+            [
+                (ON, ASHP, v, e, o, f)
+                for v in PERIODS
+                for e, f in ((SPH, 0.04), (SPC, 0.016))
+                for o, f in ((OperatorCode.GE, 0.95 * f), (OperatorCode.LE, f))
+            ]
+            + [(QC, ASHP, v, SPH, OperatorCode.LE, 0.05) for v in PERIODS]
+            + [(ON, SOLAR, v, WAH, OperatorCode.LE, 0.1) for v in PERIODS]
+            + [(ON, LED, v, LGT, OperatorCode.LE, 0.0667) for v in PERIODS],
+            columns=[
+                "region",
+                "technology",
+                "vintage",
+                "end_use",
+                "operator",
+                "factor",
+            ],
+        ),
+        efficiency_notes="AEO",
+        investment_cost_notes="AEO",
+        fixed_cost_notes="EIA",
+        lifetime_notes="Weibull",
+        lifetime_process_notes="lamp life",
+        capacity_factor_notes="equivalent existing technology",
+    )
+
+
+def _build_new(db: sqlite3.Connection) -> None:
+    demand = pd.DataFrame(
+        [(ON, 2025, e, 1.0) for e in (SPH, SPC, WAH, LGT)],
+        columns=["region", "period", "end_use", "demand"],
+    )
+    for end_use in (SPH, SPC, WAH, LGT):  # The demands they output
+        build_end_use_demand(
+            end_use, demand, None, [ON, QC], PERIODS, [], "", "", DATA_ID
+        ).build(db)
+    for entity in build_new_technologies(
+        [ASHP, SOLAR, LED, NewTechnology.OilFurnace],
+        _new_parameters(),
+        [ON, QC],
+        PERIODS,
+        DATA_ID,
+    ):
+        entity.build(db)
+
+
+class TestNewTechnology:
+    def test_heat_pump_serves_both_end_uses(self, db: sqlite3.Connection):
+        _build_new(db)
+        assert db.execute(
+            "SELECT tech, unlim_cap, annual, description FROM technology "
+            + "WHERE tech NOT LIKE 'R_LGT%' ORDER BY tech"
+        ).fetchall() == [
+            (
+                "R_SPHC_AIR_HP-TYP-NEW",
+                0,
+                1,
+                "space heating+space cooling - air-source heat pump - new",
+            ),
+            ("R_WAH_SOLAR-TYP-NEW", 0, 1, "water heating - solar water heater - new"),
+        ]
+        assert db.execute(
+            "SELECT region, input_comm, vintage, output_comm, efficiency, units "
+            + "FROM efficiency WHERE tech = 'R_SPHC_AIR_HP-TYP-NEW' "
+            + "ORDER BY vintage, output_comm"
+        ).fetchall() == [
+            ("ON", "R_elc", 2025, "R_D_SPC", 4.7, "PJ/PJ"),
+            ("ON", "R_elc", 2025, "R_D_SPH", 2.7, "PJ/PJ"),
+            ("ON", "R_elc", 2030, "R_D_SPC", 4.7, "PJ/PJ"),
+            ("ON", "R_elc", 2030, "R_D_SPH", 2.7, "PJ/PJ"),
+        ]
+        assert db.execute(
+            "SELECT output_comm, operator, factor FROM limit_annual_capacity_factor "
+            + "WHERE tech_or_group = 'R_SPHC_AIR_HP-TYP-NEW' AND vintage = 2025 "
+            + "ORDER BY output_comm, operator"
+        ).fetchall() == [
+            ("R_D_SPC", "ge", pytest.approx(0.95 * 0.016)),
+            ("R_D_SPC", "le", 0.016),
+            ("R_D_SPH", "ge", pytest.approx(0.95 * 0.04)),
+            ("R_D_SPH", "le", 0.04),
+        ]
+        assert db.execute(
+            "SELECT region, vintage, cost, units FROM cost_invest "
+            + "WHERE tech = 'R_SPHC_AIR_HP-TYP-NEW'"
+        ).fetchall() == [("ON", 2025, 7.3, "M$/kunit"), ("ON", 2030, 7.3, "M$/kunit")]
+        assert db.execute(
+            "SELECT period, vintage, cost, units FROM cost_fixed ORDER BY period, vintage"
+        ).fetchall() == [
+            (2025, 2025, 0.09, "M$/kunit.y"),
+            (2030, 2025, 0.09, "M$/kunit.y"),
+            (2030, 2030, 0.09, "M$/kunit.y"),
+        ]
+        assert db.execute(
+            "SELECT region, tech, lifetime, units FROM lifetime_tech ORDER BY tech"
+        ).fetchall() == [
+            ("ON", "R_SPHC_AIR_HP-TYP-NEW", 14.0, "year"),
+            ("ON", "R_WAH_SOLAR-TYP-NEW", 20.0, "year"),
+        ]
+        assert db.execute(
+            "SELECT tech, c2a, units FROM capacity_to_activity "
+            + "WHERE tech NOT LIKE 'R_LGT%' ORDER BY tech"
+        ).fetchall() == [
+            ("R_SPHC_AIR_HP-TYP-NEW", 1.0, "PJ/kunit.y"),
+            ("R_WAH_SOLAR-TYP-NEW", 1.0, "PJ/kunit.y"),
+        ]
+
+    def test_solar_water_heater_takes_the_free_source(self, db: sqlite3.Connection):
+        _build_new(db)
+        assert db.execute(
+            "SELECT name, flag, description, units FROM commodity WHERE flag != 'd' "
+            + "ORDER BY name"
+        ).fetchall() == [
+            ("R_elc", "p", "electricity fuel for Residential sector", "PJ"),
+            ("R_ethos", "s", "dummy input - residential", "PJ"),
+        ]
+        assert db.execute(
+            "SELECT DISTINCT input_comm, output_comm, efficiency FROM efficiency "
+            + "WHERE tech = 'R_WAH_SOLAR-TYP-NEW'"
+        ).fetchall() == [("R_ethos", "R_D_WAH", 1.0)]
+        assert db.execute(
+            "SELECT count(*) FROM cost_fixed WHERE tech = 'R_WAH_SOLAR-TYP-NEW'"
+        ).fetchone() == (0,)
+
+    def test_left_out_of_regions_without_capacity_factor(
+        self, caplog: pytest.LogCaptureFixture
+    ):
+        from loguru import logger
+
+        handler = logger.add(caplog.handler, level="INFO", format="{message}")
+        try:
+            entity = build_new_technology(
+                ASHP, _new_parameters(), [ON, QC], PERIODS, DATA_ID
+            )
+        finally:
+            logger.remove(handler)
+        assert entity is not None
+        assert entity.technology.input_regions("R_elc") == [ON]
+        assert "R_SPHC_AIR_HP-TYP-NEW left out of QC" in caplog.text
+
+    def test_left_out_without_data(self):
+        assert (
+            build_new_technology(
+                NewTechnology.OilFurnace, _new_parameters(), [ON, QC], PERIODS, DATA_ID
+            )
+            is None
+        )
+
+    def test_lamps_have_lifetimes_by_vintage(self, db: sqlite3.Connection):
+        _build_new(db)
+        assert db.execute(
+            "SELECT description FROM technology WHERE tech = 'R_LGT_LED-TYP-NEW'"
+        ).fetchall() == [("lighting - led bulb - new",)]
+        assert db.execute(
+            "SELECT vintage, lifetime, units FROM lifetime_process "
+            + "WHERE tech = 'R_LGT_LED-TYP-NEW'"
+        ).fetchall() == [(2025, 24.0, "year"), (2030, 18.0, "year")]
+        assert db.execute(
+            "SELECT count(*) FROM lifetime_tech WHERE tech = 'R_LGT_LED-TYP-NEW'"
+        ).fetchone() == (0,)
+        assert db.execute(
+            "SELECT DISTINCT e.units, c.units, i.units FROM efficiency e "
+            + "JOIN capacity_to_activity c USING (tech) JOIN cost_invest i USING (tech) "
+            + "WHERE tech = 'R_LGT_LED-TYP-NEW'"
+        ).fetchall() == [("Glmy/PJ", "Glmy/Glm.y", "M$/Glm")]
+
+    def test_a_lifetime_is_required(self):
+        parameters = replace(
+            _new_parameters(),
+            lifetime_process=pd.DataFrame(
+                columns=["region", "technology", "vintage", "lifetime"]
+            ),
+        )
+        with pytest.raises(ValueError, match="no lifetime"):
+            build_new_technology(LED, parameters, [ON], PERIODS, DATA_ID)
+
+
+OTH = ResidentialEndUse.OtherAppliances
+
+
+class TestOtherAppliances:
+    def test_unlimited_capacity_in_the_first_period(self, db: sqlite3.Connection):
+        build_end_use_demand(
+            OTH,
+            pd.DataFrame(
+                [(ON, 2025, OTH, 3.0)],
+                columns=["region", "period", "end_use", "demand"],
+            ),
+            None,
+            [ON, QC],
+            PERIODS,
+            [],
+            "",
+            "",
+            DATA_ID,
+        ).build(db)
+        entity = build_other_appliances(
+            pd.DataFrame([(ON, 0.64), (QC, 0.0)], columns=["region", "efficiency"]),
+            [ON, QC],
+            PERIODS[0],
+            notes="t13",
+            data_id=DATA_ID,
+        )
+        assert entity is not None
+        entity.build(db)
+        assert db.execute(
+            "SELECT tech, unlim_cap, annual, description FROM technology"
+        ).fetchall() == [("R_APP_OTH", 1, 1, "other electrical appliances and devices")]
+        assert db.execute(
+            "SELECT region, input_comm, vintage, output_comm, efficiency, units "
+            + "FROM efficiency"
+        ).fetchall() == [("ON", "R_elc", 2025, "R_D_APP_OTH", 0.64, "Munity/PJ")]
+        assert db.execute("SELECT count(*) FROM lifetime_tech").fetchone() == (0,)
+
+    def test_optional_lifetime(self):
+        entity = build_other_appliances(
+            pd.DataFrame([(ON, 0.64)], columns=["region", "efficiency"]),
+            [ON],
+            PERIODS[0],
+            notes="",
+            data_id=DATA_ID,
+            lifetime=30.0,
+        )
+        assert entity is not None
+        technology = entity.to_technology_entities()[0]
+        assert technology.lifetime is not None
+        assert technology.lifetime.values.to_records() == [
+            {"region": ON, "value": 30.0}
+        ]
+
+    def test_left_out_without_efficiency(self):
+        assert (
+            build_other_appliances(
+                pd.DataFrame([(ON, 0.0)], columns=["region", "efficiency"]),
+                [ON],
+                PERIODS[0],
+                notes="",
+                data_id=DATA_ID,
+            )
+            is None
+        )
+
+
+class TestResidentialEntities:
+    def test_fuel_imports_where_the_technologies_take_them(self):
+        existing = build_existing_technologies(
+            [WOOD_ELC], _existing_parameters(), [ON, QC], PERIODS, DATA_ID
+        )
+        other = build_other_appliances(
+            pd.DataFrame([(QC, 0.64)], columns=["region", "efficiency"]),
+            [ON, QC],
+            PERIODS[0],
+            notes="",
+            data_id=DATA_ID,
+        )
+        new = build_new_technologies(
+            [SOLAR], _new_parameters(), [ON, QC], PERIODS, DATA_ID
+        )
+        entities = ResidentialEntities(
+            demands=[],
+            existing_technologies=existing,
+            other_appliances=other,
+            new_technologies=new,
+        )
+        assert [t.name for t in entities.technology_entities()] == [
+            "R_SPH_WOOD-ELC-EXS",
+            "R_APP_OTH",
+            "R_WAH_SOLAR-TYP-NEW",
+        ]
+        # R_ethos (solar water heater) is not a fuel import
+        assert {
+            (str(i.fuel), tuple(p.short() for p in i.provinces))
+            for i in entities.fuel_imports()
+        } == {("Wood", ("ON",)), ("Electricity", ("ON", "QC"))}

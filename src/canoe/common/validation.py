@@ -53,6 +53,31 @@ def check_missing_periods(
         )
 
 
+def check_missing_existing_periods(
+    db_conn: Connection,
+    existing_vintages: list[int],
+    behavior: ValidationBehavior = "error",
+):
+    """
+    Checks that every existing vintage a module writes exists in time_period with
+    flag='e' (canoe-base seeds them from `existing_periods`).
+    """
+    cursor = db_conn.cursor()
+    db_periods = {
+        row[0]
+        for row in cursor.execute(
+            f"SELECT period FROM {TimePeriod.__table_name__} WHERE flag = 'e'"
+        ).fetchall()
+    }
+    missing = sorted({v for v in existing_vintages if v not in db_periods})
+    if missing:
+        handle_validation_issue(
+            f"Existing vintages {missing} are absent from time_period (flag='e'). "
+            + "Add them to existing_periods of the base configuration.",
+            behavior,
+        )
+
+
 def check_missing_regions(
     db_conn: Connection,
     provinces: list[CANOEProvince],

@@ -1,0 +1,6 @@
+﻿code,tech,description,on_share_sf,on_share_mf,statcan_category,oldest_vint
+inc,R_LGT_INC-EXS,incandescent,0.148,0.1845,No energy saving lights,
+hal,R_LGT_HAL-EXS,halogen,0.148,0.1845,Halogen lights,
+cfl,R_LGT_CFL-EXS,compact fluorescent,0.178,0.172,Compact fluorescent lights,2000
+led,R_LGT_LED-EXS,led,0.418,0.32,"Light emitting diode (LED) lights, excluding LED holiday lights",2010
+t12,R_LGT_T12-EXS,linear fluorescent,0.062,0.097,Fluorescent tubes,

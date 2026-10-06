@@ -1,9 +1,12 @@
+# ####################################################################################
+# COMPILER CONFIG
+# ####################################################################################
 [compiler.base]
 schema_version = "4.0"
 db_output_dir = "canoe-pwd/canoe.sqlite"
 # Version in the data set codes (e.g. COMHR003), inherited by the sectors
 data_version = "003"
-existing_periods = [2005, 2010, 2015, 2020, 2022, 2024]
+existing_periods = [2000, 2005, 2010, 2015, 2020, 2022, 2024]
 # Model periods, the ones the modules write data for. The end of the horizon
 # (last period + period_step, here 2050) is added to time_period with no data
 future_periods = [2025, 2030, 2035, 2040, 2045]
@@ -46,6 +49,8 @@ force_sync = false
 [compiler.sectors]
 commercial = "configuration/commercial-default.toml"
 agriculture = "configuration/agriculture-default.toml"
+industry = "configuration/industry-default.toml"
+residential = "configuration/residential-default.toml"
 
 # ####################################################################################
 # FUELS CONFIG

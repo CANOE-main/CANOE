@@ -1,0 +1,134 @@
+module_name = "residential"
+# data_version, gdp_scenario, gdp_projection_point and model_currency_year are
+# inherited from [compiler.base]; set them here to override
+
+# Year of the NRCan CEUD residential data read (energy use, stock, efficiencies): the
+# base year of the demands and of the existing capacity
+ceud_data_year = 2022
+
+# ----------------------------------------------------------
+#                   DEMAND PROJECTION
+# ----------------------------------------------------------
+# Series that projects the base-year demands: "population" (StatCan provincial
+# projections) or "gdp" (CER national GDP, as the other sectors). Read at
+# demand_projection_point of each period, inherited from gdp_projection_point.
+demand_driver = "population"
+
+# Existing technologies with less existing capacity than this in a province (kunit,
+# Munit or Glm) are left out there
+existing_capacity_tolerance = 0.1
+
+# ----------------------------------------------------------
+#             DEMAND-SPECIFIC DISTRIBUTION (DSD)
+# ----------------------------------------------------------
+include_dsd = true
+# Hours of a profile below this fraction of its mean are set to 0 (fewer rows)
+dsd_tolerance = 0.02
+
+# ----------------------------------------------------------
+#                     RUNTIME SWITCHES
+# ----------------------------------------------------------
+# "error" or "warning"
+validation_behavior = "error"      # database lacks periods, regions or time slices
+missing_data_behavior = "warning"  # data missing for a modelled end use
+
+# ----------------------------------------------------------
+#                        END USES
+# ----------------------------------------------------------
+# One table per group of end uses: [end_uses."<name>"]. A group is modelled if and
+# only if its table is present. Every modelled end use has its NRCan existing stock;
+# new_technologies lists the technologies that can be built (AEO technology menu).
+# A heat pump listed under both space heating and space cooling serves both.
+#
+# new_technologies options, by table. Names are typical efficiency equipment; those
+# marked (+) also come as "<name> high efficiency":
+#   space heating: "electric radiator", "natural gas furnace" (+), "natural gas
+#     boiler" (+), "oil furnace" (+), "oil boiler" (+), "lpg furnace" (+), "wood
+#     stove" (+), and the heat pumps below
+#   space heating and space cooling: "air-source heat pump" (+), "geo-exchange heat
+#     pump" (+), "natural gas heat pump"
+#   space cooling: "central air conditioner" (+), "room air conditioner" (+)
+#   water heating: "electric water heater" (+), "heat pump water heater" (+),
+#     "natural gas water heater" (+), "oil water heater" (+), "lpg water heater" (+),
+#     "solar water heater"
+#   lighting: "incandescent bulb", "halogen bulb", "compact fluorescent bulb" (+),
+#     "led bulb" (+), "linear fluorescent lamp"
+#   appliances: "refrigerator" (+), "freezer" (+), "dish washer" (+), "clothes
+#     washer" (+), "electric clothes dryer" (+), "natural gas clothes dryer" (+),
+#     "electric cooking range", "natural gas cooking range" (+), "lpg cooking
+#     range" (+)
+
+[end_uses."space heating"]
+apply_weather_mapping = true # map the ResStock (US) profiles to Canadian weather
+new_technologies = [
+  "electric radiator",
+  "natural gas furnace",
+  "wood stove",
+  "air-source heat pump",
+  "geo-exchange heat pump",
+  "natural gas heat pump",
+]
+
+[end_uses."space cooling"]
+apply_weather_mapping = true
+new_technologies = [
+  "central air conditioner",
+  "room air conditioner",
+  "air-source heat pump",
+  "geo-exchange heat pump",
+  "natural gas heat pump",
+]
+
+[end_uses."water heating"]
+new_technologies = [
+  "electric water heater",
+  "heat pump water heater",
+  "natural gas water heater",
+  "solar water heater",
+]
+
+[end_uses.lighting]
+annual_capacity_factor = 0.0667 # 1.6 hours a day (DOE, 2012)
+new_technologies = ["led bulb"]
+
+[end_uses.appliances]
+annual_capacity_factor = 0.15 # arbitrary, so the existing stock meets the peak
+new_technologies = [
+  "refrigerator",
+  "freezer",
+  "dish washer",
+  "clothes washer",
+  "electric clothes dryer",
+  "natural gas clothes dryer",
+  "electric cooking range",
+  "natural gas cooking range",
+]
+
+# ----------------------------------------------------------
+#                    DATA SOURCE MAPPINGS
+# ----------------------------------------------------------
+# US state whose ResStock hourly profiles each province takes
+[resstock_us_states]
+ON = "MI"
+AB = "MT"
+BC = "WA"
+QC = "ME"
+MB = "ND"
+SK = "ND"
+NLLAB = "ME"
+PEI = "ME"
+NS = "ME"
+NB = "ME"
+
+# US census division whose AEO technology parameters each province takes
+[aeo_census_divisions]
+ON = "east north central"
+AB = "mountain"
+BC = "pacific"
+QC = "new england"
+MB = "west north central"
+SK = "west north central"
+NLLAB = "new england"
+PEI = "new england"
+NS = "new england"
+NB = "new england"

@@ -1,7 +1,6 @@
 from importlib.resources import files
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from loguru import logger
 
@@ -46,21 +45,6 @@ def get_comstock_table(
     )
     logger.debug(f"Loading cached comstock table {us_state}-{building_type}-{upgrade}")
     return pd.read_parquet(file_path)
-
-
-def get_usca_weather_map(
-    cache_config: GoldConnectorConfig, province: "CANOEProvince"
-) -> np.ndarray:
-    """Loads the US-CA weather map from the cache."""
-    cache_path = (
-        cache_config.cache_dir
-        / Path("silver")
-        / cache_config.cache_date
-        / Path(f"weather_maps_{province.short()}")
-        / Path(f"weather_maps_{province.short()}_{cache_config.cache_date}.npz")
-    )
-    logger.debug(f"Loading cached weather map for {province}")
-    return np.load(cache_path)["arr_0"]
 
 
 def get_ceud_table(

@@ -137,6 +137,7 @@ def build_agriculture_technology(
         .with_efficiencies(
             efficiencies,
             notes="Dummy tech. Demand equal to agriculture energy use",
+            units="PJ/PJ",
         )
         .with_input_splits(
             splits,

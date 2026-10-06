@@ -1,0 +1,4050 @@
+,REF_DATE,GEO,VALUE
+0,1946-01,Canada,12188000
+1,1946-04,Canada,12241000
+2,1946-07,Canada,12316000
+3,1946-10,Canada,12393000
+4,1947-01,Canada,12450000
+5,1947-04,Canada,12507000
+6,1947-07,Canada,12576000
+7,1947-10,Canada,12646000
+8,1948-01,Canada,12710000
+9,1948-04,Canada,12773000
+10,1948-07,Canada,12852000
+11,1948-10,Canada,12930000
+12,1949-01,Canada,12998000
+13,1949-04,Canada,13399000
+14,1949-07,Canada,13475000
+15,1949-10,Canada,13548000
+16,1950-01,Canada,13607000
+17,1950-04,Canada,13663000
+18,1950-07,Canada,13737000
+19,1950-10,Canada,13807000
+20,1951-01,Canada,13870000
+21,1951-04,Canada,13937000
+22,1951-07,Canada,14050000
+23,1951-07,Newfoundland and Labrador,362000
+24,1951-07,Prince Edward Island,99000
+25,1951-07,Nova Scotia,643000
+26,1951-07,New Brunswick,517000
+27,1951-07,Quebec,4066000
+28,1951-07,Ontario,4615000
+29,1951-07,Manitoba,778000
+30,1951-07,Saskatchewan,834000
+31,1951-07,Alberta,943000
+32,1951-07,British Columbia,1168000
+33,1951-07,Yukon,9000
+34,1951-07,Northwest Territories including Nunavut,16000
+35,1951-10,Canada,14163000
+36,1951-10,Newfoundland and Labrador,365000
+37,1951-10,Prince Edward Island,99000
+38,1951-10,Nova Scotia,646000
+39,1951-10,New Brunswick,519000
+40,1951-10,Quebec,4095000
+41,1951-10,Ontario,4665000
+42,1951-10,Manitoba,784000
+43,1951-10,Saskatchewan,836000
+44,1951-10,Alberta,950000
+45,1951-10,British Columbia,1179000
+46,1951-10,Yukon,9000
+47,1951-10,Northwest Territories including Nunavut,16000
+48,1952-01,Canada,14277000
+49,1952-01,Newfoundland and Labrador,368000
+50,1952-01,Prince Edward Island,100000
+51,1952-01,Nova Scotia,647000
+52,1952-01,New Brunswick,521000
+53,1952-01,Quebec,4126000
+54,1952-01,Ontario,4717000
+55,1952-01,Manitoba,789000
+56,1952-01,Saskatchewan,836000
+57,1952-01,Alberta,959000
+58,1952-01,British Columbia,1189000
+59,1952-01,Yukon,9000
+60,1952-01,Northwest Territories including Nunavut,16000
+61,1952-04,Canada,14376000
+62,1952-04,Newfoundland and Labrador,371000
+63,1952-04,Prince Edward Island,100000
+64,1952-04,Nova Scotia,651000
+65,1952-04,New Brunswick,524000
+66,1952-04,Quebec,4153000
+67,1952-04,Ontario,4757000
+68,1952-04,Manitoba,794000
+69,1952-04,Saskatchewan,838000
+70,1952-04,Alberta,965000
+71,1952-04,British Columbia,1198000
+72,1952-04,Yukon,9000
+73,1952-04,Northwest Territories including Nunavut,16000
+74,1952-07,Canada,14496000
+75,1952-07,Newfoundland and Labrador,375000
+76,1952-07,Prince Edward Island,100000
+77,1952-07,Nova Scotia,654000
+78,1952-07,New Brunswick,527000
+79,1952-07,Quebec,4183000
+80,1952-07,Ontario,4802000
+81,1952-07,Manitoba,799000
+82,1952-07,Saskatchewan,845000
+83,1952-07,Alberta,977000
+84,1952-07,British Columbia,1209000
+85,1952-07,Yukon,9000
+86,1952-07,Northwest Territories including Nunavut,16000
+87,1952-10,Canada,14598000
+88,1952-10,Newfoundland and Labrador,377000
+89,1952-10,Prince Edward Island,101000
+90,1952-10,Nova Scotia,657000
+91,1952-10,New Brunswick,529000
+92,1952-10,Quebec,4209000
+93,1952-10,Ontario,4841000
+94,1952-10,Manitoba,802000
+95,1952-10,Saskatchewan,850000
+96,1952-10,Alberta,985000
+97,1952-10,British Columbia,1222000
+98,1952-10,Yukon,9000
+99,1952-10,Northwest Territories including Nunavut,16000
+100,1953-01,Canada,14682000
+101,1953-01,Newfoundland and Labrador,379000
+102,1953-01,Prince Edward Island,101000
+103,1953-01,Nova Scotia,660000
+104,1953-01,New Brunswick,530000
+105,1953-01,Quebec,4228000
+106,1953-01,Ontario,4876000
+107,1953-01,Manitoba,804000
+108,1953-01,Saskatchewan,852000
+109,1953-01,Alberta,994000
+110,1953-01,British Columbia,1233000
+111,1953-01,Yukon,9000
+112,1953-01,Northwest Territories including Nunavut,16000
+113,1953-04,Canada,14763000
+114,1953-04,Newfoundland and Labrador,382000
+115,1953-04,Prince Edward Island,101000
+116,1953-04,Nova Scotia,662000
+117,1953-04,New Brunswick,532000
+118,1953-04,Quebec,4249000
+119,1953-04,Ontario,4907000
+120,1953-04,Manitoba,806000
+121,1953-04,Saskatchewan,855000
+122,1953-04,Alberta,1002000
+123,1953-04,British Columbia,1242000
+124,1953-04,Yukon,9000
+125,1953-04,Northwest Territories including Nunavut,16000
+126,1953-07,Canada,14886000
+127,1953-07,Newfoundland and Labrador,384000
+128,1953-07,Prince Edward Island,101000
+129,1953-07,Nova Scotia,664000
+130,1953-07,New Brunswick,533000
+131,1953-07,Quebec,4281000
+132,1953-07,Ontario,4956000
+133,1953-07,Manitoba,810000
+134,1953-07,Saskatchewan,863000
+135,1953-07,Alberta,1016000
+136,1953-07,British Columbia,1253000
+137,1953-07,Yukon,9000
+138,1953-07,Northwest Territories including Nunavut,16000
+139,1953-10,Canada,15001000
+140,1953-10,Newfoundland and Labrador,387000
+141,1953-10,Prince Edward Island,101000
+142,1953-10,Nova Scotia,667000
+143,1953-10,New Brunswick,535000
+144,1953-10,Quebec,4310000
+145,1953-10,Ontario,5002000
+146,1953-10,Manitoba,814000
+147,1953-10,Saskatchewan,866000
+148,1953-10,Alberta,1029000
+149,1953-10,British Columbia,1265000
+150,1953-10,Yukon,9000
+151,1953-10,Northwest Territories including Nunavut,16000
+152,1954-01,Canada,15105000
+153,1954-01,Newfoundland and Labrador,390000
+154,1954-01,Prince Edward Island,101000
+155,1954-01,Nova Scotia,668000
+156,1954-01,New Brunswick,537000
+157,1954-01,Quebec,4337000
+158,1954-01,Ontario,5047000
+159,1954-01,Manitoba,816000
+160,1954-01,Saskatchewan,867000
+161,1954-01,Alberta,1039000
+162,1954-01,British Columbia,1278000
+163,1954-01,Yukon,9000
+164,1954-01,Northwest Territories including Nunavut,16000
+165,1954-04,Canada,15199000
+166,1954-04,Newfoundland and Labrador,393000
+167,1954-04,Prince Edward Island,101000
+168,1954-04,Nova Scotia,670000
+169,1954-04,New Brunswick,538000
+170,1954-04,Quebec,4365000
+171,1954-04,Ontario,5082000
+172,1954-04,Manitoba,819000
+173,1954-04,Saskatchewan,869000
+174,1954-04,Alberta,1047000
+175,1954-04,British Columbia,1288000
+176,1954-04,Yukon,10000
+177,1954-04,Northwest Territories including Nunavut,17000
+178,1954-07,Canada,15330000
+179,1954-07,Newfoundland and Labrador,396000
+180,1954-07,Prince Edward Island,101000
+181,1954-07,Nova Scotia,674000
+182,1954-07,New Brunswick,541000
+183,1954-07,Quebec,4402000
+184,1954-07,Ontario,5130000
+185,1954-07,Manitoba,825000
+186,1954-07,Saskatchewan,874000
+187,1954-07,Alberta,1061000
+188,1954-07,British Columbia,1299000
+189,1954-07,Yukon,10000
+190,1954-07,Northwest Territories including Nunavut,17000
+191,1954-10,Canada,15444000
+192,1954-10,Newfoundland and Labrador,399000
+193,1954-10,Prince Edward Island,101000
+194,1954-10,Nova Scotia,676000
+195,1954-10,New Brunswick,543000
+196,1954-10,Quebec,4436000
+197,1954-10,Ontario,5174000
+198,1954-10,Manitoba,830000
+199,1954-10,Saskatchewan,877000
+200,1954-10,Alberta,1070000
+201,1954-10,British Columbia,1311000
+202,1954-10,Yukon,10000
+203,1954-10,Northwest Territories including Nunavut,17000
+204,1955-01,Canada,15535000
+205,1955-01,Newfoundland and Labrador,401000
+206,1955-01,Prince Edward Island,100000
+207,1955-01,Nova Scotia,678000
+208,1955-01,New Brunswick,544000
+209,1955-01,Quebec,4465000
+210,1955-01,Ontario,5208000
+211,1955-01,Manitoba,833000
+212,1955-01,Saskatchewan,877000
+213,1955-01,Alberta,1078000
+214,1955-01,British Columbia,1323000
+215,1955-01,Yukon,11000
+216,1955-01,Northwest Territories including Nunavut,17000
+217,1955-04,Canada,15620000
+218,1955-04,Newfoundland and Labrador,404000
+219,1955-04,Prince Edward Island,100000
+220,1955-04,Nova Scotia,681000
+221,1955-04,New Brunswick,546000
+222,1955-04,Quebec,4492000
+223,1955-04,Ontario,5236000
+224,1955-04,Manitoba,837000
+225,1955-04,Saskatchewan,877000
+226,1955-04,Alberta,1084000
+227,1955-04,British Columbia,1334000
+228,1955-04,Yukon,11000
+229,1955-04,Northwest Territories including Nunavut,18000
+230,1955-07,Canada,15736000
+231,1955-07,Newfoundland and Labrador,407000
+232,1955-07,Prince Edward Island,100000
+233,1955-07,Nova Scotia,684000
+234,1955-07,New Brunswick,548000
+235,1955-07,Quebec,4529000
+236,1955-07,Ontario,5278000
+237,1955-07,Manitoba,841000
+238,1955-07,Saskatchewan,879000
+239,1955-07,Alberta,1094000
+240,1955-07,British Columbia,1347000
+241,1955-07,Yukon,11000
+242,1955-07,Northwest Territories including Nunavut,18000
+243,1955-10,Canada,15834000
+244,1955-10,Newfoundland and Labrador,410000
+245,1955-10,Prince Edward Island,100000
+246,1955-10,Nova Scotia,688000
+247,1955-10,New Brunswick,550000
+248,1955-10,Quebec,4557000
+249,1955-10,Ontario,5311000
+250,1955-10,Manitoba,844000
+251,1955-10,Saskatchewan,880000
+252,1955-10,Alberta,1102000
+253,1955-10,British Columbia,1362000
+254,1955-10,Yukon,12000
+255,1955-10,Northwest Territories including Nunavut,18000
+256,1956-01,Canada,15919000
+257,1956-01,Newfoundland and Labrador,412000
+258,1956-01,Prince Edward Island,100000
+259,1956-01,Nova Scotia,690000
+260,1956-01,New Brunswick,552000
+261,1956-01,Quebec,4581000
+262,1956-01,Ontario,5344000
+263,1956-01,Manitoba,845000
+264,1956-01,Saskatchewan,879000
+265,1956-01,Alberta,1109000
+266,1956-01,British Columbia,1377000
+267,1956-01,Yukon,12000
+268,1956-01,Northwest Territories including Nunavut,18000
+269,1956-04,Canada,16004000
+270,1956-04,Newfoundland and Labrador,414000
+271,1956-04,Prince Edward Island,99000
+272,1956-04,Nova Scotia,693000
+273,1956-04,New Brunswick,553000
+274,1956-04,Quebec,4606000
+275,1956-04,Ontario,5375000
+276,1956-04,Manitoba,848000
+277,1956-04,Saskatchewan,879000
+278,1956-04,Alberta,1118000
+279,1956-04,British Columbia,1388000
+280,1956-04,Yukon,12000
+281,1956-04,Northwest Territories including Nunavut,19000
+282,1956-07,Canada,16123000
+283,1956-07,Newfoundland and Labrador,416000
+284,1956-07,Prince Edward Island,99000
+285,1956-07,Nova Scotia,695000
+286,1956-07,New Brunswick,556000
+287,1956-07,Quebec,4641000
+288,1956-07,Ontario,5423000
+289,1956-07,Manitoba,850000
+290,1956-07,Saskatchewan,881000
+291,1956-07,Alberta,1126000
+292,1956-07,British Columbia,1405000
+293,1956-07,Yukon,12000
+294,1956-07,Northwest Territories including Nunavut,19000
+295,1956-10,Canada,16235000
+296,1956-10,Newfoundland and Labrador,418000
+297,1956-10,Prince Edward Island,99000
+298,1956-10,Nova Scotia,695000
+299,1956-10,New Brunswick,557000
+300,1956-10,Quebec,4671000
+301,1956-10,Ontario,5470000
+302,1956-10,Manitoba,852000
+303,1956-10,Saskatchewan,880000
+304,1956-10,Alberta,1136000
+305,1956-10,British Columbia,1426000
+306,1956-10,Yukon,12000
+307,1956-10,Northwest Territories including Nunavut,19000
+308,1957-01,Canada,16352000
+309,1957-01,Newfoundland and Labrador,420000
+310,1957-01,Prince Edward Island,99000
+311,1957-01,Nova Scotia,695000
+312,1957-01,New Brunswick,558000
+313,1957-01,Quebec,4702000
+314,1957-01,Ontario,5529000
+315,1957-01,Manitoba,851000
+316,1957-01,Saskatchewan,874000
+317,1957-01,Alberta,1144000
+318,1957-01,British Columbia,1449000
+319,1957-01,Yukon,12000
+320,1957-01,Northwest Territories including Nunavut,19000
+321,1957-04,Canada,16479000
+322,1957-04,Newfoundland and Labrador,422000
+323,1957-04,Prince Edward Island,99000
+324,1957-04,Nova Scotia,698000
+325,1957-04,New Brunswick,560000
+326,1957-04,Quebec,4737000
+327,1957-04,Ontario,5580000
+328,1957-04,Manitoba,856000
+329,1957-04,Saskatchewan,875000
+330,1957-04,Alberta,1153000
+331,1957-04,British Columbia,1468000
+332,1957-04,Yukon,12000
+333,1957-04,Northwest Territories including Nunavut,19000
+334,1957-07,Canada,16677000
+335,1957-07,Newfoundland and Labrador,425000
+336,1957-07,Prince Edward Island,99000
+337,1957-07,Nova Scotia,701000
+338,1957-07,New Brunswick,563000
+339,1957-07,Quebec,4786000
+340,1957-07,Ontario,5668000
+341,1957-07,Manitoba,863000
+342,1957-07,Saskatchewan,882000
+343,1957-07,Alberta,1169000
+344,1957-07,British Columbia,1490000
+345,1957-07,Yukon,12000
+346,1957-07,Northwest Territories including Nunavut,19000
+347,1957-10,Canada,16810000
+348,1957-10,Newfoundland and Labrador,427000
+349,1957-10,Prince Edward Island,99000
+350,1957-10,Nova Scotia,702000
+351,1957-10,New Brunswick,565000
+352,1957-10,Quebec,4825000
+353,1957-10,Ontario,5722000
+354,1957-10,Manitoba,863000
+355,1957-10,Saskatchewan,884000
+356,1957-10,Alberta,1179000
+357,1957-10,British Columbia,1511000
+358,1957-10,Yukon,13000
+359,1957-10,Northwest Territories including Nunavut,20000
+360,1958-01,Canada,16907000
+361,1958-01,Newfoundland and Labrador,428000
+362,1958-01,Prince Edward Island,99000
+363,1958-01,Nova Scotia,705000
+364,1958-01,New Brunswick,567000
+365,1958-01,Quebec,4849000
+366,1958-01,Ontario,5759000
+367,1958-01,Manitoba,868000
+368,1958-01,Saskatchewan,884000
+369,1958-01,Alberta,1191000
+370,1958-01,British Columbia,1524000
+371,1958-01,Yukon,13000
+372,1958-01,Northwest Territories including Nunavut,20000
+373,1958-04,Canada,16997000
+374,1958-04,Newfoundland and Labrador,430000
+375,1958-04,Prince Edward Island,100000
+376,1958-04,Nova Scotia,707000
+377,1958-04,New Brunswick,569000
+378,1958-04,Quebec,4879000
+379,1958-04,Ontario,5789000
+380,1958-04,Manitoba,872000
+381,1958-04,Saskatchewan,888000
+382,1958-04,Alberta,1198000
+383,1958-04,British Columbia,1532000
+384,1958-04,Yukon,13000
+385,1958-04,Northwest Territories including Nunavut,20000
+386,1958-07,Canada,17120000
+387,1958-07,Newfoundland and Labrador,433000
+388,1958-07,Prince Edward Island,100000
+389,1958-07,Nova Scotia,710000
+390,1958-07,New Brunswick,572000
+391,1958-07,Quebec,4915000
+392,1958-07,Ontario,5835000
+393,1958-07,Manitoba,877000
+394,1958-07,Saskatchewan,894000
+395,1958-07,Alberta,1211000
+396,1958-07,British Columbia,1540000
+397,1958-07,Yukon,13000
+398,1958-07,Northwest Territories including Nunavut,20000
+399,1958-10,Canada,17225000
+400,1958-10,Newfoundland and Labrador,435000
+401,1958-10,Prince Edward Island,101000
+402,1958-10,Nova Scotia,713000
+403,1958-10,New Brunswick,574000
+404,1958-10,Quebec,4947000
+405,1958-10,Ontario,5874000
+406,1958-10,Manitoba,881000
+407,1958-10,Saskatchewan,898000
+408,1958-10,Alberta,1221000
+409,1958-10,British Columbia,1548000
+410,1958-10,Yukon,13000
+411,1958-10,Northwest Territories including Nunavut,20000
+412,1959-01,Canada,17318000
+413,1959-01,Newfoundland and Labrador,437000
+414,1959-01,Prince Edward Island,101000
+415,1959-01,Nova Scotia,716000
+416,1959-01,New Brunswick,577000
+417,1959-01,Quebec,4974000
+418,1959-01,Ontario,5907000
+419,1959-01,Manitoba,883000
+420,1959-01,Saskatchewan,900000
+421,1959-01,Alberta,1233000
+422,1959-01,British Columbia,1556000
+423,1959-01,Yukon,13000
+424,1959-01,Northwest Territories including Nunavut,21000
+425,1959-04,Canada,17406000
+426,1959-04,Newfoundland and Labrador,439000
+427,1959-04,Prince Edward Island,101000
+428,1959-04,Nova Scotia,718000
+429,1959-04,New Brunswick,580000
+430,1959-04,Quebec,5002000
+431,1959-04,Ontario,5938000
+432,1959-04,Manitoba,888000
+433,1959-04,Saskatchewan,903000
+434,1959-04,Alberta,1241000
+435,1959-04,British Columbia,1562000
+436,1959-04,Yukon,13000
+437,1959-04,Northwest Territories including Nunavut,21000
+438,1959-07,Canada,17522000
+439,1959-07,Newfoundland and Labrador,441000
+440,1959-07,Prince Edward Island,102000
+441,1959-07,Nova Scotia,720000
+442,1959-07,New Brunswick,583000
+443,1959-07,Quebec,5035000
+444,1959-07,Ontario,5985000
+445,1959-07,Manitoba,892000
+446,1959-07,Saskatchewan,908000
+447,1959-07,Alberta,1252000
+448,1959-07,British Columbia,1570000
+449,1959-07,Yukon,13000
+450,1959-07,Northwest Territories including Nunavut,21000
+451,1959-10,Canada,17624000
+452,1959-10,Newfoundland and Labrador,443000
+453,1959-10,Prince Edward Island,102000
+454,1959-10,Nova Scotia,722000
+455,1959-10,New Brunswick,584000
+456,1959-10,Quebec,5068000
+457,1959-10,Ontario,6020000
+458,1959-10,Manitoba,896000
+459,1959-10,Saskatchewan,912000
+460,1959-10,Alberta,1263000
+461,1959-10,British Columbia,1580000
+462,1959-10,Yukon,13000
+463,1959-10,Northwest Territories including Nunavut,21000
+464,1960-01,Canada,17710000
+465,1960-01,Newfoundland and Labrador,445000
+466,1960-01,Prince Edward Island,103000
+467,1960-01,Nova Scotia,722000
+468,1960-01,New Brunswick,585000
+469,1960-01,Quebec,5092000
+470,1960-01,Ontario,6054000
+471,1960-01,Manitoba,900000
+472,1960-01,Saskatchewan,911000
+473,1960-01,Alberta,1274000
+474,1960-01,British Columbia,1589000
+475,1960-01,Yukon,14000
+476,1960-01,Northwest Territories including Nunavut,21000
+477,1960-04,Canada,17793000
+478,1960-04,Newfoundland and Labrador,447000
+479,1960-04,Prince Edward Island,103000
+480,1960-04,Nova Scotia,725000
+481,1960-04,New Brunswick,587000
+482,1960-04,Quebec,5119000
+483,1960-04,Ontario,6083000
+484,1960-04,Manitoba,903000
+485,1960-04,Saskatchewan,912000
+486,1960-04,Alberta,1282000
+487,1960-04,British Columbia,1596000
+488,1960-04,Yukon,14000
+489,1960-04,Northwest Territories including Nunavut,22000
+490,1960-07,Canada,17909000
+491,1960-07,Newfoundland and Labrador,449000
+492,1960-07,Prince Edward Island,103000
+493,1960-07,Nova Scotia,728000
+494,1960-07,New Brunswick,589000
+495,1960-07,Quebec,5152000
+496,1960-07,Ontario,6127000
+497,1960-07,Manitoba,908000
+498,1960-07,Saskatchewan,916000
+499,1960-07,Alberta,1296000
+500,1960-07,British Columbia,1605000
+501,1960-07,Yukon,14000
+502,1960-07,Northwest Territories including Nunavut,22000
+503,1960-10,Canada,18009000
+504,1960-10,Newfoundland and Labrador,452000
+505,1960-10,Prince Edward Island,104000
+506,1960-10,Nova Scotia,731000
+507,1960-10,New Brunswick,591000
+508,1960-10,Quebec,5187000
+509,1960-10,Ontario,6158000
+510,1960-10,Manitoba,911000
+511,1960-10,Saskatchewan,918000
+512,1960-10,Alberta,1307000
+513,1960-10,British Columbia,1614000
+514,1960-10,Yukon,14000
+515,1960-10,Northwest Territories including Nunavut,22000
+516,1961-01,Canada,18092000
+517,1961-01,Newfoundland and Labrador,454000
+518,1961-01,Prince Edward Island,104000
+519,1961-01,Nova Scotia,732000
+520,1961-01,New Brunswick,593000
+521,1961-01,Quebec,5212000
+522,1961-01,Ontario,6187000
+523,1961-01,Manitoba,916000
+524,1961-01,Saskatchewan,919000
+525,1961-01,Alberta,1317000
+526,1961-01,British Columbia,1621000
+527,1961-01,Yukon,14000
+528,1961-01,Northwest Territories including Nunavut,23000
+529,1961-04,Canada,18172000
+530,1961-04,Newfoundland and Labrador,456000
+531,1961-04,Prince Edward Island,104000
+532,1961-04,Nova Scotia,735000
+533,1961-04,New Brunswick,596000
+534,1961-04,Quebec,5238000
+535,1961-04,Ontario,6214000
+536,1961-04,Manitoba,919000
+537,1961-04,Saskatchewan,922000
+538,1961-04,Alberta,1325000
+539,1961-04,British Columbia,1626000
+540,1961-04,Yukon,14000
+541,1961-04,Northwest Territories including Nunavut,23000
+542,1961-07,Canada,18271000
+543,1961-07,Newfoundland and Labrador,459000
+544,1961-07,Prince Edward Island,105000
+545,1961-07,Nova Scotia,738000
+546,1961-07,New Brunswick,599000
+547,1961-07,Quebec,5268000
+548,1961-07,Ontario,6248000
+549,1961-07,Manitoba,923000
+550,1961-07,Saskatchewan,926000
+551,1961-07,Alberta,1335000
+552,1961-07,British Columbia,1632000
+553,1961-07,Yukon,15000
+554,1961-07,Northwest Territories including Nunavut,23000
+555,1961-10,Canada,18363000
+556,1961-10,Newfoundland and Labrador,462000
+557,1961-10,Prince Edward Island,106000
+558,1961-10,Nova Scotia,740000
+559,1961-10,New Brunswick,600000
+560,1961-10,Quebec,5300000
+561,1961-10,Ontario,6275000
+562,1961-10,Manitoba,927000
+563,1961-10,Saskatchewan,929000
+564,1961-10,Alberta,1345000
+565,1961-10,British Columbia,1640000
+566,1961-10,Yukon,15000
+567,1961-10,Northwest Territories including Nunavut,24000
+568,1962-01,Canada,18442000
+569,1962-01,Newfoundland and Labrador,464000
+570,1962-01,Prince Edward Island,107000
+571,1962-01,Nova Scotia,742000
+572,1962-01,New Brunswick,602000
+573,1962-01,Quebec,5324000
+574,1962-01,Ontario,6303000
+575,1962-01,Manitoba,930000
+576,1962-01,Saskatchewan,927000
+577,1962-01,Alberta,1356000
+578,1962-01,British Columbia,1648000
+579,1962-01,Yukon,15000
+580,1962-01,Northwest Territories including Nunavut,24000
+581,1962-04,Canada,18519000
+582,1962-04,Newfoundland and Labrador,466000
+583,1962-04,Prince Edward Island,107000
+584,1962-04,Nova Scotia,744000
+585,1962-04,New Brunswick,604000
+586,1962-04,Quebec,5350000
+587,1962-04,Ontario,6330000
+588,1962-04,Manitoba,933000
+589,1962-04,Saskatchewan,928000
+590,1962-04,Alberta,1363000
+591,1962-04,British Columbia,1655000
+592,1962-04,Yukon,15000
+593,1962-04,Northwest Territories including Nunavut,24000
+594,1962-07,Canada,18614000
+595,1962-07,Newfoundland and Labrador,469000
+596,1962-07,Prince Edward Island,107000
+597,1962-07,Nova Scotia,746000
+598,1962-07,New Brunswick,605000
+599,1962-07,Quebec,5381000
+600,1962-07,Ontario,6362000
+601,1962-07,Manitoba,937000
+602,1962-07,Saskatchewan,931000
+603,1962-07,Alberta,1373000
+604,1962-07,British Columbia,1663000
+605,1962-07,Yukon,15000
+606,1962-07,Northwest Territories including Nunavut,25000
+607,1962-10,Canada,18708000
+608,1962-10,Newfoundland and Labrador,471000
+609,1962-10,Prince Edward Island,107000
+610,1962-10,Nova Scotia,748000
+611,1962-10,New Brunswick,607000
+612,1962-10,Quebec,5413000
+613,1962-10,Ontario,6395000
+614,1962-10,Manitoba,940000
+615,1962-10,Saskatchewan,931000
+616,1962-10,Alberta,1382000
+617,1962-10,British Columbia,1674000
+618,1962-10,Yukon,15000
+619,1962-10,Northwest Territories including Nunavut,25000
+620,1963-01,Canada,18787000
+621,1963-01,Newfoundland and Labrador,473000
+622,1963-01,Prince Edward Island,107000
+623,1963-01,Nova Scotia,747000
+624,1963-01,New Brunswick,607000
+625,1963-01,Quebec,5437000
+626,1963-01,Ontario,6427000
+627,1963-01,Manitoba,944000
+628,1963-01,Saskatchewan,928000
+629,1963-01,Alberta,1391000
+630,1963-01,British Columbia,1686000
+631,1963-01,Yukon,15000
+632,1963-01,Northwest Territories including Nunavut,25000
+633,1963-04,Canada,18864000
+634,1963-04,Newfoundland and Labrador,474000
+635,1963-04,Prince Edward Island,108000
+636,1963-04,Nova Scotia,749000
+637,1963-04,New Brunswick,608000
+638,1963-04,Quebec,5461000
+639,1963-04,Ontario,6455000
+640,1963-04,Manitoba,947000
+641,1963-04,Saskatchewan,930000
+642,1963-04,Alberta,1398000
+643,1963-04,British Columbia,1694000
+644,1963-04,Yukon,15000
+645,1963-04,Northwest Territories including Nunavut,25000
+646,1963-07,Canada,18964000
+647,1963-07,Newfoundland and Labrador,477000
+648,1963-07,Prince Edward Island,108000
+649,1963-07,Nova Scotia,751000
+650,1963-07,New Brunswick,609000
+651,1963-07,Quebec,5489000
+652,1963-07,Ontario,6497000
+653,1963-07,Manitoba,950000
+654,1963-07,Saskatchewan,933000
+655,1963-07,Alberta,1407000
+656,1963-07,British Columbia,1702000
+657,1963-07,Yukon,15000
+658,1963-07,Northwest Territories including Nunavut,26000
+659,1963-10,Canada,19061000
+660,1963-10,Newfoundland and Labrador,479000
+661,1963-10,Prince Edward Island,109000
+662,1963-10,Nova Scotia,752000
+663,1963-10,New Brunswick,609000
+664,1963-10,Quebec,5518000
+665,1963-10,Ontario,6535000
+666,1963-10,Manitoba,953000
+667,1963-10,Saskatchewan,935000
+668,1963-10,Alberta,1414000
+669,1963-10,British Columbia,1716000
+670,1963-10,Yukon,15000
+671,1963-10,Northwest Territories including Nunavut,26000
+672,1964-01,Canada,19142000
+673,1964-01,Newfoundland and Labrador,480000
+674,1964-01,Prince Edward Island,109000
+675,1964-01,Nova Scotia,752000
+676,1964-01,New Brunswick,609000
+677,1964-01,Quebec,5541000
+678,1964-01,Ontario,6572000
+679,1964-01,Manitoba,955000
+680,1964-01,Saskatchewan,936000
+681,1964-01,Alberta,1419000
+682,1964-01,British Columbia,1728000
+683,1964-01,Yukon,15000
+684,1964-01,Northwest Territories including Nunavut,26000
+685,1964-04,Canada,19222000
+686,1964-04,Newfoundland and Labrador,482000
+687,1964-04,Prince Edward Island,109000
+688,1964-04,Nova Scotia,753000
+689,1964-04,New Brunswick,610000
+690,1964-04,Quebec,5566000
+691,1964-04,Ontario,6602000
+692,1964-04,Manitoba,957000
+693,1964-04,Saskatchewan,939000
+694,1964-04,Alberta,1425000
+695,1964-04,British Columbia,1737000
+696,1964-04,Yukon,15000
+697,1964-04,Northwest Territories including Nunavut,27000
+698,1964-07,Canada,19325000
+699,1964-07,Newfoundland and Labrador,484000
+700,1964-07,Prince Edward Island,109000
+701,1964-07,Nova Scotia,755000
+702,1964-07,New Brunswick,612000
+703,1964-07,Quebec,5593000
+704,1964-07,Ontario,6646000
+705,1964-07,Manitoba,960000
+706,1964-07,Saskatchewan,943000
+707,1964-07,Alberta,1431000
+708,1964-07,British Columbia,1750000
+709,1964-07,Yukon,15000
+710,1964-07,Northwest Territories including Nunavut,27000
+711,1964-10,Canada,19420000
+712,1964-10,Newfoundland and Labrador,485000
+713,1964-10,Prince Edward Island,109000
+714,1964-10,Nova Scotia,756000
+715,1964-10,New Brunswick,612000
+716,1964-10,Quebec,5621000
+717,1964-10,Ontario,6687000
+718,1964-10,Manitoba,961000
+719,1964-10,Saskatchewan,946000
+720,1964-10,Alberta,1436000
+721,1964-10,British Columbia,1765000
+722,1964-10,Yukon,15000
+723,1964-10,Northwest Territories including Nunavut,27000
+724,1965-01,Canada,19501000
+725,1965-01,Newfoundland and Labrador,485000
+726,1965-01,Prince Edward Island,109000
+727,1965-01,Nova Scotia,755000
+728,1965-01,New Brunswick,613000
+729,1965-01,Quebec,5644000
+730,1965-01,Ontario,6723000
+731,1965-01,Manitoba,962000
+732,1965-01,Saskatchewan,946000
+733,1965-01,Alberta,1443000
+734,1965-01,British Columbia,1779000
+735,1965-01,Yukon,15000
+736,1965-01,Northwest Territories including Nunavut,27000
+737,1965-04,Canada,19578000
+738,1965-04,Newfoundland and Labrador,486000
+739,1965-04,Prince Edward Island,109000
+740,1965-04,Nova Scotia,754000
+741,1965-04,New Brunswick,614000
+742,1965-04,Quebec,5668000
+743,1965-04,Ontario,6758000
+744,1965-04,Manitoba,964000
+745,1965-04,Saskatchewan,948000
+746,1965-04,Alberta,1445000
+747,1965-04,British Columbia,1790000
+748,1965-04,Yukon,15000
+749,1965-04,Northwest Territories including Nunavut,27000
+750,1965-07,Canada,19678000
+751,1965-07,Newfoundland and Labrador,488000
+752,1965-07,Prince Edward Island,109000
+753,1965-07,Nova Scotia,756000
+754,1965-07,New Brunswick,615000
+755,1965-07,Quebec,5694000
+756,1965-07,Ontario,6803000
+757,1965-07,Manitoba,965000
+758,1965-07,Saskatchewan,951000
+759,1965-07,Alberta,1451000
+760,1965-07,British Columbia,1804000
+761,1965-07,Yukon,14000
+762,1965-07,Northwest Territories including Nunavut,28000
+763,1965-10,Canada,19777000
+764,1965-10,Newfoundland and Labrador,489000
+765,1965-10,Prince Edward Island,109000
+766,1965-10,Nova Scotia,755000
+767,1965-10,New Brunswick,616000
+768,1965-10,Quebec,5720000
+769,1965-10,Ontario,6849000
+770,1965-10,Manitoba,963000
+771,1965-10,Saskatchewan,953000
+772,1965-10,Alberta,1453000
+773,1965-10,British Columbia,1827000
+774,1965-10,Yukon,15000
+775,1965-10,Northwest Territories including Nunavut,28000
+776,1966-01,Canada,19857000
+777,1966-01,Newfoundland and Labrador,490000
+778,1966-01,Prince Edward Island,108000
+779,1966-01,Nova Scotia,754000
+780,1966-01,New Brunswick,616000
+781,1966-01,Quebec,5740000
+782,1966-01,Ontario,6888000
+783,1966-01,Manitoba,962000
+784,1966-01,Saskatchewan,952000
+785,1966-01,Alberta,1456000
+786,1966-01,British Columbia,1848000
+787,1966-01,Yukon,15000
+788,1966-01,Northwest Territories including Nunavut,28000
+789,1966-04,Canada,19939000
+790,1966-04,Newfoundland and Labrador,492000
+791,1966-04,Prince Edward Island,108000
+792,1966-04,Nova Scotia,755000
+793,1966-04,New Brunswick,616000
+794,1966-04,Quebec,5762000
+795,1966-04,Ontario,6926000
+796,1966-04,Manitoba,963000
+797,1966-04,Saskatchewan,954000
+798,1966-04,Alberta,1459000
+799,1966-04,British Columbia,1862000
+800,1966-04,Yukon,14000
+801,1966-04,Northwest Territories including Nunavut,28000
+802,1966-07,Canada,20048000
+803,1966-07,Newfoundland and Labrador,494000
+804,1966-07,Prince Edward Island,109000
+805,1966-07,Nova Scotia,757000
+806,1966-07,New Brunswick,617000
+807,1966-07,Quebec,5787000
+808,1966-07,Ontario,6977000
+809,1966-07,Manitoba,963000
+810,1966-07,Saskatchewan,956000
+811,1966-07,Alberta,1465000
+812,1966-07,British Columbia,1880000
+813,1966-07,Yukon,14000
+814,1966-07,Northwest Territories including Nunavut,29000
+815,1966-10,Canada,20146000
+816,1966-10,Newfoundland and Labrador,496000
+817,1966-10,Prince Edward Island,109000
+818,1966-10,Nova Scotia,756000
+819,1966-10,New Brunswick,617000
+820,1966-10,Quebec,5808000
+821,1966-10,Ontario,7025000
+822,1966-10,Manitoba,959000
+823,1966-10,Saskatchewan,957000
+824,1966-10,Alberta,1470000
+825,1966-10,British Columbia,1905000
+826,1966-10,Yukon,15000
+827,1966-10,Northwest Territories including Nunavut,29000
+828,1967-01,Canada,20228000
+829,1967-01,Newfoundland and Labrador,496000
+830,1967-01,Prince Edward Island,109000
+831,1967-01,Nova Scotia,757000
+832,1967-01,New Brunswick,618000
+833,1967-01,Quebec,5826000
+834,1967-01,Ontario,7063000
+835,1967-01,Manitoba,958000
+836,1967-01,Saskatchewan,955000
+837,1967-01,Alberta,1476000
+838,1967-01,British Columbia,1926000
+839,1967-01,Yukon,15000
+840,1967-01,Northwest Territories including Nunavut,29000
+841,1967-04,Canada,20306000
+842,1967-04,Newfoundland and Labrador,498000
+843,1967-04,Prince Edward Island,109000
+844,1967-04,Nova Scotia,758000
+845,1967-04,New Brunswick,619000
+846,1967-04,Quebec,5846000
+847,1967-04,Ontario,7096000
+848,1967-04,Manitoba,961000
+849,1967-04,Saskatchewan,955000
+850,1967-04,Alberta,1483000
+851,1967-04,British Columbia,1937000
+852,1967-04,Yukon,15000
+853,1967-04,Northwest Territories including Nunavut,29000
+854,1967-07,Canada,20412000
+855,1967-07,Newfoundland and Labrador,500000
+856,1967-07,Prince Edward Island,109000
+857,1967-07,Nova Scotia,761000
+858,1967-07,New Brunswick,621000
+859,1967-07,Quebec,5870000
+860,1967-07,Ontario,7142000
+861,1967-07,Manitoba,964000
+862,1967-07,Saskatchewan,958000
+863,1967-07,Alberta,1493000
+864,1967-07,British Columbia,1950000
+865,1967-07,Yukon,15000
+866,1967-07,Northwest Territories including Nunavut,29000
+867,1967-10,Canada,20509000
+868,1967-10,Newfoundland and Labrador,502000
+869,1967-10,Prince Edward Island,109000
+870,1967-10,Nova Scotia,762000
+871,1967-10,New Brunswick,622000
+872,1967-10,Quebec,5888000
+873,1967-10,Ontario,7186000
+874,1967-10,Manitoba,966000
+875,1967-10,Saskatchewan,959000
+876,1967-10,Alberta,1501000
+877,1967-10,British Columbia,1970000
+878,1967-10,Yukon,15000
+879,1967-10,Northwest Territories including Nunavut,29000
+880,1968-01,Canada,20581000
+881,1968-01,Newfoundland and Labrador,503000
+882,1968-01,Prince Edward Island,110000
+883,1968-01,Nova Scotia,764000
+884,1968-01,New Brunswick,623000
+885,1968-01,Quebec,5902000
+886,1968-01,Ontario,7213000
+887,1968-01,Manitoba,966000
+888,1968-01,Saskatchewan,957000
+889,1968-01,Alberta,1510000
+890,1968-01,British Columbia,1988000
+891,1968-01,Yukon,15000
+892,1968-01,Northwest Territories including Nunavut,30000
+893,1968-04,Canada,20644000
+894,1968-04,Newfoundland and Labrador,505000
+895,1968-04,Prince Edward Island,110000
+896,1968-04,Nova Scotia,765000
+897,1968-04,New Brunswick,624000
+898,1968-04,Quebec,5916000
+899,1968-04,Ontario,7238000
+900,1968-04,Manitoba,968000
+901,1968-04,Saskatchewan,959000
+902,1968-04,Alberta,1518000
+903,1968-04,British Columbia,1996000
+904,1968-04,Yukon,15000
+905,1968-04,Northwest Territories including Nunavut,30000
+906,1968-07,Canada,20729000
+907,1968-07,Newfoundland and Labrador,507000
+908,1968-07,Prince Edward Island,110000
+909,1968-07,Nova Scotia,768000
+910,1968-07,New Brunswick,626000
+911,1968-07,Quebec,5931000
+912,1968-07,Ontario,7275000
+913,1968-07,Manitoba,972000
+914,1968-07,Saskatchewan,961000
+915,1968-07,Alberta,1527000
+916,1968-07,British Columbia,2006000
+917,1968-07,Yukon,16000
+918,1968-07,Northwest Territories including Nunavut,30000
+919,1968-10,Canada,20814000
+920,1968-10,Newfoundland and Labrador,509000
+921,1968-10,Prince Edward Island,111000
+922,1968-10,Nova Scotia,771000
+923,1968-10,New Brunswick,628000
+924,1968-10,Quebec,5949000
+925,1968-10,Ontario,7305000
+926,1968-10,Manitoba,974000
+927,1968-10,Saskatchewan,962000
+928,1968-10,Alberta,1536000
+929,1968-10,British Columbia,2023000
+930,1968-10,Yukon,16000
+931,1968-10,Northwest Territories including Nunavut,30000
+932,1969-01,Canada,20888000
+933,1969-01,Newfoundland and Labrador,511000
+934,1969-01,Prince Edward Island,111000
+935,1969-01,Nova Scotia,771000
+936,1969-01,New Brunswick,627000
+937,1969-01,Quebec,5961000
+938,1969-01,Ontario,7338000
+939,1969-01,Manitoba,975000
+940,1969-01,Saskatchewan,959000
+941,1969-01,Alberta,1546000
+942,1969-01,British Columbia,2042000
+943,1969-01,Yukon,16000
+944,1969-01,Northwest Territories including Nunavut,31000
+945,1969-04,Canada,20950000
+946,1969-04,Newfoundland and Labrador,513000
+947,1969-04,Prince Edward Island,111000
+948,1969-04,Nova Scotia,774000
+949,1969-04,New Brunswick,627000
+950,1969-04,Quebec,5975000
+951,1969-04,Ontario,7362000
+952,1969-04,Manitoba,977000
+953,1969-04,Saskatchewan,959000
+954,1969-04,Alberta,1553000
+955,1969-04,British Columbia,2052000
+956,1969-04,Yukon,16000
+957,1969-04,Northwest Territories including Nunavut,31000
+958,1969-07,Canada,21028000
+959,1969-07,Newfoundland and Labrador,515000
+960,1969-07,Prince Edward Island,111000
+961,1969-07,Nova Scotia,777000
+962,1969-07,New Brunswick,628000
+963,1969-07,Quebec,5987000
+964,1969-07,Ontario,7399000
+965,1969-07,Manitoba,979000
+966,1969-07,Saskatchewan,958000
+967,1969-07,Alberta,1562000
+968,1969-07,British Columbia,2065000
+969,1969-07,Yukon,16000
+970,1969-07,Northwest Territories including Nunavut,31000
+971,1969-10,Canada,21111000
+972,1969-10,Newfoundland and Labrador,516000
+973,1969-10,Prince Edward Island,111000
+974,1969-10,Nova Scotia,778000
+975,1969-10,New Brunswick,628000
+976,1969-10,Quebec,6001000
+977,1969-10,Ontario,7442000
+978,1969-10,Manitoba,979000
+979,1969-10,Saskatchewan,955000
+980,1969-10,Alberta,1571000
+981,1969-10,British Columbia,2082000
+982,1969-10,Yukon,16000
+983,1969-10,Northwest Territories including Nunavut,32000
+984,1970-01,Canada,21182000
+985,1970-01,Newfoundland and Labrador,516000
+986,1970-01,Prince Edward Island,110000
+987,1970-01,Nova Scotia,779000
+988,1970-01,New Brunswick,625000
+989,1970-01,Quebec,6002000
+990,1970-01,Ontario,7488000
+991,1970-01,Manitoba,979000
+992,1970-01,Saskatchewan,948000
+993,1970-01,Alberta,1579000
+994,1970-01,British Columbia,2107000
+995,1970-01,Yukon,17000
+996,1970-01,Northwest Territories including Nunavut,32000
+997,1970-04,Canada,21244000
+998,1970-04,Newfoundland and Labrador,516000
+999,1970-04,Prince Edward Island,110000
+1000,1970-04,Nova Scotia,780000
+1001,1970-04,New Brunswick,626000
+1002,1970-04,Quebec,6005000
+1003,1970-04,Ontario,7528000
+1004,1970-04,Manitoba,981000
+1005,1970-04,Saskatchewan,942000
+1006,1970-04,Alberta,1589000
+1007,1970-04,British Columbia,2118000
+1008,1970-04,Yukon,17000
+1009,1970-04,Northwest Territories including Nunavut,32000
+1010,1970-07,Canada,21324000
+1011,1970-07,Newfoundland and Labrador,518000
+1012,1970-07,Prince Edward Island,110000
+1013,1970-07,Nova Scotia,783000
+1014,1970-07,New Brunswick,628000
+1015,1970-07,Quebec,6015000
+1016,1970-07,Ontario,7566000
+1017,1970-07,Manitoba,983000
+1018,1970-07,Saskatchewan,940000
+1019,1970-07,Alberta,1597000
+1020,1970-07,British Columbia,2134000
+1021,1970-07,Yukon,17000
+1022,1970-07,Northwest Territories including Nunavut,33000
+1023,1970-10,Canada,21400000
+1024,1970-10,Newfoundland and Labrador,519000
+1025,1970-10,Prince Edward Island,111000
+1026,1970-10,Nova Scotia,784000
+1027,1970-10,New Brunswick,628000
+1028,1970-10,Quebec,6021000
+1029,1970-10,Ontario,7613000
+1030,1970-10,Manitoba,982000
+1031,1970-10,Saskatchewan,933000
+1032,1970-10,Alberta,1607000
+1033,1970-10,British Columbia,2152000
+1034,1970-10,Yukon,17000
+1035,1970-10,Northwest Territories including Nunavut,33000
+1036,1971-01,Canada,21465000
+1037,1971-01,Newfoundland and Labrador,519000
+1038,1971-01,Prince Edward Island,111000
+1039,1971-01,Nova Scotia,785000
+1040,1971-01,New Brunswick,630000
+1041,1971-01,Quebec,6017000
+1042,1971-01,Ontario,7656000
+1043,1971-01,Manitoba,984000
+1044,1971-01,Saskatchewan,927000
+1045,1971-01,Alberta,1616000
+1046,1971-01,British Columbia,2168000
+1047,1971-01,Yukon,18000
+1048,1971-01,Northwest Territories including Nunavut,34000
+1049,1971-04,Canada,21523000
+1050,1971-04,Newfoundland and Labrador,521000
+1051,1971-04,Prince Edward Island,111000
+1052,1971-04,Nova Scotia,788000
+1053,1971-04,New Brunswick,633000
+1054,1971-04,Quebec,6022000
+1055,1971-04,Ontario,7683000
+1056,1971-04,Manitoba,986000
+1057,1971-04,Saskatchewan,926000
+1058,1971-04,Alberta,1623000
+1059,1971-04,British Columbia,2178000
+1060,1971-04,Yukon,18000
+1061,1971-04,Northwest Territories including Nunavut,34000
+1062,1971-07,Canada,21962032
+1063,1971-07,Newfoundland and Labrador,530854
+1064,1971-07,Prince Edward Island,112591
+1065,1971-07,Nova Scotia,797294
+1066,1971-07,New Brunswick,642471
+1067,1971-07,Quebec,6137305
+1068,1971-07,Ontario,7849027
+1069,1971-07,Manitoba,998876
+1070,1971-07,Saskatchewan,932038
+1071,1971-07,Alberta,1665717
+1072,1971-07,British Columbia,2240470
+1073,1971-07,Yukon,18991
+1074,1971-07,Northwest Territories including Nunavut,36398
+1075,1971-10,Canada,22039243
+1076,1971-10,Newfoundland and Labrador,534471
+1077,1971-10,Prince Edward Island,112874
+1078,1971-10,Nova Scotia,798804
+1079,1971-10,New Brunswick,644717
+1080,1971-10,Quebec,6148121
+1081,1971-10,Ontario,7882241
+1082,1971-10,Manitoba,998957
+1083,1971-10,Saskatchewan,928061
+1084,1971-10,Alberta,1675638
+1085,1971-10,British Columbia,2258651
+1086,1971-10,Yukon,19462
+1087,1971-10,Northwest Territories including Nunavut,37246
+1088,1972-01,Canada,22092498
+1089,1972-01,Newfoundland and Labrador,535736
+1090,1972-01,Prince Edward Island,112964
+1091,1972-01,Nova Scotia,800513
+1092,1972-01,New Brunswick,646337
+1093,1972-01,Quebec,6152950
+1094,1972-01,Ontario,7906337
+1095,1972-01,Manitoba,998910
+1096,1972-01,Saskatchewan,923123
+1097,1972-01,Alberta,1679985
+1098,1972-01,British Columbia,2278085
+1099,1972-01,Yukon,19723
+1100,1972-01,Northwest Territories including Nunavut,37835
+1101,1972-04,Canada,22148919
+1102,1972-04,Newfoundland and Labrador,537368
+1103,1972-04,Prince Edward Island,113314
+1104,1972-04,Nova Scotia,800542
+1105,1972-04,New Brunswick,648056
+1106,1972-04,Quebec,6165470
+1107,1972-04,Ontario,7927220
+1108,1972-04,Manitoba,1000104
+1109,1972-04,Saskatchewan,921306
+1110,1972-04,Alberta,1686758
+1111,1972-04,British Columbia,2290667
+1112,1972-04,Yukon,19859
+1113,1972-04,Northwest Territories including Nunavut,38255
+1114,1972-07,Canada,22218463
+1115,1972-07,Newfoundland and Labrador,539124
+1116,1972-07,Prince Edward Island,113460
+1117,1972-07,Nova Scotia,802255
+1118,1972-07,New Brunswick,648769
+1119,1972-07,Quebec,6174216
+1120,1972-07,Ontario,7963117
+1121,1972-07,Manitoba,1001652
+1122,1972-07,Saskatchewan,920780
+1123,1972-07,Alberta,1694090
+1124,1972-07,British Columbia,2302086
+1125,1972-07,Yukon,20143
+1126,1972-07,Northwest Territories including Nunavut,38771
+1127,1972-10,Canada,22288499
+1128,1972-10,Newfoundland and Labrador,541472
+1129,1972-10,Prince Edward Island,113960
+1130,1972-10,Nova Scotia,805317
+1131,1972-10,New Brunswick,651182
+1132,1972-10,Quebec,6182065
+1133,1972-10,Ontario,7992037
+1134,1972-10,Manitoba,1001682
+1135,1972-10,Saskatchewan,916659
+1136,1972-10,Alberta,1705519
+1137,1972-10,British Columbia,2318552
+1138,1972-10,Yukon,20570
+1139,1972-10,Northwest Territories including Nunavut,39484
+1140,1973-01,Canada,22347459
+1141,1973-01,Newfoundland and Labrador,542983
+1142,1973-01,Prince Edward Island,114276
+1143,1973-01,Nova Scotia,808614
+1144,1973-01,New Brunswick,652497
+1145,1973-01,Quebec,6189678
+1146,1973-01,Ontario,8013391
+1147,1973-01,Manitoba,1002589
+1148,1973-01,Saskatchewan,913591
+1149,1973-01,Alberta,1710866
+1150,1973-01,British Columbia,2338148
+1151,1973-01,Yukon,20813
+1152,1973-01,Northwest Territories including Nunavut,40013
+1153,1973-04,Canada,22405392
+1154,1973-04,Newfoundland and Labrador,544026
+1155,1973-04,Prince Edward Island,114437
+1156,1973-04,Nova Scotia,809697
+1157,1973-04,New Brunswick,655725
+1158,1973-04,Quebec,6199080
+1159,1973-04,Ontario,8035129
+1160,1973-04,Manitoba,1005005
+1161,1973-04,Saskatchewan,912191
+1162,1973-04,Alberta,1717910
+1163,1973-04,British Columbia,2350837
+1164,1973-04,Yukon,20968
+1165,1973-04,Northwest Territories including Nunavut,40387
+1166,1973-07,Canada,22491777
+1167,1973-07,Newfoundland and Labrador,545561
+1168,1973-07,Prince Edward Island,114620
+1169,1973-07,Nova Scotia,812386
+1170,1973-07,New Brunswick,656720
+1171,1973-07,Quebec,6213149
+1172,1973-07,Ontario,8075547
+1173,1973-07,Manitoba,1007358
+1174,1973-07,Saskatchewan,911937
+1175,1973-07,Alberta,1725327
+1176,1973-07,British Columbia,2367271
+1177,1973-07,Yukon,21148
+1178,1973-07,Northwest Territories including Nunavut,40753
+1179,1973-10,Canada,22570338
+1180,1973-10,Newfoundland and Labrador,546717
+1181,1973-10,Prince Edward Island,114944
+1182,1973-10,Nova Scotia,814351
+1183,1973-10,New Brunswick,658693
+1184,1973-10,Quebec,6227045
+1185,1973-10,Ontario,8107108
+1186,1973-10,Manitoba,1008908
+1187,1973-10,Saskatchewan,908856
+1188,1973-10,Alberta,1735396
+1189,1973-10,British Columbia,2386932
+1190,1973-10,Yukon,20874
+1191,1973-10,Northwest Territories including Nunavut,40514
+1192,1974-01,Canada,22649538
+1193,1974-01,Newfoundland and Labrador,547107
+1194,1974-01,Prince Edward Island,115189
+1195,1974-01,Nova Scotia,816353
+1196,1974-01,New Brunswick,661016
+1197,1974-01,Quebec,6238468
+1198,1974-01,Ontario,8139808
+1199,1974-01,Manitoba,1012378
+1200,1974-01,Saskatchewan,907546
+1201,1974-01,Alberta,1739942
+1202,1974-01,British Columbia,2409913
+1203,1974-01,Yukon,20973
+1204,1974-01,Northwest Territories including Nunavut,40845
+1205,1974-04,Canada,22723274
+1206,1974-04,Newfoundland and Labrador,547385
+1207,1974-04,Prince Edward Island,115566
+1208,1974-04,Nova Scotia,816688
+1209,1974-04,New Brunswick,662560
+1210,1974-04,Quebec,6251741
+1211,1974-04,Ontario,8172562
+1212,1974-04,Manitoba,1015368
+1213,1974-04,Saskatchewan,907748
+1214,1974-04,Alberta,1746975
+1215,1974-04,British Columbia,2424995
+1216,1974-04,Yukon,20895
+1217,1974-04,Northwest Territories including Nunavut,40791
+1218,1974-07,Canada,22807969
+1219,1974-07,Newfoundland and Labrador,549604
+1220,1974-07,Prince Edward Island,115962
+1221,1974-07,Nova Scotia,818751
+1222,1974-07,New Brunswick,664744
+1223,1974-07,Quebec,6268571
+1224,1974-07,Ontario,8204275
+1225,1974-07,Manitoba,1018206
+1226,1974-07,Saskatchewan,908457
+1227,1974-07,Alberta,1754621
+1228,1974-07,British Columbia,2442578
+1229,1974-07,Yukon,21069
+1230,1974-07,Northwest Territories including Nunavut,41131
+1231,1974-10,Canada,22907390
+1232,1974-10,Newfoundland and Labrador,551508
+1233,1974-10,Prince Edward Island,116401
+1234,1974-10,Nova Scotia,821251
+1235,1974-10,New Brunswick,669506
+1236,1974-10,Quebec,6286708
+1237,1974-10,Ontario,8240114
+1238,1974-10,Manitoba,1018954
+1239,1974-10,Saskatchewan,908714
+1240,1974-10,Alberta,1769880
+1241,1974-10,British Columbia,2461396
+1242,1974-10,Yukon,21335
+1243,1974-10,Northwest Territories including Nunavut,41623
+1244,1975-01,Canada,22979190
+1245,1975-01,Newfoundland and Labrador,552812
+1246,1975-01,Prince Edward Island,117031
+1247,1975-01,Nova Scotia,823084
+1248,1975-01,New Brunswick,671135
+1249,1975-01,Quebec,6299783
+1250,1975-01,Ontario,8260161
+1251,1975-01,Manitoba,1019529
+1252,1975-01,Saskatchewan,910276
+1253,1975-01,Alberta,1782575
+1254,1975-01,British Columbia,2479085
+1255,1975-01,Yukon,21580
+1256,1975-01,Northwest Territories including Nunavut,42139
+1257,1975-04,Canada,23048990
+1258,1975-04,Newfoundland and Labrador,554166
+1259,1975-04,Prince Edward Island,117316
+1260,1975-04,Nova Scotia,824791
+1261,1975-04,New Brunswick,673918
+1262,1975-04,Quebec,6310999
+1263,1975-04,Ontario,8284503
+1264,1975-04,Manitoba,1021824
+1265,1975-04,Saskatchewan,913118
+1266,1975-04,Alberta,1795097
+1267,1975-04,British Columbia,2489116
+1268,1975-04,Yukon,21692
+1269,1975-04,Northwest Territories including Nunavut,42450
+1270,1975-07,Canada,23143275
+1271,1975-07,Newfoundland and Labrador,556496
+1272,1975-07,Prince Edward Island,117724
+1273,1975-07,Nova Scotia,826549
+1274,1975-07,New Brunswick,677008
+1275,1975-07,Quebec,6330303
+1276,1975-07,Ontario,8319795
+1277,1975-07,Manitoba,1024975
+1278,1975-07,Saskatchewan,917415
+1279,1975-07,Alberta,1808689
+1280,1975-07,British Columbia,2499564
+1281,1975-07,Yukon,21908
+1282,1975-07,Northwest Territories including Nunavut,42849
+1283,1975-10,Canada,23240585
+1284,1975-10,Newfoundland and Labrador,558900
+1285,1975-10,Prince Edward Island,118009
+1286,1975-10,Nova Scotia,830351
+1287,1975-10,New Brunswick,682086
+1288,1975-10,Quebec,6348244
+1289,1975-10,Ontario,8352911
+1290,1975-10,Manitoba,1026093
+1291,1975-10,Saskatchewan,922468
+1292,1975-10,Alberta,1825051
+1293,1975-10,British Columbia,2510751
+1294,1975-10,Yukon,22214
+1295,1975-10,Northwest Territories including Nunavut,43507
+1296,1976-01,Canada,23304197
+1297,1976-01,Newfoundland and Labrador,560024
+1298,1976-01,Prince Edward Island,118264
+1299,1976-01,Nova Scotia,832765
+1300,1976-01,New Brunswick,685155
+1301,1976-01,Quebec,6362125
+1302,1976-01,Ontario,8366498
+1303,1976-01,Manitoba,1028134
+1304,1976-01,Saskatchewan,925570
+1305,1976-01,Alberta,1839191
+1306,1976-01,British Columbia,2520425
+1307,1976-01,Yukon,22259
+1308,1976-01,Northwest Territories including Nunavut,43787
+1309,1976-04,Canada,23369845
+1310,1976-04,Newfoundland and Labrador,560856
+1311,1976-04,Prince Edward Island,118298
+1312,1976-04,Nova Scotia,833741
+1313,1976-04,New Brunswick,687521
+1314,1976-04,Quebec,6377976
+1315,1976-04,Ontario,8387985
+1316,1976-04,Manitoba,1030093
+1317,1976-04,Saskatchewan,928697
+1318,1976-04,Alberta,1852651
+1319,1976-04,British Columbia,2525812
+1320,1976-04,Yukon,22263
+1321,1976-04,Northwest Territories including Nunavut,43952
+1322,1976-07,Canada,23449808
+1323,1976-07,Newfoundland and Labrador,562639
+1324,1976-07,Prince Edward Island,118648
+1325,1976-07,Nova Scotia,835166
+1326,1976-07,New Brunswick,689494
+1327,1976-07,Quebec,6396761
+1328,1976-07,Ontario,8413779
+1329,1976-07,Manitoba,1031758
+1330,1976-07,Saskatchewan,931612
+1331,1976-07,Alberta,1869287
+1332,1976-07,British Columbia,2533899
+1333,1976-07,Yukon,22441
+1334,1976-07,Northwest Territories including Nunavut,44324
+1335,1976-10,Canada,23533565
+1336,1976-10,Newfoundland and Labrador,563591
+1337,1976-10,Prince Edward Island,118925
+1338,1976-10,Nova Scotia,837578
+1339,1976-10,New Brunswick,690936
+1340,1976-10,Quebec,6404158
+1341,1976-10,Ontario,8438765
+1342,1976-10,Manitoba,1033171
+1343,1976-10,Saskatchewan,936235
+1344,1976-10,Alberta,1896466
+1345,1976-10,British Columbia,2546813
+1346,1976-10,Yukon,22509
+1347,1976-10,Northwest Territories including Nunavut,44418
+1348,1977-01,Canada,23591713
+1349,1977-01,Newfoundland and Labrador,563387
+1350,1977-01,Prince Edward Island,119121
+1351,1977-01,Nova Scotia,838385
+1352,1977-01,New Brunswick,691810
+1353,1977-01,Quebec,6412575
+1354,1977-01,Ontario,8458617
+1355,1977-01,Manitoba,1034113
+1356,1977-01,Saskatchewan,938455
+1357,1977-01,Alberta,1914570
+1358,1977-01,British Columbia,2554051
+1359,1977-01,Yukon,22262
+1360,1977-01,Northwest Territories including Nunavut,44367
+1361,1977-04,Canada,23656739
+1362,1977-04,Newfoundland and Labrador,564217
+1363,1977-04,Prince Edward Island,119297
+1364,1977-04,Nova Scotia,839315
+1365,1977-04,New Brunswick,693580
+1366,1977-04,Quebec,6423152
+1367,1977-04,Ontario,8481322
+1368,1977-04,Manitoba,1035920
+1369,1977-04,Saskatchewan,941297
+1370,1977-04,Alberta,1931214
+1371,1977-04,British Columbia,2560711
+1372,1977-04,Yukon,22308
+1373,1977-04,Northwest Territories including Nunavut,44406
+1374,1977-07,Canada,23725843
+1375,1977-07,Newfoundland and Labrador,565348
+1376,1977-07,Prince Edward Island,119902
+1377,1977-07,Nova Scotia,840028
+1378,1977-07,New Brunswick,695843
+1379,1977-07,Quebec,6433133
+1380,1977-07,Ontario,8504080
+1381,1977-07,Manitoba,1037369
+1382,1977-07,Saskatchewan,944621
+1383,1977-07,Alberta,1948263
+1384,1977-07,British Columbia,2570315
+1385,1977-07,Yukon,22462
+1386,1977-07,Northwest Territories including Nunavut,44479
+1387,1977-10,Canada,23801445
+1388,1977-10,Newfoundland and Labrador,566116
+1389,1977-10,Prince Edward Island,120459
+1390,1977-10,Nova Scotia,842051
+1391,1977-10,New Brunswick,696378
+1392,1977-10,Quebec,6431509
+1393,1977-10,Ontario,8530102
+1394,1977-10,Manitoba,1038470
+1395,1977-10,Saskatchewan,947400
+1396,1977-10,Alberta,1974721
+1397,1977-10,British Columbia,2586668
+1398,1977-10,Yukon,22747
+1399,1977-10,Northwest Territories including Nunavut,44824
+1400,1978-01,Canada,23849503
+1401,1978-01,Newfoundland and Labrador,565981
+1402,1978-01,Prince Edward Island,120764
+1403,1978-01,Nova Scotia,842961
+1404,1978-01,New Brunswick,696872
+1405,1978-01,Quebec,6432019
+1406,1978-01,Ontario,8548453
+1407,1978-01,Manitoba,1038859
+1408,1978-01,Saskatchewan,948753
+1409,1978-01,Alberta,1991454
+1410,1978-01,British Columbia,2595858
+1411,1978-01,Yukon,22668
+1412,1978-01,Northwest Territories including Nunavut,44861
+1413,1978-04,Canada,23903687
+1414,1978-04,Newfoundland and Labrador,566671
+1415,1978-04,Prince Edward Island,121014
+1416,1978-04,Nova Scotia,843663
+1417,1978-04,New Brunswick,697851
+1418,1978-04,Quebec,6436705
+1419,1978-04,Ontario,8569298
+1420,1978-04,Manitoba,1040028
+1421,1978-04,Saskatchewan,950365
+1422,1978-04,Alberta,2006745
+1423,1978-04,British Columbia,2603502
+1424,1978-04,Yukon,22834
+1425,1978-04,Northwest Territories including Nunavut,45011
+1426,1978-07,Canada,23963203
+1427,1978-07,Newfoundland and Labrador,567639
+1428,1978-07,Prince Edward Island,121684
+1429,1978-07,Nova Scotia,844628
+1430,1978-07,New Brunswick,699514
+1431,1978-07,Quebec,6440459
+1432,1978-07,Ontario,8590144
+1433,1978-07,Manitoba,1040881
+1434,1978-07,Saskatchewan,952430
+1435,1978-07,Alberta,2022241
+1436,1978-07,British Columbia,2615162
+1437,1978-07,Yukon,23157
+1438,1978-07,Northwest Territories including Nunavut,45264
+1439,1978-10,Canada,24025447
+1440,1978-10,Newfoundland and Labrador,568417
+1441,1978-10,Prince Edward Island,121952
+1442,1978-10,Nova Scotia,846612
+1443,1978-10,New Brunswick,699937
+1444,1978-10,Quebec,6442774
+1445,1978-10,Ontario,8604263
+1446,1978-10,Manitoba,1038528
+1447,1978-10,Saskatchewan,954473
+1448,1978-10,Alberta,2047919
+1449,1978-10,British Columbia,2632020
+1450,1978-10,Yukon,23120
+1451,1978-10,Northwest Territories including Nunavut,45432
+1452,1979-01,Canada,24071889
+1453,1979-01,Newfoundland and Labrador,568329
+1454,1979-01,Prince Edward Island,122104
+1455,1979-01,Nova Scotia,847511
+1456,1979-01,New Brunswick,700237
+1457,1979-01,Quebec,6446529
+1458,1979-01,Ontario,8619239
+1459,1979-01,Manitoba,1037449
+1460,1979-01,Saskatchewan,955552
+1461,1979-01,Alberta,2064776
+1462,1979-01,British Columbia,2641872
+1463,1979-01,Yukon,22845
+1464,1979-01,Northwest Territories including Nunavut,45446
+1465,1979-04,Canada,24128180
+1466,1979-04,Newfoundland and Labrador,569012
+1467,1979-04,Prince Edward Island,122277
+1468,1979-04,Nova Scotia,848272
+1469,1979-04,New Brunswick,701261
+1470,1979-04,Quebec,6455295
+1471,1979-04,Ontario,8638099
+1472,1979-04,Manitoba,1037417
+1473,1979-04,Saskatchewan,957375
+1474,1979-04,Alberta,2079840
+1475,1979-04,British Columbia,2650940
+1476,1979-04,Yukon,22845
+1477,1979-04,Northwest Territories including Nunavut,45547
+1478,1979-07,Canada,24201544
+1479,1979-07,Newfoundland and Labrador,570075
+1480,1979-07,Prince Edward Island,122885
+1481,1979-07,Nova Scotia,849396
+1482,1979-07,New Brunswick,703158
+1483,1979-07,Quebec,6465996
+1484,1979-07,Ontario,8662088
+1485,1979-07,Manitoba,1037272
+1486,1979-07,Saskatchewan,959735
+1487,1979-07,Alberta,2096966
+1488,1979-07,British Columbia,2665238
+1489,1979-07,Yukon,22972
+1490,1979-07,Northwest Territories including Nunavut,45763
+1491,1979-10,Canada,24279044
+1492,1979-10,Newfoundland and Labrador,570976
+1493,1979-10,Prince Edward Island,123002
+1494,1979-10,Nova Scotia,850336
+1495,1979-10,New Brunswick,703038
+1496,1979-10,Quebec,6472095
+1497,1979-10,Ontario,8674941
+1498,1979-10,Manitoba,1034189
+1499,1979-10,Saskatchewan,961723
+1500,1979-10,Alberta,2128647
+1501,1979-10,British Columbia,2691121
+1502,1979-10,Yukon,23036
+1503,1979-10,Northwest Territories including Nunavut,45940
+1504,1980-01,Canada,24345365
+1505,1980-01,Newfoundland and Labrador,570899
+1506,1980-01,Prince Edward Island,123109
+1507,1980-01,Nova Scotia,850915
+1508,1980-01,New Brunswick,703538
+1509,1980-01,Quebec,6480428
+1510,1980-01,Ontario,8693157
+1511,1980-01,Manitoba,1033557
+1512,1980-01,Saskatchewan,963231
+1513,1980-01,Alberta,2149996
+1514,1980-01,British Columbia,2707690
+1515,1980-01,Yukon,22834
+1516,1980-01,Northwest Territories including Nunavut,46011
+1517,1980-04,Canada,24418295
+1518,1980-04,Newfoundland and Labrador,571554
+1519,1980-04,Prince Edward Island,123275
+1520,1980-04,Nova Scotia,851541
+1521,1980-04,New Brunswick,704475
+1522,1980-04,Quebec,6492192
+1523,1980-04,Ontario,8715218
+1524,1980-04,Manitoba,1033985
+1525,1980-04,Saskatchewan,965215
+1526,1980-04,Alberta,2168863
+1527,1980-04,British Columbia,2722921
+1528,1980-04,Yukon,22876
+1529,1980-04,Northwest Territories including Nunavut,46180
+1530,1980-07,Canada,24515667
+1531,1980-07,Newfoundland and Labrador,572759
+1532,1980-07,Prince Edward Island,123735
+1533,1980-07,Nova Scotia,852659
+1534,1980-07,New Brunswick,706219
+1535,1980-07,Quebec,6505997
+1536,1980-07,Ontario,8746013
+1537,1980-07,Manitoba,1034435
+1538,1980-07,Saskatchewan,967548
+1539,1980-07,Alberta,2191029
+1540,1980-07,British Columbia,2745861
+1541,1980-07,Yukon,23019
+1542,1980-07,Northwest Territories including Nunavut,46393
+1543,1980-10,Canada,24603534
+1544,1980-10,Newfoundland and Labrador,573582
+1545,1980-10,Prince Edward Island,123445
+1546,1980-10,Nova Scotia,853389
+1547,1980-10,New Brunswick,705237
+1548,1980-10,Quebec,6515323
+1549,1980-10,Ontario,8757388
+1550,1980-10,Manitoba,1034017
+1551,1980-10,Saskatchewan,970183
+1552,1980-10,Alberta,2227159
+1553,1980-10,British Columbia,2773680
+1554,1980-10,Yukon,23380
+1555,1980-10,Northwest Territories including Nunavut,46751
+1556,1981-01,Canada,24665355
+1557,1981-01,Newfoundland and Labrador,573420
+1558,1981-01,Prince Edward Island,123315
+1559,1981-01,Nova Scotia,853673
+1560,1981-01,New Brunswick,704763
+1561,1981-01,Quebec,6523258
+1562,1981-01,Ontario,8770591
+1563,1981-01,Manitoba,1033968
+1564,1981-01,Saskatchewan,971544
+1565,1981-01,Alberta,2249907
+1566,1981-01,British Columbia,2790754
+1567,1981-01,Yukon,23311
+1568,1981-01,Northwest Territories including Nunavut,46851
+1569,1981-04,Canada,24732826
+1570,1981-04,Newfoundland and Labrador,574199
+1571,1981-04,Prince Edward Island,123285
+1572,1981-04,Nova Scotia,854024
+1573,1981-04,New Brunswick,705241
+1574,1981-04,Quebec,6534508
+1575,1981-04,Ontario,8787156
+1576,1981-04,Manitoba,1034805
+1577,1981-04,Saskatchewan,973372
+1578,1981-04,Alberta,2270227
+1579,1981-04,British Columbia,2805394
+1580,1981-04,Yukon,23517
+1581,1981-04,Northwest Territories including Nunavut,47098
+1582,1981-07,Canada,24819915
+1583,1981-07,Newfoundland and Labrador,575302
+1584,1981-07,Prince Edward Island,123551
+1585,1981-07,Nova Scotia,854871
+1586,1981-07,New Brunswick,706438
+1587,1981-07,Quebec,6547207
+1588,1981-07,Ontario,8812286
+1589,1981-07,Manitoba,1035545
+1590,1981-07,Saskatchewan,975759
+1591,1981-07,Alberta,2291104
+1592,1981-07,British Columbia,2826558
+1593,1981-07,Yukon,23880
+1594,1981-07,Northwest Territories including Nunavut,47414
+1595,1981-10,Canada,24920120
+1596,1981-10,Newfoundland and Labrador,575276
+1597,1981-10,Prince Edward Island,123496
+1598,1981-10,Nova Scotia,857038
+1599,1981-10,New Brunswick,706008
+1600,1981-10,Quebec,6558545
+1601,1981-10,Ontario,8846005
+1602,1981-10,Manitoba,1037183
+1603,1981-10,Saskatchewan,979469
+1604,1981-10,Alberta,2319715
+1605,1981-10,British Columbia,2845212
+1606,1981-10,Yukon,24120
+1607,1981-10,Northwest Territories including Nunavut,48053
+1608,1982-01,Canada,24979229
+1609,1982-01,Newfoundland and Labrador,573343
+1610,1982-01,Prince Edward Island,123335
+1611,1982-01,Nova Scotia,857469
+1612,1982-01,New Brunswick,705608
+1613,1982-01,Quebec,6565745
+1614,1982-01,Ontario,8865774
+1615,1982-01,Manitoba,1039300
+1616,1982-01,Saskatchewan,981559
+1617,1982-01,Alberta,2337458
+1618,1982-01,British Columbia,2857268
+1619,1982-01,Yukon,24302
+1620,1982-01,Northwest Territories including Nunavut,48068
+1621,1982-04,Canada,25042069
+1622,1982-04,Newfoundland and Labrador,573292
+1623,1982-04,Prince Edward Island,123225
+1624,1982-04,Nova Scotia,857592
+1625,1982-04,New Brunswick,706179
+1626,1982-04,Quebec,6572316
+1627,1982-04,Ontario,8892646
+1628,1982-04,Manitoba,1042251
+1629,1982-04,Saskatchewan,983744
+1630,1982-04,Alberta,2352042
+1631,1982-04,British Columbia,2865557
+1632,1982-04,Yukon,24571
+1633,1982-04,Northwest Territories including Nunavut,48654
+1634,1982-07,Canada,25116942
+1635,1982-07,Newfoundland and Labrador,573795
+1636,1982-07,Prince Edward Island,123588
+1637,1982-07,Nova Scotia,859038
+1638,1982-07,New Brunswick,707457
+1639,1982-07,Quebec,6580631
+1640,1982-07,Ontario,8920288
+1641,1982-07,Manitoba,1045224
+1642,1982-07,Saskatchewan,986582
+1643,1982-07,Alberta,2369827
+1644,1982-07,British Columbia,2876513
+1645,1982-07,Yukon,24668
+1646,1982-07,Northwest Territories including Nunavut,49331
+1647,1982-10,Canada,25193538
+1648,1982-10,Newfoundland and Labrador,575898
+1649,1982-10,Prince Edward Island,123919
+1650,1982-10,Nova Scotia,862255
+1651,1982-10,New Brunswick,709894
+1652,1982-10,Quebec,6584666
+1653,1982-10,Ontario,8957042
+1654,1982-10,Manitoba,1049816
+1655,1982-10,Saskatchewan,991621
+1656,1982-10,Alberta,2378405
+1657,1982-10,British Columbia,2885875
+1658,1982-10,Yukon,24320
+1659,1982-10,Northwest Territories including Nunavut,49827
+1660,1983-01,Canada,25242830
+1661,1983-01,Newfoundland and Labrador,576813
+1662,1983-01,Prince Edward Island,124181
+1663,1983-01,Nova Scotia,864117
+1664,1983-01,New Brunswick,711021
+1665,1983-01,Quebec,6588636
+1666,1983-01,Ontario,8982933
+1667,1983-01,Manitoba,1052538
+1668,1983-01,Saskatchewan,993810
+1669,1983-01,Alberta,2383354
+1670,1983-01,British Columbia,2891441
+1671,1983-01,Yukon,23838
+1672,1983-01,Northwest Territories including Nunavut,50148
+1673,1983-04,Canada,25300372
+1674,1983-04,Newfoundland and Labrador,577523
+1675,1983-04,Prince Edward Island,124479
+1676,1983-04,Nova Scotia,865796
+1677,1983-04,New Brunswick,712338
+1678,1983-04,Quebec,6595846
+1679,1983-04,Ontario,9010994
+1680,1983-04,Manitoba,1055586
+1681,1983-04,Saskatchewan,997100
+1682,1983-04,Alberta,2388090
+1683,1983-04,British Columbia,2898574
+1684,1983-04,Yukon,23702
+1685,1983-04,Northwest Territories including Nunavut,50344
+1686,1983-07,Canada,25366451
+1687,1983-07,Newfoundland and Labrador,579164
+1688,1983-07,Prince Edward Island,125102
+1689,1983-07,Nova Scotia,868289
+1690,1983-07,New Brunswick,714842
+1691,1983-07,Quebec,6602976
+1692,1983-07,Ontario,9039564
+1693,1983-07,Manitoba,1059752
+1694,1983-07,Saskatchewan,1001249
+1695,1983-07,Alberta,2393587
+1696,1983-07,British Columbia,2907502
+1697,1983-07,Yukon,23664
+1698,1983-07,Northwest Territories including Nunavut,50760
+1699,1983-10,Canada,25434150
+1700,1983-10,Newfoundland and Labrador,579603
+1701,1983-10,Prince Edward Island,125634
+1702,1983-10,Nova Scotia,872143
+1703,1983-10,New Brunswick,716531
+1704,1983-10,Quebec,6608417
+1705,1983-10,Ontario,9074145
+1706,1983-10,Manitoba,1063952
+1707,1983-10,Saskatchewan,1005175
+1708,1983-10,Alberta,2394239
+1709,1983-10,British Columbia,2919166
+1710,1983-10,Yukon,23760
+1711,1983-10,Northwest Territories including Nunavut,51385
+1712,1984-01,Canada,25482358
+1713,1984-01,Newfoundland and Labrador,579558
+1714,1984-01,Prince Edward Island,125906
+1715,1984-01,Nova Scotia,874076
+1716,1984-01,New Brunswick,717434
+1717,1984-01,Quebec,6613628
+1718,1984-01,Ontario,9100590
+1719,1984-01,Manitoba,1066222
+1720,1984-01,Saskatchewan,1007484
+1721,1984-01,Alberta,2394892
+1722,1984-01,British Columbia,2927258
+1723,1984-01,Yukon,23544
+1724,1984-01,Northwest Territories including Nunavut,51766
+1725,1984-04,Canada,25539861
+1726,1984-04,Newfoundland and Labrador,579810
+1727,1984-04,Prince Edward Island,126184
+1728,1984-04,Nova Scotia,875922
+1729,1984-04,New Brunswick,718627
+1730,1984-04,Quebec,6621748
+1731,1984-04,Ontario,9129833
+1732,1984-04,Manitoba,1069201
+1733,1984-04,Saskatchewan,1010840
+1734,1984-04,Alberta,2396706
+1735,1984-04,British Columbia,2935384
+1736,1984-04,Yukon,23603
+1737,1984-04,Northwest Territories including Nunavut,52003
+1738,1984-07,Canada,25607053
+1739,1984-07,Newfoundland and Labrador,580065
+1740,1984-07,Prince Edward Island,126563
+1741,1984-07,Nova Scotia,877471
+1742,1984-07,New Brunswick,720488
+1743,1984-07,Quebec,6631220
+1744,1984-07,Ontario,9167484
+1745,1984-07,Manitoba,1071810
+1746,1984-07,Saskatchewan,1014615
+1747,1984-07,Alberta,2393907
+1748,1984-07,British Columbia,2947181
+1749,1984-07,Yukon,23921
+1750,1984-07,Northwest Territories including Nunavut,52328
+1751,1984-10,Canada,25677668
+1752,1984-10,Newfoundland and Labrador,579356
+1753,1984-10,Prince Edward Island,126877
+1754,1984-10,Nova Scotia,881323
+1755,1984-10,New Brunswick,721509
+1756,1984-10,Quebec,6640276
+1757,1984-10,Ontario,9210346
+1758,1984-10,Manitoba,1075088
+1759,1984-10,Saskatchewan,1018785
+1760,1984-10,Alberta,2390913
+1761,1984-10,British Columbia,2956332
+1762,1984-10,Yukon,24168
+1763,1984-10,Northwest Territories including Nunavut,52695
+1764,1985-01,Canada,25721170
+1765,1985-01,Newfoundland and Labrador,579043
+1766,1985-01,Prince Edward Island,127330
+1767,1985-01,Nova Scotia,883012
+1768,1985-01,New Brunswick,721932
+1769,1985-01,Quebec,6645778
+1770,1985-01,Ontario,9230294
+1771,1985-01,Manitoba,1078327
+1772,1985-01,Saskatchewan,1020040
+1773,1985-01,Alberta,2395813
+1774,1985-01,British Columbia,2962108
+1775,1985-01,Yukon,24156
+1776,1985-01,Northwest Territories including Nunavut,53337
+1777,1985-04,Canada,25774717
+1778,1985-04,Newfoundland and Labrador,579320
+1779,1985-04,Prince Edward Island,127486
+1780,1985-04,Nova Scotia,884525
+1781,1985-04,New Brunswick,722406
+1782,1985-04,Quebec,6654729
+1783,1985-04,Ontario,9256175
+1784,1985-04,Manitoba,1081013
+1785,1985-04,Saskatchewan,1021914
+1786,1985-04,Alberta,2401499
+1787,1985-04,British Columbia,2967584
+1788,1985-04,Yukon,24245
+1789,1985-04,Northwest Territories including Nunavut,53821
+1790,1985-07,Canada,25842116
+1791,1985-07,Newfoundland and Labrador,579275
+1792,1985-07,Prince Edward Island,127619
+1793,1985-07,Nova Scotia,885848
+1794,1985-07,New Brunswick,723287
+1795,1985-07,Quebec,6665802
+1796,1985-07,Ontario,9294657
+1797,1985-07,Manitoba,1082495
+1798,1985-07,Saskatchewan,1024928
+1799,1985-07,Alberta,2404490
+1800,1985-07,British Columbia,2975131
+1801,1985-07,Yukon,24375
+1802,1985-07,Northwest Territories including Nunavut,54209
+1803,1985-10,Canada,25914797
+1804,1985-10,Newfoundland and Labrador,577784
+1805,1985-10,Prince Edward Island,127864
+1806,1985-10,Nova Scotia,887408
+1807,1985-10,New Brunswick,723955
+1808,1985-10,Quebec,6676959
+1809,1985-10,Ontario,9338435
+1810,1985-10,Manitoba,1085016
+1811,1985-10,Saskatchewan,1027418
+1812,1985-10,Alberta,2407001
+1813,1985-10,British Columbia,2984237
+1814,1985-10,Yukon,24458
+1815,1985-10,Northwest Territories including Nunavut,54262
+1816,1986-01,Canada,25962414
+1817,1986-01,Newfoundland and Labrador,577248
+1818,1986-01,Prince Edward Island,128256
+1819,1986-01,Nova Scotia,887435
+1820,1986-01,New Brunswick,724277
+1821,1986-01,Quebec,6684699
+1822,1986-01,Ontario,9362036
+1823,1986-01,Manitoba,1087851
+1824,1986-01,Saskatchewan,1027137
+1825,1986-01,Alberta,2415590
+1826,1986-01,British Columbia,2988964
+1827,1986-01,Yukon,24359
+1828,1986-01,Northwest Territories including Nunavut,54562
+1829,1986-04,Canada,26019615
+1830,1986-04,Newfoundland and Labrador,577105
+1831,1986-04,Prince Edward Island,128403
+1832,1986-04,Nova Scotia,888157
+1833,1986-04,New Brunswick,724432
+1834,1986-04,Quebec,6693133
+1835,1986-04,Ontario,9391784
+1836,1986-04,Manitoba,1090433
+1837,1986-04,Saskatchewan,1027812
+1838,1986-04,Alberta,2424950
+1839,1986-04,British Columbia,2994267
+1840,1986-04,Yukon,24364
+1841,1986-04,Northwest Territories including Nunavut,54775
+1842,1986-07,Canada,26100278
+1843,1986-07,Newfoundland and Labrador,576306
+1844,1986-07,Prince Edward Island,128436
+1845,1986-07,Nova Scotia,889087
+1846,1986-07,New Brunswick,725019
+1847,1986-07,Quebec,6708170
+1848,1986-07,Ontario,9437359
+1849,1986-07,Manitoba,1091552
+1850,1986-07,Saskatchewan,1028717
+1851,1986-07,Alberta,2432930
+1852,1986-07,British Columbia,3003621
+1853,1986-07,Yukon,24430
+1854,1986-07,Northwest Territories including Nunavut,54651
+1855,1986-10,Canada,26187639
+1856,1986-10,Newfoundland and Labrador,575396
+1857,1986-10,Prince Edward Island,128281
+1858,1986-10,Nova Scotia,891078
+1859,1986-10,New Brunswick,725304
+1860,1986-10,Quebec,6727250
+1861,1986-10,Ontario,9493289
+1862,1986-10,Manitoba,1092636
+1863,1986-10,Saskatchewan,1029554
+1864,1986-10,Alberta,2429949
+1865,1986-10,British Columbia,3015876
+1866,1986-10,Yukon,24782
+1867,1986-10,Northwest Territories including Nunavut,54244
+1868,1987-01,Canada,26256140
+1869,1987-01,Newfoundland and Labrador,575586
+1870,1987-01,Prince Edward Island,128429
+1871,1987-01,Nova Scotia,891424
+1872,1987-01,New Brunswick,725368
+1873,1987-01,Quebec,6745101
+1874,1987-01,Ontario,9531478
+1875,1987-01,Manitoba,1094659
+1876,1987-01,Saskatchewan,1029639
+1877,1987-01,Alberta,2432958
+1878,1987-01,British Columbia,3021900
+1879,1987-01,Yukon,25125
+1880,1987-01,Northwest Territories including Nunavut,54473
+1881,1987-04,Canada,26346370
+1882,1987-04,Newfoundland and Labrador,575802
+1883,1987-04,Prince Edward Island,128645
+1884,1987-04,Nova Scotia,891908
+1885,1987-04,New Brunswick,726566
+1886,1987-04,Quebec,6765059
+1887,1987-04,Ontario,9577947
+1888,1987-04,Manitoba,1097076
+1889,1987-04,Saskatchewan,1031336
+1890,1987-04,Alberta,2439074
+1891,1987-04,British Columbia,3032807
+1892,1987-04,Yukon,25386
+1893,1987-04,Northwest Territories including Nunavut,54764
+1894,1987-07,Canada,26446601
+1895,1987-07,Newfoundland and Labrador,575242
+1896,1987-07,Prince Edward Island,128641
+1897,1987-07,Nova Scotia,893606
+1898,1987-07,New Brunswick,727768
+1899,1987-07,Quebec,6781984
+1900,1987-07,Ontario,9637945
+1901,1987-07,Manitoba,1098373
+1902,1987-07,Saskatchewan,1032799
+1903,1987-07,Alberta,2440877
+1904,1987-07,British Columbia,3048651
+1905,1987-07,Yukon,25706
+1906,1987-07,Northwest Territories including Nunavut,55009
+1907,1987-10,Canada,26542370
+1908,1987-10,Newfoundland and Labrador,574094
+1909,1987-10,Prince Edward Island,128758
+1910,1987-10,Nova Scotia,894585
+1911,1987-10,New Brunswick,728100
+1912,1987-10,Quebec,6796640
+1913,1987-10,Ontario,9702789
+1914,1987-10,Manitoba,1098195
+1915,1987-10,Saskatchewan,1031995
+1916,1987-10,Alberta,2437537
+1917,1987-10,British Columbia,3068995
+1918,1987-10,Yukon,25808
+1919,1987-10,Northwest Territories including Nunavut,54874
+1920,1988-01,Canada,26602328
+1921,1988-01,Newfoundland and Labrador,574543
+1922,1988-01,Prince Edward Island,129152
+1923,1988-01,Nova Scotia,894600
+1924,1988-01,New Brunswick,728401
+1925,1988-01,Quebec,6805203
+1926,1988-01,Ontario,9735171
+1927,1988-01,Manitoba,1099782
+1928,1988-01,Saskatchewan,1029527
+1929,1988-01,Alberta,2443396
+1930,1988-01,British Columbia,3081368
+1931,1988-01,Yukon,25902
+1932,1988-01,Northwest Territories including Nunavut,55283
+1933,1988-04,Canada,26679165
+1934,1988-04,Newfoundland and Labrador,574912
+1935,1988-04,Prince Edward Island,129242
+1936,1988-04,Nova Scotia,895638
+1937,1988-04,New Brunswick,729079
+1938,1988-04,Quebec,6818248
+1939,1988-04,Ontario,9774964
+1940,1988-04,Manitoba,1101404
+1941,1988-04,Saskatchewan,1028590
+1942,1988-04,Alberta,2450646
+1943,1988-04,British Columbia,3094274
+1944,1988-04,Yukon,26335
+1945,1988-04,Northwest Territories including Nunavut,55833
+1946,1988-07,Canada,26791747
+1947,1988-07,Newfoundland and Labrador,574982
+1948,1988-07,Prince Edward Island,129289
+1949,1988-07,Nova Scotia,897216
+1950,1988-07,New Brunswick,730349
+1951,1988-07,Quebec,6837077
+1952,1988-07,Ontario,9838620
+1953,1988-07,Manitoba,1102152
+1954,1988-07,Saskatchewan,1028225
+1955,1988-07,Alberta,2456614
+1956,1988-07,British Columbia,3114761
+1957,1988-07,Yukon,26653
+1958,1988-07,Northwest Territories including Nunavut,55809
+1959,1988-10,Canada,26932655
+1960,1988-10,Newfoundland and Labrador,574645
+1961,1988-10,Prince Edward Island,129327
+1962,1988-10,Nova Scotia,899462
+1963,1988-10,New Brunswick,731671
+1964,1988-10,Quebec,6864044
+1965,1988-10,Ontario,9917210
+1966,1988-10,Manitoba,1101074
+1967,1988-10,Saskatchewan,1025453
+1968,1988-10,Alberta,2465242
+1969,1988-10,British Columbia,3141854
+1970,1988-10,Yukon,26582
+1971,1988-10,Northwest Territories including Nunavut,56091
+1972,1989-01,Canada,27032356
+1973,1989-01,Newfoundland and Labrador,575626
+1974,1989-01,Prince Edward Island,129984
+1975,1989-01,Nova Scotia,900270
+1976,1989-01,New Brunswick,732462
+1977,1989-01,Quebec,6882602
+1978,1989-01,Ontario,9969308
+1979,1989-01,Manitoba,1101544
+1980,1989-01,Saskatchewan,1021497
+1981,1989-01,Alberta,2477533
+1982,1989-01,British Columbia,3158092
+1983,1989-01,Yukon,26898
+1984,1989-01,Northwest Territories including Nunavut,56540
+1985,1989-04,Canada,27147776
+1986,1989-04,Newfoundland and Labrador,576458
+1987,1989-04,Prince Edward Island,130192
+1988,1989-04,Nova Scotia,901341
+1989,1989-04,New Brunswick,733872
+1990,1989-04,Quebec,6903228
+1991,1989-04,Ontario,10031922
+1992,1989-04,Manitoba,1102669
+1993,1989-04,Saskatchewan,1020302
+1994,1989-04,Alberta,2489032
+1995,1989-04,British Columbia,3174623
+1996,1989-04,Yukon,27053
+1997,1989-04,Northwest Territories including Nunavut,57084
+1998,1989-07,Canada,27276781
+1999,1989-07,Newfoundland and Labrador,576551
+2000,1989-07,Prince Edward Island,130153
+2001,1989-07,Nova Scotia,903841
+2002,1989-07,New Brunswick,735129
+2003,1989-07,Quebec,6925128
+2004,1989-07,Ontario,10103305
+2005,1989-07,Manitoba,1103792
+2006,1989-07,Saskatchewan,1019439
+2007,1989-07,Alberta,2498325
+2008,1989-07,British Columbia,3196725
+2009,1989-07,Yukon,27167
+2010,1989-07,Northwest Territories including Nunavut,57226
+2011,1989-10,Canada,27402695
+2012,1989-10,Newfoundland and Labrador,575594
+2013,1989-10,Prince Edward Island,129900
+2014,1989-10,Nova Scotia,906644
+2015,1989-10,New Brunswick,736352
+2016,1989-10,Quebec,6946945
+2017,1989-10,Ontario,10167642
+2018,1989-10,Manitoba,1102522
+2019,1989-10,Saskatchewan,1016043
+2020,1989-10,Alberta,2507203
+2021,1989-10,British Columbia,3229220
+2022,1989-10,Yukon,27197
+2023,1989-10,Northwest Territories including Nunavut,57433
+2024,1990-01,Canada,27463550
+2025,1990-01,Newfoundland and Labrador,576278
+2026,1990-01,Prince Edward Island,130336
+2027,1990-01,Nova Scotia,907394
+2028,1990-01,New Brunswick,737307
+2029,1990-01,Quebec,6955119
+2030,1990-01,Ontario,10189985
+2031,1990-01,Manitoba,1102752
+2032,1990-01,Saskatchewan,1011429
+2033,1990-01,Alberta,2520056
+2034,1990-01,British Columbia,3247419
+2035,1990-01,Yukon,27605
+2036,1990-01,Northwest Territories including Nunavut,57870
+2037,1990-04,Canada,27567161
+2038,1990-04,Newfoundland and Labrador,577167
+2039,1990-04,Prince Edward Island,130468
+2040,1990-04,Nova Scotia,908444
+2041,1990-04,New Brunswick,738744
+2042,1990-04,Quebec,6973762
+2043,1990-04,Ontario,10238884
+2044,1990-04,Manitoba,1103935
+2045,1990-04,Saskatchewan,1009952
+2046,1990-04,Alberta,2532621
+2047,1990-04,British Columbia,3266888
+2048,1990-04,Yukon,27824
+2049,1990-04,Northwest Territories including Nunavut,58472
+2050,1990-07,Canada,27691138
+2051,1990-07,Newfoundland and Labrador,577368
+2052,1990-07,Prince Edward Island,130404
+2053,1990-07,Nova Scotia,910451
+2054,1990-07,New Brunswick,740156
+2055,1990-07,Quebec,6996986
+2056,1990-07,Ontario,10295832
+2057,1990-07,Manitoba,1105421
+2058,1990-07,Saskatchewan,1007727
+2059,1990-07,Alberta,2547788
+2060,1990-07,British Columbia,3292111
+2061,1990-07,Yukon,27957
+2062,1990-07,Northwest Territories including Nunavut,58937
+2063,1990-10,Canada,27807591
+2064,1990-10,Newfoundland and Labrador,577113
+2065,1990-10,Prince Edward Island,130367
+2066,1990-10,Nova Scotia,911749
+2067,1990-10,New Brunswick,741981
+2068,1990-10,Quebec,7019039
+2069,1990-10,Ontario,10344678
+2070,1990-10,Manitoba,1105098
+2071,1990-10,Saskatchewan,1004214
+2072,1990-10,Alberta,2563142
+2073,1990-10,British Columbia,3322896
+2074,1990-10,Yukon,28023
+2075,1990-10,Northwest Territories including Nunavut,59291
+2076,1991-01,Canada,27854861
+2077,1991-01,Newfoundland and Labrador,577377
+2078,1991-01,Prince Edward Island,130477
+2079,1991-01,Nova Scotia,912792
+2080,1991-01,New Brunswick,743210
+2081,1991-01,Quebec,7026241
+2082,1991-01,Ontario,10355101
+2083,1991-01,Manitoba,1106196
+2084,1991-01,Saskatchewan,1002651
+2085,1991-01,Alberta,2572947
+2086,1991-01,British Columbia,3339935
+2087,1991-01,Yukon,28223
+2088,1991-01,Northwest Territories including Nunavut,59711
+2089,1991-04,Canada,27928837
+2090,1991-04,Newfoundland and Labrador,578397
+2091,1991-04,Prince Edward Island,130453
+2092,1991-04,Nova Scotia,912889
+2093,1991-04,New Brunswick,744203
+2094,1991-04,Quebec,7044395
+2095,1991-04,Ontario,10385937
+2096,1991-04,Manitoba,1107757
+2097,1991-04,Saskatchewan,1002876
+2098,1991-04,Alberta,2580625
+2099,1991-04,British Columbia,3352585
+2100,1991-04,Yukon,28494
+2101,1991-04,Northwest Territories including Nunavut,60226
+2102,1991-07,Canada,28037420
+2103,1991-07,Newfoundland and Labrador,579644
+2104,1991-07,Prince Edward Island,130369
+2105,1991-07,Nova Scotia,914969
+2106,1991-07,New Brunswick,745567
+2107,1991-07,Quebec,7067396
+2108,1991-07,Ontario,10431316
+2109,1991-07,Manitoba,1109604
+2110,1991-07,Saskatchewan,1002713
+2111,1991-07,Alberta,2592306
+2112,1991-07,British Columbia,3373787
+2113,1991-07,Yukon,28871
+2114,1991-07,Northwest Territories including Nunavut,60878
+2115,1991-07,Northwest Territories,38724
+2116,1991-07,Nunavut,22154
+2117,1991-10,Canada,28127327
+2118,1991-10,Newfoundland and Labrador,579549
+2119,1991-10,Prince Edward Island,130360
+2120,1991-10,Nova Scotia,916896
+2121,1991-10,New Brunswick,745886
+2122,1991-10,Quebec,7080336
+2123,1991-10,Ontario,10465562
+2124,1991-10,Manitoba,1109400
+2125,1991-10,Saskatchewan,1000942
+2126,1991-10,Alberta,2604031
+2127,1991-10,British Columbia,3404049
+2128,1991-10,Yukon,29142
+2129,1991-10,Northwest Territories,38854
+2130,1991-10,Nunavut,22320
+2131,1992-01,Canada,28181477
+2132,1992-01,Newfoundland and Labrador,579425
+2133,1992-01,Prince Edward Island,130604
+2134,1992-01,Nova Scotia,917302
+2135,1992-01,New Brunswick,746571
+2136,1992-01,Quebec,7082645
+2137,1992-01,Ontario,10488022
+2138,1992-01,Manitoba,1109978
+2139,1992-01,Saskatchewan,1001136
+2140,1992-01,Alberta,2611786
+2141,1992-01,British Columbia,3423217
+2142,1992-01,Yukon,29239
+2143,1992-01,Northwest Territories,39055
+2144,1992-01,Nunavut,22497
+2145,1992-04,Canada,28269699
+2146,1992-04,Newfoundland and Labrador,579761
+2147,1992-04,Prince Edward Island,130812
+2148,1992-04,Nova Scotia,917555
+2149,1992-04,New Brunswick,747232
+2150,1992-04,Quebec,7096705
+2151,1992-04,Ontario,10528346
+2152,1992-04,Manitoba,1111050
+2153,1992-04,Saskatchewan,1002831
+2154,1992-04,Alberta,2620771
+2155,1992-04,British Columbia,3443237
+2156,1992-04,Yukon,29510
+2157,1992-04,Northwest Territories,39230
+2158,1992-04,Nunavut,22659
+2159,1992-07,Canada,28371264
+2160,1992-07,Newfoundland and Labrador,580109
+2161,1992-07,Prince Edward Island,130827
+2162,1992-07,Nova Scotia,919451
+2163,1992-07,New Brunswick,748121
+2164,1992-07,Quebec,7110010
+2165,1992-07,Ontario,10572205
+2166,1992-07,Manitoba,1112689
+2167,1992-07,Saskatchewan,1003995
+2168,1992-07,Alberta,2632672
+2169,1992-07,British Columbia,3468802
+2170,1992-07,Yukon,30084
+2171,1992-07,Northwest Territories,39416
+2172,1992-07,Nunavut,22883
+2173,1992-10,Canada,28474177
+2174,1992-10,Newfoundland and Labrador,579624
+2175,1992-10,Prince Edward Island,131201
+2176,1992-10,Nova Scotia,921619
+2177,1992-10,New Brunswick,747746
+2178,1992-10,Quebec,7129062
+2179,1992-10,Ontario,10610665
+2180,1992-10,Manitoba,1113209
+2181,1992-10,Saskatchewan,1002960
+2182,1992-10,Alberta,2643421
+2183,1992-10,British Columbia,3502209
+2184,1992-10,Yukon,30034
+2185,1992-10,Northwest Territories,39422
+2186,1992-10,Nunavut,23005
+2187,1993-01,Canada,28533602
+2188,1993-01,Newfoundland and Labrador,580819
+2189,1993-01,Prince Edward Island,131564
+2190,1993-01,Nova Scotia,922128
+2191,1993-01,New Brunswick,747892
+2192,1993-01,Quebec,7137514
+2193,1993-01,Ontario,10629994
+2194,1993-01,Manitoba,1114180
+2195,1993-01,Saskatchewan,1003443
+2196,1993-01,Alberta,2650886
+2197,1993-01,British Columbia,3522509
+2198,1993-01,Yukon,29964
+2199,1993-01,Northwest Territories,39538
+2200,1993-01,Nunavut,23171
+2201,1993-04,Canada,28600864
+2202,1993-04,Newfoundland and Labrador,580369
+2203,1993-04,Prince Edward Island,131833
+2204,1993-04,Nova Scotia,922469
+2205,1993-04,New Brunswick,748320
+2206,1993-04,Quebec,7147047
+2207,1993-04,Ontario,10656924
+2208,1993-04,Manitoba,1115554
+2209,1993-04,Saskatchewan,1005037
+2210,1993-04,Alberta,2658293
+2211,1993-04,British Columbia,3541936
+2212,1993-04,Yukon,30112
+2213,1993-04,Northwest Territories,39649
+2214,1993-04,Nunavut,23321
+2215,1993-07,Canada,28684764
+2216,1993-07,Newfoundland and Labrador,579977
+2217,1993-07,Prince Edward Island,132177
+2218,1993-07,Nova Scotia,923925
+2219,1993-07,New Brunswick,748812
+2220,1993-07,Quebec,7156537
+2221,1993-07,Ontario,10690038
+2222,1993-07,Manitoba,1117618
+2223,1993-07,Saskatchewan,1006900
+2224,1993-07,Alberta,2667292
+2225,1993-07,British Columbia,3567772
+2226,1993-07,Yukon,30337
+2227,1993-07,Northwest Territories,39820
+2228,1993-07,Nunavut,23559
+2229,1993-10,Canada,28786619
+2230,1993-10,Newfoundland and Labrador,578194
+2231,1993-10,Prince Edward Island,132467
+2232,1993-10,Nova Scotia,925851
+2233,1993-10,New Brunswick,749454
+2234,1993-10,Quebec,7172016
+2235,1993-10,Ontario,10728737
+2236,1993-10,Manitoba,1118603
+2237,1993-10,Saskatchewan,1007016
+2238,1993-10,Alberta,2678623
+2239,1993-10,British Columbia,3601746
+2240,1993-10,Yukon,30016
+2241,1993-10,Northwest Territories,40095
+2242,1993-10,Nunavut,23801
+2243,1994-01,Canada,28835772
+2244,1994-01,Newfoundland and Labrador,577128
+2245,1994-01,Prince Edward Island,132752
+2246,1994-01,Nova Scotia,925852
+2247,1994-01,New Brunswick,749531
+2248,1994-01,Quebec,7177923
+2249,1994-01,Ontario,10744762
+2250,1994-01,Manitoba,1119284
+2251,1994-01,Saskatchewan,1007554
+2252,1994-01,Alberta,2683346
+2253,1994-01,British Columbia,3623717
+2254,1994-01,Yukon,29670
+2255,1994-01,Northwest Territories,40273
+2256,1994-01,Nunavut,23980
+2257,1994-04,Canada,28907448
+2258,1994-04,Newfoundland and Labrador,575670
+2259,1994-04,Prince Edward Island,133030
+2260,1994-04,Nova Scotia,926109
+2261,1994-04,New Brunswick,749473
+2262,1994-04,Quebec,7184599
+2263,1994-04,Ontario,10776819
+2264,1994-04,Manitoba,1120863
+2265,1994-04,Saskatchewan,1008540
+2266,1994-04,Alberta,2691443
+2267,1994-04,British Columbia,3646632
+2268,1994-04,Yukon,29682
+2269,1994-04,Northwest Territories,40383
+2270,1994-04,Nunavut,24205
+2271,1994-07,Canada,29000663
+2272,1994-07,Newfoundland and Labrador,574466
+2273,1994-07,Prince Edward Island,133437
+2274,1994-07,Nova Scotia,926871
+2275,1994-07,New Brunswick,750185
+2276,1994-07,Quebec,7192403
+2277,1994-07,Ontario,10819146
+2278,1994-07,Manitoba,1123230
+2279,1994-07,Saskatchewan,1009575
+2280,1994-07,Alberta,2700606
+2281,1994-07,British Columbia,3676075
+2282,1994-07,Yukon,29684
+2283,1994-07,Northwest Territories,40578
+2284,1994-07,Nunavut,24407
+2285,1994-10,Canada,29096372
+2286,1994-10,Newfoundland and Labrador,572068
+2287,1994-10,Prince Edward Island,133800
+2288,1994-10,Nova Scotia,927778
+2289,1994-10,New Brunswick,750670
+2290,1994-10,Quebec,7201106
+2291,1994-10,Ontario,10860406
+2292,1994-10,Manitoba,1124263
+2293,1994-10,Saskatchewan,1010784
+2294,1994-10,Alberta,2709011
+2295,1994-10,British Columbia,3711468
+2296,1994-10,Yukon,29606
+2297,1994-10,Northwest Territories,40875
+2298,1994-10,Nunavut,24537
+2299,1995-01,Canada,29141902
+2300,1995-01,Newfoundland and Labrador,570563
+2301,1995-01,Prince Edward Island,134060
+2302,1995-01,Nova Scotia,927395
+2303,1995-01,New Brunswick,750819
+2304,1995-01,Quebec,7205074
+2305,1995-01,Ontario,10875308
+2306,1995-01,Manitoba,1124947
+2307,1995-01,Saskatchewan,1011784
+2308,1995-01,Alberta,2715701
+2309,1995-01,British Columbia,3730564
+2310,1995-01,Yukon,29882
+2311,1995-01,Northwest Territories,41114
+2312,1995-01,Nunavut,24691
+2313,1995-04,Canada,29211541
+2314,1995-04,Newfoundland and Labrador,569068
+2315,1995-04,Prince Edward Island,134175
+2316,1995-04,Nova Scotia,927641
+2317,1995-04,New Brunswick,750692
+2318,1995-04,Quebec,7210305
+2319,1995-04,Ontario,10906895
+2320,1995-04,Manitoba,1127234
+2321,1995-04,Saskatchewan,1012795
+2322,1995-04,Alberta,2724946
+2323,1995-04,British Columbia,3751377
+2324,1995-04,Yukon,30143
+2325,1995-04,Northwest Territories,41407
+2326,1995-04,Nunavut,24863
+2327,1995-07,Canada,29302311
+2328,1995-07,Newfoundland and Labrador,567397
+2329,1995-07,Prince Edward Island,134415
+2330,1995-07,Nova Scotia,928120
+2331,1995-07,New Brunswick,750943
+2332,1995-07,Quebec,7219219
+2333,1995-07,Ontario,10950119
+2334,1995-07,Manitoba,1129150
+2335,1995-07,Saskatchewan,1014187
+2336,1995-07,Alberta,2734519
+2337,1995-07,British Columbia,3777390
+2338,1995-07,Yukon,30442
+2339,1995-07,Northwest Territories,41432
+2340,1995-07,Nunavut,24978
+2341,1995-10,Canada,29396274
+2342,1995-10,Newfoundland and Labrador,565008
+2343,1995-10,Prince Edward Island,134971
+2344,1995-10,Nova Scotia,930028
+2345,1995-10,New Brunswick,751174
+2346,1995-10,Quebec,7228600
+2347,1995-10,Ontario,10993416
+2348,1995-10,Manitoba,1129547
+2349,1995-10,Saskatchewan,1015349
+2350,1995-10,Alberta,2745255
+2351,1995-10,British Columbia,3805461
+2352,1995-10,Yukon,30875
+2353,1995-10,Northwest Territories,41470
+2354,1995-10,Nunavut,25120
+2355,1996-01,Canada,29446857
+2356,1996-01,Newfoundland and Labrador,563679
+2357,1996-01,Prince Edward Island,135119
+2358,1996-01,Nova Scotia,929782
+2359,1996-01,New Brunswick,751581
+2360,1996-01,Quebec,7232952
+2361,1996-01,Ontario,11009307
+2362,1996-01,Manitoba,1130288
+2363,1996-01,Saskatchewan,1016198
+2364,1996-01,Alberta,2753463
+2365,1996-01,British Columbia,3826739
+2366,1996-01,Yukon,30963
+2367,1996-01,Northwest Territories,41495
+2368,1996-01,Nunavut,25291
+2369,1996-04,Canada,29514217
+2370,1996-04,Newfoundland and Labrador,561646
+2371,1996-04,Prince Edward Island,135311
+2372,1996-04,Nova Scotia,929921
+2373,1996-04,New Brunswick,751872
+2374,1996-04,Quebec,7237307
+2375,1996-04,Ontario,11037392
+2376,1996-04,Manitoba,1132025
+2377,1996-04,Saskatchewan,1017872
+2378,1996-04,Alberta,2762903
+2379,1996-04,British Columbia,3849847
+2380,1996-04,Yukon,31142
+2381,1996-04,Northwest Territories,41516
+2382,1996-04,Nunavut,25463
+2383,1996-07,Canada,29610218
+2384,1996-07,Newfoundland and Labrador,559698
+2385,1996-07,Prince Edward Island,135737
+2386,1996-07,Nova Scotia,931327
+2387,1996-07,New Brunswick,752268
+2388,1996-07,Quebec,7246897
+2389,1996-07,Ontario,11082903
+2390,1996-07,Manitoba,1134196
+2391,1996-07,Saskatchewan,1018945
+2392,1996-07,Alberta,2775133
+2393,1996-07,British Columbia,3874317
+2394,1996-07,Yukon,31387
+2395,1996-07,Northwest Territories,41741
+2396,1996-07,Nunavut,25669
+2397,1996-10,Canada,29708206
+2398,1996-10,Newfoundland and Labrador,557281
+2399,1996-10,Prince Edward Island,136004
+2400,1996-10,Nova Scotia,932276
+2401,1996-10,New Brunswick,752526
+2402,1996-10,Quebec,7257616
+2403,1996-10,Ontario,11130574
+2404,1996-10,Manitoba,1134619
+2405,1996-10,Saskatchewan,1019408
+2406,1996-10,Alberta,2789691
+2407,1996-10,British Columbia,3899256
+2408,1996-10,Yukon,31596
+2409,1996-10,Northwest Territories,41611
+2410,1996-10,Nunavut,25748
+2411,1997-01,Canada,29751536
+2412,1997-01,Newfoundland and Labrador,555432
+2413,1997-01,Prince Edward Island,135935
+2414,1997-01,Nova Scotia,932349
+2415,1997-01,New Brunswick,752334
+2416,1997-01,Quebec,7262945
+2417,1997-01,Ontario,11146270
+2418,1997-01,Manitoba,1134997
+2419,1997-01,Saskatchewan,1018326
+2420,1997-01,Alberta,2799561
+2421,1997-01,British Columbia,3914490
+2422,1997-01,Yukon,31633
+2423,1997-01,Northwest Territories,41528
+2424,1997-01,Nunavut,25736
+2425,1997-04,Canada,29818012
+2426,1997-04,Newfoundland and Labrador,553115
+2427,1997-04,Prince Edward Island,135931
+2428,1997-04,Nova Scotia,931832
+2429,1997-04,New Brunswick,752447
+2430,1997-04,Quebec,7267820
+2431,1997-04,Ontario,11179959
+2432,1997-04,Manitoba,1135846
+2433,1997-04,Saskatchewan,1017683
+2434,1997-04,Alberta,2813157
+2435,1997-04,British Columbia,3931056
+2436,1997-04,Yukon,31659
+2437,1997-04,Northwest Territories,41668
+2438,1997-04,Nunavut,25839
+2439,1997-07,Canada,29905948
+2440,1997-07,Newfoundland and Labrador,550911
+2441,1997-07,Prince Edward Island,136095
+2442,1997-07,Nova Scotia,932402
+2443,1997-07,New Brunswick,752511
+2444,1997-07,Quebec,7274611
+2445,1997-07,Ontario,11227651
+2446,1997-07,Manitoba,1136128
+2447,1997-07,Saskatchewan,1017902
+2448,1997-07,Alberta,2829848
+2449,1997-07,British Columbia,3948583
+2450,1997-07,Yukon,31797
+2451,1997-07,Northwest Territories,41625
+2452,1997-07,Nunavut,25884
+2453,1997-10,Canada,29994790
+2454,1997-10,Newfoundland and Labrador,547639
+2455,1997-10,Prince Edward Island,136165
+2456,1997-10,Nova Scotia,932735
+2457,1997-10,New Brunswick,752248
+2458,1997-10,Quebec,7282871
+2459,1997-10,Ontario,11278893
+2460,1997-10,Manitoba,1135649
+2461,1997-10,Saskatchewan,1017426
+2462,1997-10,Alberta,2847526
+2463,1997-10,British Columbia,3964677
+2464,1997-10,Yukon,31556
+2465,1997-10,Northwest Territories,41411
+2466,1997-10,Nunavut,25994
+2467,1998-01,Canada,30028506
+2468,1998-01,Newfoundland and Labrador,545769
+2469,1998-01,Prince Edward Island,135938
+2470,1998-01,Nova Scotia,932549
+2471,1998-01,New Brunswick,751969
+2472,1998-01,Quebec,7286008
+2473,1998-01,Ontario,11292059
+2474,1998-01,Manitoba,1135770
+2475,1998-01,Saskatchewan,1017504
+2476,1998-01,Alberta,2859305
+2477,1998-01,British Columbia,3972821
+2478,1998-01,Yukon,31510
+2479,1998-01,Northwest Territories,41222
+2480,1998-01,Nunavut,26082
+2481,1998-04,Canada,30080180
+2482,1998-04,Newfoundland and Labrador,542479
+2483,1998-04,Prince Edward Island,135635
+2484,1998-04,Nova Scotia,932033
+2485,1998-04,New Brunswick,751080
+2486,1998-04,Quebec,7290497
+2487,1998-04,Ontario,11322038
+2488,1998-04,Manitoba,1136177
+2489,1998-04,Saskatchewan,1017105
+2490,1998-04,Alberta,2876753
+2491,1998-04,British Columbia,3977912
+2492,1998-04,Yukon,31320
+2493,1998-04,Northwest Territories,40968
+2494,1998-04,Nunavut,26183
+2495,1998-07,Canada,30155173
+2496,1998-07,Newfoundland and Labrador,539843
+2497,1998-07,Prince Edward Island,135804
+2498,1998-07,Nova Scotia,931836
+2499,1998-07,New Brunswick,750530
+2500,1998-07,Quebec,7295935
+2501,1998-07,Ontario,11365901
+2502,1998-07,Manitoba,1137489
+2503,1998-07,Saskatchewan,1017332
+2504,1998-07,Alberta,2899066
+2505,1998-07,British Columbia,3983113
+2506,1998-07,Yukon,31149
+2507,1998-07,Northwest Territories,40802
+2508,1998-07,Nunavut,26373
+2509,1998-10,Canada,30231639
+2510,1998-10,Newfoundland and Labrador,537908
+2511,1998-10,Prince Edward Island,135908
+2512,1998-10,Nova Scotia,932740
+2513,1998-10,New Brunswick,750708
+2514,1998-10,Quebec,7305302
+2515,1998-10,Ontario,11408804
+2516,1998-10,Manitoba,1138328
+2517,1998-10,Saskatchewan,1017748
+2518,1998-10,Alberta,2915781
+2519,1998-10,British Columbia,3990451
+2520,1998-10,Yukon,30877
+2521,1998-10,Northwest Territories,40635
+2522,1998-10,Nunavut,26449
+2523,1999-01,Canada,30260117
+2524,1999-01,Newfoundland and Labrador,536515
+2525,1999-01,Prince Edward Island,135994
+2526,1999-01,Nova Scotia,932145
+2527,1999-01,New Brunswick,750127
+2528,1999-01,Quebec,7310238
+2529,1999-01,Ontario,11419589
+2530,1999-01,Manitoba,1138946
+2531,1999-01,Saskatchewan,1016883
+2532,1999-01,Alberta,2926079
+2533,1999-01,British Columbia,3995643
+2534,1999-01,Yukon,30748
+2535,1999-01,Northwest Territories,40635
+2536,1999-01,Nunavut,26575
+2537,1999-04,Canada,30314696
+2538,1999-04,Newfoundland and Labrador,534498
+2539,1999-04,Prince Edward Island,136025
+2540,1999-04,Nova Scotia,932116
+2541,1999-04,New Brunswick,750075
+2542,1999-04,Quebec,7315053
+2543,1999-04,Ontario,11452857
+2544,1999-04,Manitoba,1140502
+2545,1999-04,Saskatchewan,1015716
+2546,1999-04,Alberta,2937393
+2547,1999-04,British Columbia,4002433
+2548,1999-04,Yukon,30602
+2549,1999-04,Northwest Territories,40705
+2550,1999-04,Nunavut,26721
+2551,1999-07,Canada,30401286
+2552,1999-07,Newfoundland and Labrador,533329
+2553,1999-07,Prince Edward Island,136281
+2554,1999-07,Nova Scotia,933784
+2555,1999-07,New Brunswick,750601
+2556,1999-07,Quebec,7323250
+2557,1999-07,Ontario,11504759
+2558,1999-07,Manitoba,1142448
+2559,1999-07,Saskatchewan,1014524
+2560,1999-07,Alberta,2952692
+2561,1999-07,British Columbia,4011375
+2562,1999-07,Yukon,30785
+2563,1999-07,Northwest Territories,40638
+2564,1999-07,Nunavut,26820
+2565,1999-10,Canada,30492106
+2566,1999-10,Newfoundland and Labrador,532246
+2567,1999-10,Prince Edward Island,136424
+2568,1999-10,Nova Scotia,935941
+2569,1999-10,New Brunswick,750643
+2570,1999-10,Quebec,7334722
+2571,1999-10,Ontario,11559464
+2572,1999-10,Manitoba,1143618
+2573,1999-10,Saskatchewan,1012582
+2574,1999-10,Alberta,2966682
+2575,1999-10,British Columbia,4021600
+2576,1999-10,Yukon,30608
+2577,1999-10,Northwest Territories,40579
+2578,1999-10,Nunavut,26997
+2579,2000-01,Canada,30525872
+2580,2000-01,Newfoundland and Labrador,531774
+2581,2000-01,Prince Edward Island,136442
+2582,2000-01,Nova Scotia,934594
+2583,2000-01,New Brunswick,750786
+2584,2000-01,Quebec,7340269
+2585,2000-01,Ontario,11576994
+2586,2000-01,Manitoba,1144428
+2587,2000-01,Saskatchewan,1011141
+2588,2000-01,Alberta,2974517
+2589,2000-01,British Columbia,4026664
+2590,2000-01,Yukon,30495
+2591,2000-01,Northwest Territories,40623
+2592,2000-01,Nunavut,27145
+2593,2000-04,Canada,30594030
+2594,2000-04,Newfoundland and Labrador,529574
+2595,2000-04,Prince Edward Island,136289
+2596,2000-04,Nova Scotia,934291
+2597,2000-04,New Brunswick,750543
+2598,2000-04,Quebec,7347179
+2599,2000-04,Ontario,11621255
+2600,2000-04,Manitoba,1145873
+2601,2000-04,Saskatchewan,1009177
+2602,2000-04,Alberta,2988465
+2603,2000-04,British Columbia,4033319
+2604,2000-04,Yukon,30382
+2605,2000-04,Northwest Territories,40455
+2606,2000-04,Nunavut,27228
+2607,2000-07,Canada,30685730
+2608,2000-07,Newfoundland and Labrador,527966
+2609,2000-07,Prince Edward Island,136470
+2610,2000-07,Nova Scotia,933821
+2611,2000-07,New Brunswick,750517
+2612,2000-07,Quebec,7356951
+2613,2000-07,Ontario,11683290
+2614,2000-07,Manitoba,1147313
+2615,2000-07,Saskatchewan,1007565
+2616,2000-07,Alberta,3004198
+2617,2000-07,British Columbia,4039230
+2618,2000-07,Yukon,30431
+2619,2000-07,Northwest Territories,40480
+2620,2000-07,Nunavut,27498
+2621,2000-10,Canada,30783969
+2622,2000-10,Newfoundland and Labrador,526732
+2623,2000-10,Prince Edward Island,136400
+2624,2000-10,Nova Scotia,934459
+2625,2000-10,New Brunswick,750252
+2626,2000-10,Quebec,7368772
+2627,2000-10,Ontario,11748348
+2628,2000-10,Manitoba,1148183
+2629,2000-10,Saskatchewan,1006027
+2630,2000-10,Alberta,3016947
+2631,2000-10,British Columbia,4049297
+2632,2000-10,Yukon,30294
+2633,2000-10,Northwest Territories,40575
+2634,2000-10,Nunavut,27683
+2635,2001-01,Canada,30824441
+2636,2001-01,Newfoundland and Labrador,525299
+2637,2001-01,Prince Edward Island,136377
+2638,2001-01,Nova Scotia,933463
+2639,2001-01,New Brunswick,749715
+2640,2001-01,Quebec,7373978
+2641,2001-01,Ontario,11771945
+2642,2001-01,Manitoba,1148456
+2643,2001-01,Saskatchewan,1003469
+2644,2001-01,Alberta,3027941
+2645,2001-01,British Columbia,4055229
+2646,2001-01,Yukon,30147
+2647,2001-01,Northwest Territories,40624
+2648,2001-01,Nunavut,27798
+2649,2001-04,Canada,30910996
+2650,2001-04,Newfoundland and Labrador,523235
+2651,2001-04,Prince Edward Island,136499
+2652,2001-04,Nova Scotia,932909
+2653,2001-04,New Brunswick,749789
+2654,2001-04,Quebec,7383844
+2655,2001-04,Ontario,11827345
+2656,2001-04,Manitoba,1149684
+2657,2001-04,Saskatchewan,1001643
+2658,2001-04,Alberta,3041238
+2659,2001-04,British Columbia,4066132
+2660,2001-04,Yukon,30124
+2661,2001-04,Northwest Territories,40625
+2662,2001-04,Nunavut,27929
+2663,2001-07,Canada,31020855
+2664,2001-07,Newfoundland and Labrador,522043
+2665,2001-07,Prince Edward Island,136667
+2666,2001-07,Nova Scotia,932483
+2667,2001-07,New Brunswick,749823
+2668,2001-07,Quebec,7396014
+2669,2001-07,Ontario,11897473
+2670,2001-07,Manitoba,1151451
+2671,2001-07,Saskatchewan,1000307
+2672,2001-07,Alberta,3058554
+2673,2001-07,British Columbia,4076896
+2674,2001-07,Yukon,30160
+2675,2001-07,Northwest Territories,40850
+2676,2001-07,Nunavut,28134
+2677,2001-10,Canada,31128873
+2678,2001-10,Newfoundland and Labrador,521583
+2679,2001-10,Prince Edward Island,136876
+2680,2001-10,Nova Scotia,933318
+2681,2001-10,New Brunswick,749298
+2682,2001-10,Quebec,7411084
+2683,2001-10,Ontario,11961546
+2684,2001-10,Manitoba,1152144
+2685,2001-10,Saskatchewan,999241
+2686,2001-10,Alberta,3078756
+2687,2001-10,British Columbia,4085595
+2688,2001-10,Yukon,30079
+2689,2001-10,Northwest Territories,41175
+2690,2001-10,Nunavut,28178
+2691,2002-01,Canada,31168896
+2692,2002-01,Newfoundland and Labrador,521414
+2693,2002-01,Prince Edward Island,136858
+2694,2002-01,Nova Scotia,933757
+2695,2002-01,New Brunswick,748639
+2696,2002-01,Quebec,7417456
+2697,2002-01,Ontario,11979906
+2698,2002-01,Manitoba,1152828
+2699,2002-01,Saskatchewan,998742
+2700,2002-01,Alberta,3092506
+2701,2002-01,British Columbia,4087124
+2702,2002-01,Yukon,30156
+2703,2002-01,Northwest Territories,41176
+2704,2002-01,Nunavut,28334
+2705,2002-04,Canada,31252682
+2706,2002-04,Newfoundland and Labrador,520176
+2707,2002-04,Prince Edward Island,136893
+2708,2002-04,Nova Scotia,934165
+2709,2002-04,New Brunswick,748778
+2710,2002-04,Quebec,7427639
+2711,2002-04,Ontario,12029818
+2712,2002-04,Manitoba,1154728
+2713,2002-04,Saskatchewan,997792
+2714,2002-04,Alberta,3108716
+2715,2002-04,British Columbia,4094170
+2716,2002-04,Yukon,30144
+2717,2002-04,Northwest Territories,41280
+2718,2002-04,Nunavut,28383
+2719,2002-07,Canada,31359199
+2720,2002-07,Newfoundland and Labrador,519411
+2721,2002-07,Prince Edward Island,136882
+2722,2002-07,Nova Scotia,935172
+2723,2002-07,New Brunswick,749375
+2724,2002-07,Quebec,7441305
+2725,2002-07,Ontario,12093412
+2726,2002-07,Manitoba,1156673
+2727,2002-07,Saskatchewan,996854
+2728,2002-07,Alberta,3128757
+2729,2002-07,British Columbia,4100504
+2730,2002-07,Yukon,30339
+2731,2002-07,Northwest Territories,41698
+2732,2002-07,Nunavut,28817
+2733,2002-10,Canada,31450677
+2734,2002-10,Newfoundland and Labrador,519387
+2735,2002-10,Prince Edward Island,137082
+2736,2002-10,Nova Scotia,935959
+2737,2002-10,New Brunswick,749416
+2738,2002-10,Quebec,7455548
+2739,2002-10,Ontario,12145100
+2740,2002-10,Manitoba,1157289
+2741,2002-10,Saskatchewan,996324
+2742,2002-10,Alberta,3145227
+2743,2002-10,British Columbia,4108351
+2744,2002-10,Yukon,30268
+2745,2002-10,Northwest Territories,41874
+2746,2002-10,Nunavut,28852
+2747,2003-01,Canada,31479415
+2748,2003-01,Newfoundland and Labrador,519140
+2749,2003-01,Prince Edward Island,137079
+2750,2003-01,Nova Scotia,935495
+2751,2003-01,New Brunswick,749243
+2752,2003-01,Quebec,7461162
+2753,2003-01,Ontario,12155691
+2754,2003-01,Manitoba,1158358
+2755,2003-01,Saskatchewan,996286
+2756,2003-01,Alberta,3155370
+2757,2003-01,British Columbia,4110197
+2758,2003-01,Yukon,30424
+2759,2003-01,Northwest Territories,42007
+2760,2003-01,Nunavut,28963
+2761,2003-04,Canada,31549344
+2762,2003-04,Newfoundland and Labrador,518735
+2763,2003-04,Prince Edward Island,137124
+2764,2003-04,Nova Scotia,935775
+2765,2003-04,New Brunswick,749269
+2766,2003-04,Quebec,7471463
+2767,2003-04,Ontario,12194269
+2768,2003-04,Manitoba,1160853
+2769,2003-04,Saskatchewan,995785
+2770,2003-04,Alberta,3169295
+2771,2003-04,British Columbia,4114884
+2772,2003-04,Yukon,30575
+2773,2003-04,Northwest Territories,42218
+2774,2003-04,Nunavut,29099
+2775,2003-07,Canada,31642461
+2776,2003-07,Newfoundland and Labrador,518389
+2777,2003-07,Prince Edward Island,137231
+2778,2003-07,Nova Scotia,937681
+2779,2003-07,New Brunswick,749444
+2780,2003-07,Quebec,7485488
+2781,2003-07,Ontario,12243641
+2782,2003-07,Manitoba,1163585
+2783,2003-07,Saskatchewan,996422
+2784,2003-07,Alberta,3183291
+2785,2003-07,British Columbia,4124447
+2786,2003-07,Yukon,30943
+2787,2003-07,Northwest Territories,42598
+2788,2003-07,Nunavut,29301
+2789,2003-10,Canada,31736141
+2790,2003-10,Newfoundland and Labrador,518718
+2791,2003-10,Prince Edward Island,137430
+2792,2003-10,Nova Scotia,938744
+2793,2003-10,New Brunswick,749467
+2794,2003-10,Quebec,7503483
+2795,2003-10,Ontario,12290116
+2796,2003-10,Manitoba,1165518
+2797,2003-10,Saskatchewan,996585
+2798,2003-10,Alberta,3198059
+2799,2003-10,British Columbia,4134598
+2800,2003-10,Yukon,31219
+2801,2003-10,Northwest Territories,42855
+2802,2003-10,Nunavut,29349
+2803,2004-01,Canada,31775723
+2804,2004-01,Newfoundland and Labrador,518677
+2805,2004-01,Prince Edward Island,137512
+2806,2004-01,Nova Scotia,938946
+2807,2004-01,New Brunswick,749192
+2808,2004-01,Quebec,7510218
+2809,2004-01,Ontario,12303516
+2810,2004-01,Manitoba,1167643
+2811,2004-01,Saskatchewan,996586
+2812,2004-01,Alberta,3209557
+2813,2004-01,British Columbia,4139895
+2814,2004-01,Yukon,31320
+2815,2004-01,Northwest Territories,43166
+2816,2004-01,Nunavut,29495
+2817,2004-04,Canada,31844704
+2818,2004-04,Newfoundland and Labrador,517888
+2819,2004-04,Prince Edward Island,137631
+2820,2004-04,Nova Scotia,938738
+2821,2004-04,New Brunswick,749340
+2822,2004-04,Quebec,7520109
+2823,2004-04,Ontario,12339813
+2824,2004-04,Manitoba,1170336
+2825,2004-04,Saskatchewan,997106
+2826,2004-04,Alberta,3223659
+2827,2004-04,British Columbia,4145916
+2828,2004-04,Yukon,31400
+2829,2004-04,Northwest Territories,43208
+2830,2004-04,Nunavut,29560
+2831,2004-07,Canada,31938807
+2832,2004-07,Newfoundland and Labrador,517375
+2833,2004-07,Prince Edward Island,137682
+2834,2004-07,Nova Scotia,939625
+2835,2004-07,New Brunswick,749424
+2836,2004-07,Quebec,7535483
+2837,2004-07,Ontario,12389641
+2838,2004-07,Manitoba,1173228
+2839,2004-07,Saskatchewan,997305
+2840,2004-07,Alberta,3238817
+2841,2004-07,British Columbia,4155630
+2842,2004-07,Yukon,31455
+2843,2004-07,Northwest Territories,43306
+2844,2004-07,Nunavut,29836
+2845,2004-10,Canada,32038207
+2846,2004-10,Newfoundland and Labrador,516863
+2847,2004-10,Prince Edward Island,137697
+2848,2004-10,Nova Scotia,939855
+2849,2004-10,New Brunswick,749249
+2850,2004-10,Quebec,7553578
+2851,2004-10,Ontario,12435931
+2852,2004-10,Manitoba,1174667
+2853,2004-10,Saskatchewan,997010
+2854,2004-10,Alberta,3260721
+2855,2004-10,British Columbia,4167802
+2856,2004-10,Yukon,31688
+2857,2004-10,Northwest Territories,43354
+2858,2004-10,Nunavut,29792
+2859,2005-01,Canada,32075011
+2860,2005-01,Newfoundland and Labrador,516750
+2861,2005-01,Prince Edward Island,137691
+2862,2005-01,Nova Scotia,939202
+2863,2005-01,New Brunswick,749005
+2864,2005-01,Quebec,7559576
+2865,2005-01,Ontario,12444755
+2866,2005-01,Manitoba,1176047
+2867,2005-01,Saskatchewan,995914
+2868,2005-01,Alberta,3276908
+2869,2005-01,British Columbia,4174017
+2870,2005-01,Yukon,31770
+2871,2005-01,Northwest Territories,43440
+2872,2005-01,Nunavut,29936
+2873,2005-04,Canada,32140569
+2874,2005-04,Newfoundland and Labrador,515324
+2875,2005-04,Prince Edward Island,137790
+2876,2005-04,Nova Scotia,937989
+2877,2005-04,New Brunswick,748696
+2878,2005-04,Quebec,7567277
+2879,2005-04,Ontario,12476560
+2880,2005-04,Manitoba,1177285
+2881,2005-04,Saskatchewan,994902
+2882,2005-04,Alberta,3296359
+2883,2005-04,British Columbia,4182971
+2884,2005-04,Yukon,31861
+2885,2005-04,Northwest Territories,43456
+2886,2005-04,Nunavut,30099
+2887,2005-07,Canada,32242732
+2888,2005-07,Newfoundland and Labrador,514310
+2889,2005-07,Prince Edward Island,138067
+2890,2005-07,Nova Scotia,937931
+2891,2005-07,New Brunswick,748061
+2892,2005-07,Quebec,7581467
+2893,2005-07,Ontario,12527581
+2894,2005-07,Manitoba,1178262
+2895,2005-07,Saskatchewan,993510
+2896,2005-07,Alberta,3321839
+2897,2005-07,British Columbia,4196076
+2898,2005-07,Yukon,31901
+2899,2005-07,Northwest Territories,43399
+2900,2005-07,Nunavut,30328
+2901,2005-10,Canada,32353311
+2902,2005-10,Newfoundland and Labrador,513725
+2903,2005-10,Prince Edward Island,138133
+2904,2005-10,Nova Scotia,938755
+2905,2005-10,New Brunswick,747674
+2906,2005-10,Quebec,7598880
+2907,2005-10,Ontario,12578240
+2908,2005-10,Manitoba,1179082
+2909,2005-10,Saskatchewan,993299
+2910,2005-10,Alberta,3346802
+2911,2005-10,British Columbia,4212674
+2912,2005-10,Yukon,32127
+2913,2005-10,Northwest Territories,43523
+2914,2005-10,Nunavut,30397
+2915,2006-01,Canada,32394909
+2916,2006-01,Newfoundland and Labrador,512554
+2917,2006-01,Prince Edward Island,137908
+2918,2006-01,Nova Scotia,938120
+2919,2006-01,New Brunswick,746985
+2920,2006-01,Quebec,7604228
+2921,2006-01,Ontario,12587149
+2922,2006-01,Manitoba,1179916
+2923,2006-01,Saskatchewan,992246
+2924,2006-01,Alberta,3371851
+2925,2006-01,British Columbia,4217956
+2926,2006-01,Yukon,32112
+2927,2006-01,Northwest Territories,43315
+2928,2006-01,Nunavut,30569
+2929,2006-04,Canada,32470171
+2930,2006-04,Newfoundland and Labrador,510959
+2931,2006-04,Prince Edward Island,137847
+2932,2006-04,Nova Scotia,937665
+2933,2006-04,New Brunswick,746337
+2934,2006-04,Quebec,7615496
+2935,2006-04,Ontario,12618321
+2936,2006-04,Manitoba,1181632
+2937,2006-04,Saskatchewan,991231
+2938,2006-04,Alberta,3396809
+2939,2006-04,British Columbia,4227980
+2940,2006-04,Yukon,32152
+2941,2006-04,Northwest Territories,43101
+2942,2006-04,Nunavut,30641
+2943,2006-07,Canada,32571193
+2944,2006-07,Newfoundland and Labrador,510593
+2945,2006-07,Prince Edward Island,137869
+2946,2006-07,Nova Scotia,937880
+2947,2006-07,New Brunswick,745621
+2948,2006-07,Quebec,7631901
+2949,2006-07,Ontario,12661953
+2950,2006-07,Manitoba,1183560
+2951,2006-07,Saskatchewan,992313
+2952,2006-07,Alberta,3421435
+2953,2006-07,British Columbia,4241793
+2954,2006-07,Yukon,32272
+2955,2006-07,Northwest Territories,43185
+2956,2006-07,Nunavut,30818
+2957,2006-10,Canada,32680839
+2958,2006-10,Newfoundland and Labrador,510325
+2959,2006-10,Prince Edward Island,137898
+2960,2006-10,Nova Scotia,937060
+2961,2006-10,New Brunswick,744973
+2962,2006-10,Quebec,7652881
+2963,2006-10,Ontario,12701324
+2964,2006-10,Manitoba,1183975
+2965,2006-10,Saskatchewan,993359
+2966,2006-10,Alberta,3453945
+2967,2006-10,British Columbia,4258653
+2968,2006-10,Yukon,32361
+2969,2006-10,Northwest Territories,43205
+2970,2006-10,Nunavut,30880
+2971,2007-01,Canada,32717848
+2972,2007-01,Newfoundland and Labrador,510329
+2973,2007-01,Prince Edward Island,137777
+2974,2007-01,Nova Scotia,936232
+2975,2007-01,New Brunswick,744849
+2976,2007-01,Quebec,7661201
+2977,2007-01,Ontario,12703327
+2978,2007-01,Manitoba,1184495
+2979,2007-01,Saskatchewan,995170
+2980,2007-01,Alberta,3472779
+2981,2007-01,British Columbia,4265328
+2982,2007-01,Yukon,32316
+2983,2007-01,Northwest Territories,43088
+2984,2007-01,Nunavut,30957
+2985,2007-04,Canada,32785964
+2986,2007-04,Newfoundland and Labrador,509126
+2987,2007-04,Prince Edward Island,137707
+2988,2007-04,Nova Scotia,935028
+2989,2007-04,New Brunswick,744934
+2990,2007-04,Quebec,7673938
+2991,2007-04,Ontario,12727090
+2992,2007-04,Manitoba,1186421
+2993,2007-04,Saskatchewan,997541
+2994,2007-04,Alberta,3490849
+2995,2007-04,British Columbia,4276745
+2996,2007-04,Yukon,32274
+2997,2007-04,Northwest Territories,43127
+2998,2007-04,Nunavut,31184
+2999,2007-07,Canada,32888886
+3000,2007-07,Newfoundland and Labrador,509047
+3001,2007-07,Prince Edward Island,137709
+3002,2007-07,Nova Scotia,935164
+3003,2007-07,New Brunswick,745430
+3004,2007-07,Quebec,7692400
+3005,2007-07,Ontario,12765133
+3006,2007-07,Manitoba,1189446
+3007,2007-07,Saskatchewan,1002074
+3008,2007-07,Alberta,3514151
+3009,2007-07,British Columbia,4290987
+3010,2007-07,Yukon,32555
+3011,2007-07,Northwest Territories,43396
+3012,2007-07,Nunavut,31394
+3013,2007-10,Canada,33001918
+3014,2007-10,Newfoundland and Labrador,510256
+3015,2007-10,Prince Edward Island,138020
+3016,2007-10,Nova Scotia,935433
+3017,2007-10,New Brunswick,746136
+3018,2007-10,Quebec,7712616
+3019,2007-10,Ontario,12807497
+3020,2007-10,Manitoba,1191684
+3021,2007-10,Saskatchewan,1007305
+3022,2007-10,Alberta,3533414
+3023,2007-10,British Columbia,4312048
+3024,2007-10,Yukon,32663
+3025,2007-10,Northwest Territories,43286
+3026,2007-10,Nunavut,31560
+3027,2008-01,Canada,33050262
+3028,2008-01,Newfoundland and Labrador,510989
+3029,2008-01,Prince Edward Island,137990
+3030,2008-01,Nova Scotia,935540
+3031,2008-01,New Brunswick,746284
+3032,2008-01,Quebec,7724885
+3033,2008-01,Ontario,12814686
+3034,2008-01,Manitoba,1193396
+3035,2008-01,Saskatchewan,1010279
+3036,2008-01,Alberta,3548804
+3037,2008-01,British Columbia,4319657
+3038,2008-01,Yukon,32752
+3039,2008-01,Northwest Territories,43384
+3040,2008-01,Nunavut,31616
+3041,2008-04,Canada,33127394
+3042,2008-04,Newfoundland and Labrador,511239
+3043,2008-04,Prince Edward Island,138175
+3044,2008-04,Nova Scotia,935704
+3045,2008-04,New Brunswick,746529
+3046,2008-04,Quebec,7739956
+3047,2008-04,Ontario,12840482
+3048,2008-04,Manitoba,1194653
+3049,2008-04,Saskatchewan,1013449
+3050,2008-04,Alberta,3567475
+3051,2008-04,British Columbia,4331706
+3052,2008-04,Yukon,32955
+3053,2008-04,Northwest Territories,43388
+3054,2008-04,Nunavut,31683
+3055,2008-07,Canada,33247298
+3056,2008-07,Newfoundland and Labrador,511569
+3057,2008-07,Prince Edward Island,138736
+3058,2008-07,Nova Scotia,935965
+3059,2008-07,New Brunswick,746875
+3060,2008-07,Quebec,7761614
+3061,2008-07,Ontario,12883824
+3062,2008-07,Manitoba,1197767
+3063,2008-07,Saskatchewan,1017368
+3064,2008-07,Alberta,3595875
+3065,2008-07,British Columbia,4349338
+3066,2008-07,Yukon,33084
+3067,2008-07,Northwest Territories,43385
+3068,2008-07,Nunavut,31898
+3069,2008-10,Canada,33372978
+3070,2008-10,Newfoundland and Labrador,513425
+3071,2008-10,Prince Edward Island,139448
+3072,2008-10,Nova Scotia,937108
+3073,2008-10,New Brunswick,747767
+3074,2008-10,Quebec,7786609
+3075,2008-10,Ontario,12927520
+3076,2008-10,Manitoba,1199551
+3077,2008-10,Saskatchewan,1022511
+3078,2008-10,Alberta,3619319
+3079,2008-10,British Columbia,4371128
+3080,2008-10,Yukon,33307
+3081,2008-10,Northwest Territories,43315
+3082,2008-10,Nunavut,31970
+3083,2009-01,Canada,33427754
+3084,2009-01,Newfoundland and Labrador,514210
+3085,2009-01,Prince Edward Island,139114
+3086,2009-01,Nova Scotia,937445
+3087,2009-01,New Brunswick,748375
+3088,2009-01,Quebec,7799271
+3089,2009-01,Ontario,12932742
+3090,2009-01,Manitoba,1201705
+3091,2009-01,Saskatchewan,1025946
+3092,2009-01,Alberta,3638505
+3093,2009-01,British Columbia,4381832
+3094,2009-01,Yukon,33405
+3095,2009-01,Northwest Territories,43136
+3096,2009-01,Nunavut,32068
+3097,2009-04,Canada,33512305
+3098,2009-04,Newfoundland and Labrador,514707
+3099,2009-04,Prince Edward Island,139190
+3100,2009-04,Nova Scotia,937489
+3101,2009-04,New Brunswick,749165
+3102,2009-04,Quebec,7817425
+3103,2009-04,Ontario,12956924
+3104,2009-04,Manitoba,1204013
+3105,2009-04,Saskatchewan,1029862
+3106,2009-04,Alberta,3659235
+3107,2009-04,British Columbia,4395197
+3108,2009-04,Yukon,33583
+3109,2009-04,Northwest Territories,43122
+3110,2009-04,Nunavut,32393
+3111,2009-07,Canada,33630069
+3112,2009-07,Newfoundland and Labrador,516741
+3113,2009-07,Prince Edward Island,139873
+3114,2009-07,Nova Scotia,938266
+3115,2009-07,New Brunswick,749956
+3116,2009-07,Quebec,7843915
+3117,2009-07,Ontario,12998941
+3118,2009-07,Manitoba,1208555
+3119,2009-07,Saskatchewan,1034791
+3120,2009-07,Alberta,3679010
+3121,2009-07,British Columbia,4410513
+3122,2009-07,Yukon,33733
+3123,2009-07,Northwest Territories,43171
+3124,2009-07,Nunavut,32604
+3125,2009-10,Canada,33758581
+3126,2009-10,Newfoundland and Labrador,518975
+3127,2009-10,Prince Edward Island,140596
+3128,2009-10,Nova Scotia,940558
+3129,2009-10,New Brunswick,751066
+3130,2009-10,Quebec,7871847
+3131,2009-10,Ontario,13048442
+3132,2009-10,Manitoba,1211881
+3133,2009-10,Saskatchewan,1039530
+3134,2009-10,Alberta,3694318
+3135,2009-10,British Columbia,4431587
+3136,2009-10,Yukon,34027
+3137,2009-10,Northwest Territories,42938
+3138,2009-10,Nunavut,32816
+3139,2010-01,Canada,33809016
+3140,2010-01,Newfoundland and Labrador,520276
+3141,2010-01,Prince Edward Island,140598
+3142,2010-01,Nova Scotia,940879
+3143,2010-01,New Brunswick,751282
+3144,2010-01,Quebec,7886127
+3145,2010-01,Ontario,13059426
+3146,2010-01,Manitoba,1213941
+3147,2010-01,Saskatchewan,1042936
+3148,2010-01,Alberta,3702290
+3149,2010-01,British Columbia,4441345
+3150,2010-01,Yukon,34009
+3151,2010-01,Northwest Territories,42981
+3152,2010-01,Nunavut,32926
+3153,2010-04,Canada,33890461
+3154,2010-04,Newfoundland and Labrador,521197
+3155,2010-04,Prince Edward Island,140978
+3156,2010-04,Nova Scotia,940967
+3157,2010-04,New Brunswick,752020
+3158,2010-04,Quebec,7903676
+3159,2010-04,Ontario,13088924
+3160,2010-04,Manitoba,1216618
+3161,2010-04,Saskatchewan,1046779
+3162,2010-04,Alberta,3714999
+3163,2010-04,British Columbia,4453756
+3164,2010-04,Yukon,34243
+3165,2010-04,Northwest Territories,43161
+3166,2010-04,Nunavut,33143
+3167,2010-07,Canada,34005902
+3168,2010-07,Newfoundland and Labrador,522002
+3169,2010-07,Prince Edward Island,141644
+3170,2010-07,Nova Scotia,942144
+3171,2010-07,New Brunswick,753034
+3172,2010-07,Quebec,7929479
+3173,2010-07,Ontario,13136481
+3174,2010-07,Manitoba,1220782
+3175,2010-07,Saskatchewan,1051426
+3176,2010-07,Alberta,3732104
+3177,2010-07,British Columbia,4465557
+3178,2010-07,Yukon,34598
+3179,2010-07,Northwest Territories,43292
+3180,2010-07,Nunavut,33359
+3181,2010-10,Canada,34132531
+3182,2010-10,Newfoundland and Labrador,522861
+3183,2010-10,Prince Edward Island,142725
+3184,2010-10,Nova Scotia,944201
+3185,2010-10,New Brunswick,754287
+3186,2010-10,Quebec,7955183
+3187,2010-10,Ontario,13189987
+3188,2010-10,Manitoba,1224663
+3189,2010-10,Saskatchewan,1056102
+3190,2010-10,Alberta,3747235
+3191,2010-10,British Columbia,4483613
+3192,2010-10,Yukon,34790
+3193,2010-10,Northwest Territories,43307
+3194,2010-10,Nunavut,33577
+3195,2011-01,Canada,34166633
+3196,2011-01,Newfoundland and Labrador,523723
+3197,2011-01,Prince Edward Island,143016
+3198,2011-01,Nova Scotia,944082
+3199,2011-01,New Brunswick,754795
+3200,2011-01,Quebec,7967270
+3201,2011-01,Ontario,13199081
+3202,2011-01,Manitoba,1227210
+3203,2011-01,Saskatchewan,1058969
+3204,2011-01,Alberta,3754422
+3205,2011-01,British Columbia,4482262
+3206,2011-01,Yukon,34802
+3207,2011-01,Northwest Territories,43265
+3208,2011-01,Nunavut,33736
+3209,2011-04,Canada,34230555
+3210,2011-04,Newfoundland and Labrador,524238
+3211,2011-04,Prince Edward Island,143265
+3212,2011-04,Nova Scotia,943921
+3213,2011-04,New Brunswick,754843
+3214,2011-04,Quebec,7982145
+3215,2011-04,Ontario,13222146
+3216,2011-04,Manitoba,1229058
+3217,2011-04,Saskatchewan,1061484
+3218,2011-04,Alberta,3768774
+3219,2011-04,British Columbia,4488509
+3220,2011-04,Yukon,34984
+3221,2011-04,Northwest Territories,43263
+3222,2011-04,Nunavut,33925
+3223,2011-07,Canada,34339221
+3224,2011-07,Newfoundland and Labrador,524955
+3225,2011-07,Prince Edward Island,143918
+3226,2011-07,Nova Scotia,944095
+3227,2011-07,New Brunswick,755590
+3228,2011-07,Quebec,8004736
+3229,2011-07,Ontario,13262345
+3230,2011-07,Manitoba,1233353
+3231,2011-07,Saskatchewan,1065661
+3232,2011-07,Alberta,3787705
+3233,2011-07,British Columbia,4503819
+3234,2011-07,Yukon,35366
+3235,2011-07,Northwest Territories,43493
+3236,2011-07,Nunavut,34185
+3237,2011-10,Canada,34457713
+3238,2011-10,Newfoundland and Labrador,525845
+3239,2011-10,Prince Edward Island,144283
+3240,2011-10,Nova Scotia,944645
+3241,2011-10,New Brunswick,756187
+3242,2011-10,Quebec,8021063
+3243,2011-10,Ontario,13310604
+3244,2011-10,Manitoba,1237390
+3245,2011-10,Saskatchewan,1069950
+3246,2011-10,Alberta,3805071
+3247,2011-10,British Columbia,4529186
+3248,2011-10,Yukon,35578
+3249,2011-10,Northwest Territories,43576
+3250,2011-10,Nunavut,34335
+3251,2012-01,Canada,34516032
+3252,2012-01,Newfoundland and Labrador,526115
+3253,2012-01,Prince Edward Island,144208
+3254,2012-01,Nova Scotia,943907
+3255,2012-01,New Brunswick,757039
+3256,2012-01,Quebec,8028516
+3257,2012-01,Ontario,13325337
+3258,2012-01,Manitoba,1241417
+3259,2012-01,Saskatchewan,1073565
+3260,2012-01,Alberta,3822425
+3261,2012-01,British Columbia,4539775
+3262,2012-01,Yukon,35695
+3263,2012-01,Northwest Territories,43630
+3264,2012-01,Nunavut,34403
+3265,2012-04,Canada,34592192
+3266,2012-04,Newfoundland and Labrador,525550
+3267,2012-04,Prince Edward Island,144365
+3268,2012-04,Nova Scotia,943317
+3269,2012-04,New Brunswick,757024
+3270,2012-04,Quebec,8038332
+3271,2012-04,Ontario,13350123
+3272,2012-04,Manitoba,1244884
+3273,2012-04,Saskatchewan,1077170
+3274,2012-04,Alberta,3845093
+3275,2012-04,British Columbia,4552320
+3276,2012-04,Yukon,35757
+3277,2012-04,Northwest Territories,43678
+3278,2012-04,Nunavut,34579
+3279,2012-07,Canada,34713395
+3280,2012-07,Newfoundland and Labrador,526235
+3281,2012-07,Prince Edward Island,144415
+3282,2012-07,Nova Scotia,943163
+3283,2012-07,New Brunswick,758121
+3284,2012-07,Quebec,8059752
+3285,2012-07,Ontario,13392364
+3286,2012-07,Manitoba,1249094
+3287,2012-07,Saskatchewan,1083005
+3288,2012-07,Alberta,3871947
+3289,2012-07,British Columbia,4570866
+3290,2012-07,Yukon,36151
+3291,2012-07,Northwest Territories,43624
+3292,2012-07,Nunavut,34658
+3293,2012-10,Canada,34834973
+3294,2012-10,Newfoundland and Labrador,527065
+3295,2012-10,Prince Edward Island,144396
+3296,2012-10,Nova Scotia,942829
+3297,2012-10,New Brunswick,758408
+3298,2012-10,Quebec,8076838
+3299,2012-10,Ontario,13436625
+3300,2012-10,Manitoba,1253210
+3301,2012-10,Saskatchewan,1088177
+3302,2012-10,Alberta,3897746
+3303,2012-10,British Columbia,4594846
+3304,2012-10,Yukon,36347
+3305,2012-10,Northwest Territories,43656
+3306,2012-10,Nunavut,34830
+3307,2013-01,Canada,34881794
+3308,2013-01,Newfoundland and Labrador,527129
+3309,2013-01,Prince Edward Island,144041
+3310,2013-01,Nova Scotia,942045
+3311,2013-01,New Brunswick,758026
+3312,2013-01,Quebec,8081006
+3313,2013-01,Ontario,13446276
+3314,2013-01,Manitoba,1256879
+3315,2013-01,Saskatchewan,1090738
+3316,2013-01,Alberta,3917941
+3317,2013-01,British Columbia,4602742
+3318,2013-01,Yukon,36299
+3319,2013-01,Northwest Territories,43709
+3320,2013-01,Nunavut,34963
+3321,2013-04,Canada,34956567
+3322,2013-04,Newfoundland and Labrador,527177
+3323,2013-04,Prince Edward Island,143807
+3324,2013-04,Nova Scotia,940647
+3325,2013-04,New Brunswick,757854
+3326,2013-04,Quebec,8089004
+3327,2013-04,Ontario,13469151
+3328,2013-04,Manitoba,1259693
+3329,2013-04,Saskatchewan,1093549
+3330,2013-04,Alberta,3944281
+3331,2013-04,British Columbia,4616335
+3332,2013-04,Yukon,36242
+3333,2013-04,Northwest Territories,43840
+3334,2013-04,Nunavut,34987
+3335,2013-07,Canada,35080992
+3336,2013-07,Newfoundland and Labrador,526960
+3337,2013-07,Prince Edward Island,143942
+3338,2013-07,Nova Scotia,939808
+3339,2013-07,New Brunswick,758261
+3340,2013-07,Quebec,8108825
+3341,2013-07,Ontario,13511902
+3342,2013-07,Manitoba,1263393
+3343,2013-07,Saskatchewan,1098868
+3344,2013-07,Alberta,3978532
+3345,2013-07,British Columbia,4634943
+3346,2013-07,Yukon,36454
+3347,2013-07,Northwest Territories,43774
+3348,2013-07,Nunavut,35330
+3349,2013-10,Canada,35209597
+3350,2013-10,Newfoundland and Labrador,527948
+3351,2013-10,Prince Edward Island,143943
+3352,2013-10,Nova Scotia,939442
+3353,2013-10,New Brunswick,758379
+3354,2013-10,Quebec,8122462
+3355,2013-10,Ontario,13559499
+3356,2013-10,Manitoba,1267105
+3357,2013-10,Saskatchewan,1102832
+3358,2013-10,Alberta,4008421
+3359,2013-10,British Columbia,4663919
+3360,2013-10,Yukon,36384
+3361,2013-10,Northwest Territories,43727
+3362,2013-10,Nunavut,35536
+3363,2014-01,Canada,35247023
+3364,2014-01,Newfoundland and Labrador,528065
+3365,2014-01,Prince Edward Island,143828
+3366,2014-01,Nova Scotia,939166
+3367,2014-01,New Brunswick,758713
+3368,2014-01,Quebec,8123138
+3369,2014-01,Ontario,13563311
+3370,2014-01,Manitoba,1270153
+3371,2014-01,Saskatchewan,1105444
+3372,2014-01,Alberta,4027497
+3373,2014-01,British Columbia,4672025
+3374,2014-01,Yukon,36333
+3375,2014-01,Northwest Territories,43767
+3376,2014-01,Nunavut,35583
+3377,2014-04,Canada,35320540
+3378,2014-04,Newfoundland and Labrador,527314
+3379,2014-04,Prince Edward Island,143810
+3380,2014-04,Nova Scotia,938175
+3381,2014-04,New Brunswick,758570
+3382,2014-04,Quebec,8129926
+3383,2014-04,Ontario,13583220
+3384,2014-04,Manitoba,1272914
+3385,2014-04,Saskatchewan,1108674
+3386,2014-04,Alberta,4051858
+3387,2014-04,British Columbia,4689892
+3388,2014-04,Yukon,36626
+3389,2014-04,Northwest Territories,43760
+3390,2014-04,Nunavut,35801
+3391,2014-07,Canada,35434066
+3392,2014-07,Newfoundland and Labrador,527970
+3393,2014-07,Prince Edward Island,144095
+3394,2014-07,Nova Scotia,937768
+3395,2014-07,New Brunswick,758657
+3396,2014-07,Quebec,8147535
+3397,2014-07,Ontario,13617763
+3398,2014-07,Manitoba,1277425
+3399,2014-07,Saskatchewan,1111989
+3400,2014-07,Alberta,4081271
+3401,2014-07,British Columbia,4712691
+3402,2014-07,Yukon,37085
+3403,2014-07,Northwest Territories,43851
+3404,2014-07,Nunavut,35966
+3405,2014-10,Canada,35555305
+3406,2014-10,Newfoundland and Labrador,528266
+3407,2014-10,Prince Edward Island,144342
+3408,2014-10,Nova Scotia,938157
+3409,2014-10,New Brunswick,759192
+3410,2014-10,Quebec,8162631
+3411,2014-10,Ontario,13661282
+3412,2014-10,Manitoba,1281690
+3413,2014-10,Saskatchewan,1115184
+3414,2014-10,Alberta,4103702
+3415,2014-10,British Columbia,4743505
+3416,2014-10,Yukon,37223
+3417,2014-10,Northwest Territories,44031
+3418,2014-10,Nunavut,36100
+3419,2015-01,Canada,35571043
+3420,2015-01,Newfoundland and Labrador,528161
+3421,2015-01,Prince Edward Island,144162
+3422,2015-01,Nova Scotia,937442
+3423,2015-01,New Brunswick,759270
+3424,2015-01,Quebec,8160176
+3425,2015-01,Ontario,13657423
+3426,2015-01,Manitoba,1284693
+3427,2015-01,Saskatchewan,1117137
+3428,2015-01,Alberta,4113697
+3429,2015-01,British Columbia,4751439
+3430,2015-01,Yukon,37123
+3431,2015-01,Northwest Territories,44106
+3432,2015-01,Nunavut,36214
+3433,2015-04,Canada,35606734
+3434,2015-04,Newfoundland and Labrador,527859
+3435,2015-04,Prince Edward Island,144046
+3436,2015-04,Nova Scotia,935380
+3437,2015-04,New Brunswick,758579
+3438,2015-04,Quebec,8159968
+3439,2015-04,Ontario,13669290
+3440,2015-04,Manitoba,1286250
+3441,2015-04,Saskatchewan,1117736
+3442,2015-04,Alberta,4125943
+3443,2015-04,British Columbia,4763917
+3444,2015-04,Yukon,37330
+3445,2015-04,Northwest Territories,44159
+3446,2015-04,Nunavut,36277
+3447,2015-07,Canada,35704498
+3448,2015-07,Newfoundland and Labrador,528348
+3449,2015-07,Prince Edward Island,144636
+3450,2015-07,Nova Scotia,937419
+3451,2015-07,New Brunswick,759226
+3452,2015-07,Quebec,8175743
+3453,2015-07,Ontario,13709293
+3454,2015-07,Manitoba,1293598
+3455,2015-07,Saskatchewan,1122210
+3456,2015-07,Alberta,4150147
+3457,2015-07,British Columbia,4765472
+3458,2015-07,Yukon,37669
+3459,2015-07,Northwest Territories,44247
+3460,2015-07,Nunavut,36490
+3461,2015-10,Canada,35823591
+3462,2015-10,Newfoundland and Labrador,528843
+3463,2015-10,Prince Edward Island,144949
+3464,2015-10,Nova Scotia,938914
+3465,2015-10,New Brunswick,759971
+3466,2015-10,Quebec,8190074
+3467,2015-10,Ontario,13759762
+3468,2015-10,Manitoba,1298120
+3469,2015-10,Saskatchewan,1125588
+3470,2015-10,Alberta,4163048
+3471,2015-10,British Columbia,4795547
+3472,2015-10,Yukon,37730
+3473,2015-10,Northwest Territories,44443
+3474,2015-10,Nunavut,36602
+3475,2016-01,Canada,35871484
+3476,2016-01,Newfoundland and Labrador,528903
+3477,2016-01,Prince Edward Island,145238
+3478,2016-01,Nova Scotia,938973
+3479,2016-01,New Brunswick,760679
+3480,2016-01,Quebec,8193831
+3481,2016-01,Ontario,13774364
+3482,2016-01,Manitoba,1302938
+3483,2016-01,Saskatchewan,1128160
+3484,2016-01,Alberta,4171847
+3485,2016-01,British Columbia,4807562
+3486,2016-01,Yukon,37756
+3487,2016-01,Northwest Territories,44515
+3488,2016-01,Nunavut,36718
+3489,2016-04,Canada,35970407
+3490,2016-04,Newfoundland and Labrador,529083
+3491,2016-04,Prince Edward Island,145792
+3492,2016-04,Nova Scotia,940471
+3493,2016-04,New Brunswick,762317
+3494,2016-04,Quebec,8204229
+3495,2016-04,Ontario,13816652
+3496,2016-04,Manitoba,1307797
+3497,2016-04,Saskatchewan,1131285
+3498,2016-04,Alberta,4182353
+3499,2016-04,British Columbia,4831042
+3500,2016-04,Yukon,38025
+3501,2016-04,Northwest Territories,44595
+3502,2016-04,Nunavut,36766
+3503,2016-07,Canada,36110803
+3504,2016-07,Newfoundland and Labrador,529586
+3505,2016-07,Prince Edward Island,146891
+3506,2016-07,Nova Scotia,942984
+3507,2016-07,New Brunswick,763322
+3508,2016-07,Quebec,8225036
+3509,2016-07,Ontario,13876500
+3510,2016-07,Manitoba,1314140
+3511,2016-07,Saskatchewan,1135496
+3512,2016-07,Alberta,4195427
+3513,2016-07,British Columbia,4861269
+3514,2016-07,Yukon,38549
+3515,2016-07,Northwest Territories,44624
+3516,2016-07,Nunavut,36979
+3517,2016-10,Canada,36257421
+3518,2016-10,Newfoundland and Labrador,530368
+3519,2016-10,Prince Edward Island,147699
+3520,2016-10,Nova Scotia,946623
+3521,2016-10,New Brunswick,764820
+3522,2016-10,Quebec,8246383
+3523,2016-10,Ontario,13948180
+3524,2016-10,Manitoba,1319800
+3525,2016-10,Saskatchewan,1139492
+3526,2016-10,Alberta,4207139
+3527,2016-10,British Columbia,4886638
+3528,2016-10,Yukon,38724
+3529,2016-10,Northwest Territories,44471
+3530,2016-10,Nunavut,37084
+3531,2017-01,Canada,36313068
+3532,2017-01,Newfoundland and Labrador,530175
+3533,2017-01,Prince Edward Island,147811
+3534,2017-01,Nova Scotia,947023
+3535,2017-01,New Brunswick,764612
+3536,2017-01,Quebec,8252179
+3537,2017-01,Ontario,13975516
+3538,2017-01,Manitoba,1324044
+3539,2017-01,Saskatchewan,1141537
+3540,2017-01,Alberta,4215506
+3541,2017-01,British Columbia,4894147
+3542,2017-01,Yukon,38801
+3543,2017-01,Northwest Territories,44471
+3544,2017-01,Nunavut,37246
+3545,2017-04,Canada,36397141
+3546,2017-04,Newfoundland and Labrador,529700
+3547,2017-04,Prince Edward Island,148354
+3548,2017-04,Nova Scotia,948945
+3549,2017-04,New Brunswick,764859
+3550,2017-04,Quebec,8265839
+3551,2017-04,Ontario,14012209
+3552,2017-04,Manitoba,1328337
+3553,2017-04,Saskatchewan,1143829
+3554,2017-04,Alberta,4224933
+3555,2017-04,British Columbia,4908971
+3556,2017-04,Yukon,39108
+3557,2017-04,Northwest Territories,44626
+3558,2017-04,Nunavut,37431
+3559,2017-07,Canada,36545075
+3560,2017-07,Newfoundland and Labrador,529742
+3561,2017-07,Prince Edward Island,149740
+3562,2017-07,Nova Scotia,952159
+3563,2017-07,New Brunswick,766697
+3564,2017-07,Quebec,8292832
+3565,2017-07,Ontario,14078499
+3566,2017-07,Manitoba,1334734
+3567,2017-07,Saskatchewan,1147315
+3568,2017-07,Alberta,4237310
+3569,2017-07,British Columbia,4934202
+3570,2017-07,Yukon,39533
+3571,2017-07,Northwest Territories,44656
+3572,2017-07,Nunavut,37656
+3573,2017-10,Canada,36722075
+3574,2017-10,Newfoundland and Labrador,530153
+3575,2017-10,Prince Edward Island,150595
+3576,2017-10,Nova Scotia,956074
+3577,2017-10,New Brunswick,768029
+3578,2017-10,Quebec,8326075
+3579,2017-10,Ontario,14161084
+3580,2017-10,Manitoba,1340426
+3581,2017-10,Saskatchewan,1151044
+3582,2017-10,Alberta,4253530
+3583,2017-10,British Columbia,4962706
+3584,2017-10,Yukon,39705
+3585,2017-10,Northwest Territories,44825
+3586,2017-10,Nunavut,37829
+3587,2018-01,Canada,36801579
+3588,2018-01,Newfoundland and Labrador,529743
+3589,2018-01,Prince Edward Island,150619
+3590,2018-01,Nova Scotia,956711
+3591,2018-01,New Brunswick,768146
+3592,2018-01,Quebec,8338883
+3593,2018-01,Ontario,14199811
+3594,2018-01,Manitoba,1344198
+3595,2018-01,Saskatchewan,1152366
+3596,2018-01,Alberta,4263957
+3597,2018-01,British Columbia,4974712
+3598,2018-01,Yukon,39873
+3599,2018-01,Northwest Territories,44730
+3600,2018-01,Nunavut,37830
+3601,2018-04,Canada,36903671
+3602,2018-04,Newfoundland and Labrador,528924
+3603,2018-04,Prince Edward Island,151008
+3604,2018-04,Nova Scotia,957883
+3605,2018-04,New Brunswick,768707
+3606,2018-04,Quebec,8354460
+3607,2018-04,Ontario,14251136
+3608,2018-04,Manitoba,1346916
+3609,2018-04,Saskatchewan,1153530
+3610,2018-04,Alberta,4276444
+3611,2018-04,British Columbia,4991716
+3612,2018-04,Yukon,40037
+3613,2018-04,Northwest Territories,44934
+3614,2018-04,Nunavut,37976
+3615,2018-07,Canada,37072620
+3616,2018-07,Newfoundland and Labrador,528402
+3617,2018-07,Prince Edward Island,152259
+3618,2018-07,Nova Scotia,962072
+3619,2018-07,New Brunswick,770497
+3620,2018-07,Quebec,8386951
+3621,2018-07,Ontario,14326746
+3622,2018-07,Manitoba,1352687
+3623,2018-07,Saskatchewan,1156210
+3624,2018-07,Alberta,4292556
+3625,2018-07,British Columbia,5020979
+3626,2018-07,Yukon,40403
+3627,2018-07,Northwest Territories,44536
+3628,2018-07,Nunavut,38322
+3629,2018-10,Canada,37259485
+3630,2018-10,Newfoundland and Labrador,528926
+3631,2018-10,Prince Edward Island,153906
+3632,2018-10,Nova Scotia,967578
+3633,2018-10,New Brunswick,772793
+3634,2018-10,Quebec,8418646
+3635,2018-10,Ontario,14413055
+3636,2018-10,Manitoba,1357856
+3637,2018-10,Saskatchewan,1159648
+3638,2018-10,Alberta,4311439
+3639,2018-10,British Columbia,5052131
+3640,2018-10,Yukon,40533
+3641,2018-10,Northwest Territories,44487
+3642,2018-10,Nunavut,38487
+3643,2019-01,Canada,37336956
+3644,2019-01,Newfoundland and Labrador,528326
+3645,2019-01,Prince Edward Island,153881
+3646,2019-01,Nova Scotia,968724
+3647,2019-01,New Brunswick,773059
+3648,2019-01,Quebec,8430363
+3649,2019-01,Ontario,14449986
+3650,2019-01,Manitoba,1361737
+3651,2019-01,Saskatchewan,1161529
+3652,2019-01,Alberta,4324254
+3653,2019-01,British Columbia,5061132
+3654,2019-01,Yukon,40716
+3655,2019-01,Northwest Territories,44675
+3656,2019-01,Nunavut,38574
+3657,2019-04,Canada,37437243
+3658,2019-04,Newfoundland and Labrador,527993
+3659,2019-04,Prince Edward Island,154409
+3660,2019-04,Nova Scotia,970680
+3661,2019-04,New Brunswick,774277
+3662,2019-04,Quebec,8447632
+3663,2019-04,Ontario,14493612
+3664,2019-04,Manitoba,1364666
+3665,2019-04,Saskatchewan,1161787
+3666,2019-04,Alberta,4337569
+3667,2019-04,British Columbia,5080515
+3668,2019-04,Yukon,40779
+3669,2019-04,Northwest Territories,44560
+3670,2019-04,Nunavut,38764
+3671,2019-07,Canada,37618495
+3672,2019-07,Newfoundland and Labrador,527643
+3673,2019-07,Prince Edward Island,155792
+3674,2019-07,Nova Scotia,975799
+3675,2019-07,New Brunswick,777387
+3676,2019-07,Quebec,8483186
+3677,2019-07,Ontario,14573565
+3678,2019-07,Manitoba,1370033
+3679,2019-07,Saskatchewan,1164223
+3680,2019-07,Alberta,4355377
+3681,2019-07,British Columbia,5111022
+3682,2019-07,Yukon,41187
+3683,2019-07,Northwest Territories,44442
+3684,2019-07,Nunavut,38839
+3685,2019-10,Canada,37828162
+3686,2019-10,Newfoundland and Labrador,528442
+3687,2019-10,Prince Edward Island,157025
+3688,2019-10,Nova Scotia,982592
+3689,2019-10,New Brunswick,780907
+3690,2019-10,Quebec,8521542
+3691,2019-10,Ontario,14666727
+3692,2019-10,Manitoba,1373884
+3693,2019-10,Saskatchewan,1167271
+3694,2019-10,Alberta,4376860
+3695,2019-10,British Columbia,5148047
+3696,2019-10,Yukon,41460
+3697,2019-10,Northwest Territories,44512
+3698,2019-10,Nunavut,38893
+3699,2020-01,Canada,37928208
+3700,2020-01,Newfoundland and Labrador,528231
+3701,2020-01,Prince Edward Island,157494
+3702,2020-01,Nova Scotia,984130
+3703,2020-01,New Brunswick,781054
+3704,2020-01,Quebec,8537376
+3705,2020-01,Ontario,14718155
+3706,2020-01,Manitoba,1377283
+3707,2020-01,Saskatchewan,1169426
+3708,2020-01,Alberta,4392958
+3709,2020-01,British Columbia,5157053
+3710,2020-01,Yukon,41505
+3711,2020-01,Northwest Territories,44533
+3712,2020-01,Nunavut,39010
+3713,2020-04,Canada,38006941
+3714,2020-04,Newfoundland and Labrador,527733
+3715,2020-04,Prince Edward Island,158401
+3716,2020-04,Nova Scotia,986204
+3717,2020-04,New Brunswick,782512
+3718,2020-04,Quebec,8550900
+3719,2020-04,Ontario,14752374
+3720,2020-04,Manitoba,1379280
+3721,2020-04,Saskatchewan,1169038
+3722,2020-04,Alberta,4405455
+3723,2020-04,British Columbia,5169535
+3724,2020-04,Yukon,41807
+3725,2020-04,Northwest Territories,44565
+3726,2020-04,Nunavut,39137
+3727,2020-07,Canada,38028638
+3728,2020-07,Newfoundland and Labrador,526884
+3729,2020-07,Prince Edward Island,159193
+3730,2020-07,Nova Scotia,989168
+3731,2020-07,New Brunswick,783432
+3732,2020-07,Quebec,8551095
+3733,2020-07,Ontario,14761811
+3734,2020-07,Manitoba,1380132
+3735,2020-07,Saskatchewan,1167386
+3736,2020-07,Alberta,4407495
+3737,2020-07,British Columbia,5176101
+3738,2020-07,Yukon,41958
+3739,2020-07,Northwest Territories,44504
+3740,2020-07,Nunavut,39479
+3741,2020-10,Canada,38027406
+3742,2020-10,Newfoundland and Labrador,526046
+3743,2020-10,Prince Edward Island,159179
+3744,2020-10,Nova Scotia,989154
+3745,2020-10,New Brunswick,783814
+3746,2020-10,Quebec,8551865
+3747,2020-10,Ontario,14757582
+3748,2020-10,Manitoba,1381809
+3749,2020-10,Saskatchewan,1165963
+3750,2020-10,Alberta,4412013
+3751,2020-10,British Columbia,5173896
+3752,2020-10,Yukon,42109
+3753,2020-10,Northwest Territories,44395
+3754,2020-10,Nunavut,39581
+3755,2021-01,Canada,38058291
+3756,2021-01,Newfoundland and Labrador,525895
+3757,2021-01,Prince Edward Island,159240
+3758,2021-01,Nova Scotia,990025
+3759,2021-01,New Brunswick,784950
+3760,2021-01,Quebec,8550561
+3761,2021-01,Ontario,14772726
+3762,2021-01,Manitoba,1383854
+3763,2021-01,Saskatchewan,1166348
+3764,2021-01,Alberta,4418338
+3765,2021-01,British Columbia,5180015
+3766,2021-01,Yukon,42157
+3767,2021-01,Northwest Territories,44432
+3768,2021-01,Nunavut,39750
+3769,2021-04,Canada,38140918
+3770,2021-04,Newfoundland and Labrador,526195
+3771,2021-04,Prince Edward Island,160334
+3772,2021-04,Nova Scotia,993946
+3773,2021-04,New Brunswick,787002
+3774,2021-04,Quebec,8556015
+3775,2021-04,Ontario,14808093
+3776,2021-04,Manitoba,1388611
+3777,2021-04,Saskatchewan,1167711
+3778,2021-04,Alberta,4425617
+3779,2021-04,British Columbia,5200393
+3780,2021-04,Yukon,42443
+3781,2021-04,Northwest Territories,44679
+3782,2021-04,Nunavut,39879
+3783,2021-07,Canada,38239864
+3784,2021-07,Newfoundland and Labrador,527056
+3785,2021-07,Prince Edward Island,162133
+3786,2021-07,Nova Scotia,999908
+3787,2021-07,New Brunswick,790802
+3788,2021-07,Quebec,8572020
+3789,2021-07,Ontario,14842488
+3790,2021-07,Manitoba,1391924
+3791,2021-07,Saskatchewan,1167711
+3792,2021-07,Alberta,4431531
+3793,2021-07,British Columbia,5226665
+3794,2021-07,Yukon,42961
+3795,2021-07,Northwest Territories,44579
+3796,2021-07,Nunavut,40086
+3797,2021-10,Canada,38460257
+3798,2021-10,Newfoundland and Labrador,528342
+3799,2021-10,Prince Edward Island,163580
+3800,2021-10,Nova Scotia,1006562
+3801,2021-10,New Brunswick,795691
+3802,2021-10,Quebec,8604508
+3803,2021-10,Ontario,14947417
+3804,2021-10,Manitoba,1396656
+3805,2021-10,Saskatchewan,1168934
+3806,2021-10,Alberta,4451129
+3807,2021-10,British Columbia,5269491
+3808,2021-10,Yukon,43129
+3809,2021-10,Northwest Territories,44573
+3810,2021-10,Nunavut,40245
+3811,2022-01,Canada,38565380
+3812,2022-01,Newfoundland and Labrador,529008
+3813,2022-01,Prince Edward Island,164058
+3814,2022-01,Nova Scotia,1009355
+3815,2022-01,New Brunswick,798414
+3816,2022-01,Quebec,8613282
+3817,2022-01,Ontario,14997903
+3818,2022-01,Manitoba,1400367
+3819,2022-01,Saskatchewan,1171063
+3820,2022-01,Alberta,4466136
+3821,2022-01,British Columbia,5287664
+3822,2022-01,Yukon,43046
+3823,2022-01,Northwest Territories,44741
+3824,2022-01,Nunavut,40343
+3825,2022-04,Canada,38693009
+3826,2022-04,Newfoundland and Labrador,529054
+3827,2022-04,Prince Edward Island,165396
+3828,2022-04,Nova Scotia,1013351
+3829,2022-04,New Brunswick,801319
+3830,2022-04,Quebec,8628480
+3831,2022-04,Ontario,15051975
+3832,2022-04,Manitoba,1404837
+3833,2022-04,Saskatchewan,1173461
+3834,2022-04,Alberta,4482503
+3835,2022-04,British Columbia,5313881
+3836,2022-04,Yukon,43400
+3837,2022-04,Northwest Territories,44773
+3838,2022-04,Nunavut,40579
+3839,2022-07,Canada,38950132
+3840,2022-07,Newfoundland and Labrador,531257
+3841,2022-07,Prince Edward Island,167200
+3842,2022-07,Nova Scotia,1024034
+3843,2022-07,New Brunswick,808869
+3844,2022-07,Quebec,8669963
+3845,2022-07,Ontario,15155836
+3846,2022-07,Manitoba,1413498
+3847,2022-07,Saskatchewan,1178796
+3848,2022-07,Alberta,4512731
+3849,2022-07,British Columbia,5358845
+3850,2022-07,Yukon,43869
+3851,2022-07,Northwest Territories,44631
+3852,2022-07,Nunavut,40603
+3853,2022-10,Canada,39284491
+3854,2022-10,Newfoundland and Labrador,533194
+3855,2022-10,Prince Edward Island,168939
+3856,2022-10,Nova Scotia,1033146
+3857,2022-10,New Brunswick,816420
+3858,2022-10,Quebec,8718914
+3859,2022-10,Ontario,15305369
+3860,2022-10,Manitoba,1424475
+3861,2022-10,Saskatchewan,1188295
+3862,2022-10,Alberta,4560275
+3863,2022-10,British Columbia,5406059
+3864,2022-10,Yukon,44169
+3865,2022-10,Northwest Territories,44559
+3866,2022-10,Nunavut,40677
+3867,2023-01,Canada,39501329
+3868,2023-01,Newfoundland and Labrador,535147
+3869,2023-01,Prince Edward Island,169942
+3870,2023-01,Nova Scotia,1036868
+3871,2023-01,New Brunswick,819414
+3872,2023-01,Quebec,8742975
+3873,2023-01,Ontario,15407970
+3874,2023-01,Manitoba,1433655
+3875,2023-01,Saskatchewan,1195840
+3876,2023-01,Alberta,4596901
+3877,2023-01,British Columbia,5432939
+3878,2023-01,Yukon,44478
+3879,2023-01,Northwest Territories,44403
+3880,2023-01,Nunavut,40797
+3881,2023-04,Canada,39727297
+3882,2023-04,Newfoundland and Labrador,536635
+3883,2023-04,Prince Edward Island,171736
+3884,2023-04,Nova Scotia,1043723
+3885,2023-04,New Brunswick,824150
+3886,2023-04,Quebec,8772140
+3887,2023-04,Ontario,15495050
+3888,2023-04,Manitoba,1444049
+3889,2023-04,Saskatchewan,1201624
+3890,2023-04,Alberta,4641615
+3891,2023-04,British Columbia,5466566
+3892,2023-04,Yukon,44823
+3893,2023-04,Northwest Territories,44402
+3894,2023-04,Nunavut,40784
+3895,2023-07,Canada,40049088
+3896,2023-07,Newfoundland and Labrador,538789
+3897,2023-07,Prince Edward Island,173734
+3898,2023-07,Nova Scotia,1053005
+3899,2023-07,New Brunswick,831103
+3900,2023-07,Quebec,8821696
+3901,2023-07,Ontario,15632481
+3902,2023-07,Manitoba,1453202
+3903,2023-07,Saskatchewan,1210257
+3904,2023-07,Alberta,4688576
+3905,2023-07,British Columbia,5515296
+3906,2023-07,Yukon,45419
+3907,2023-07,Northwest Territories,44614
+3908,2023-07,Nunavut,40916
+3909,2023-10,Canada,40467722
+3910,2023-10,Newfoundland and Labrador,541126
+3911,2023-10,Prince Edward Island,176173
+3912,2023-10,Nova Scotia,1062825
+3913,2023-10,New Brunswick,840130
+3914,2023-10,Quebec,8882501
+3915,2023-10,Ontario,15823956
+3916,2023-10,Manitoba,1462439
+3917,2023-10,Saskatchewan,1222152
+3918,2023-10,Alberta,4752173
+3919,2023-10,British Columbia,5572694
+3920,2023-10,Yukon,45898
+3921,2023-10,Northwest Territories,44566
+3922,2023-10,Nunavut,41089
+3923,2024-01,Canada,40724526
+3924,2024-01,Newfoundland and Labrador,542449
+3925,2024-01,Prince Edward Island,176757
+3926,2024-01,Nova Scotia,1067878
+3927,2024-01,New Brunswick,844859
+3928,2024-01,Quebec,8909038
+3929,2024-01,Ontario,15946146
+3930,2024-01,Manitoba,1472261
+3931,2024-01,Saskatchewan,1230316
+3932,2024-01,Alberta,4801806
+3933,2024-01,British Columbia,5601024
+3934,2024-01,Yukon,46286
+3935,2024-01,Northwest Territories,44655
+3936,2024-01,Nunavut,41051
+3937,2024-04,Canada,40990297
+3938,2024-04,Newfoundland and Labrador,544318
+3939,2024-04,Prince Edward Island,178022
+3940,2024-04,Nova Scotia,1074020
+3941,2024-04,New Brunswick,850930
+3942,2024-04,Quebec,8945468
+3943,2024-04,Ontario,16046534
+3944,2024-04,Manitoba,1483553
+3945,2024-04,Saskatchewan,1238591
+3946,2024-04,Alberta,4857695
+3947,2024-04,British Columbia,5638043
+3948,2024-04,Yukon,46965
+3949,2024-04,Northwest Territories,45021
+3950,2024-04,Nunavut,41137
+3951,2024-07,Canada,41262329
+3952,2024-07,Newfoundland and Labrador,546869
+3953,2024-07,Prince Edward Island,179709
+3954,2024-07,Nova Scotia,1082769
+3955,2024-07,New Brunswick,858293
+3956,2024-07,Quebec,8995474
+3957,2024-07,Ontario,16144797
+3958,2024-07,Manitoba,1492144
+3959,2024-07,Saskatchewan,1247868
+3960,2024-07,Alberta,4909030
+3961,2024-07,British Columbia,5671114
+3962,2024-07,Yukon,47595
+3963,2024-07,Northwest Territories,45257
+3964,2024-07,Nunavut,41410
+3965,2024-10,Canada,41494132
+3966,2024-10,Newfoundland and Labrador,548402
+3967,2024-10,Prince Edward Island,180877
+3968,2024-10,Nova Scotia,1088273
+3969,2024-10,New Brunswick,863841
+3970,2024-10,Quebec,9038268
+3971,2024-10,Ontario,16228152
+3972,2024-10,Manitoba,1500464
+3973,2024-10,Saskatchewan,1256983
+3974,2024-10,Alberta,4957075
+3975,2024-10,British Columbia,5696852
+3976,2024-10,Yukon,47939
+3977,2024-10,Northwest Territories,45520
+3978,2024-10,Nunavut,41486
+3979,2025-01,Canada,41574517
+3980,2025-01,Newfoundland and Labrador,548842
+3981,2025-01,Prince Edward Island,180686
+3982,2025-01,Nova Scotia,1089187
+3983,2025-01,New Brunswick,865945
+3984,2025-01,Quebec,9043463
+3985,2025-01,Ontario,16255550
+3986,2025-01,Manitoba,1505644
+3987,2025-01,Saskatchewan,1261524
+3988,2025-01,Alberta,4988181
+3989,2025-01,British Columbia,5699989
+3990,2025-01,Yukon,48176
+3991,2025-01,Northwest Territories,45679
+3992,2025-01,Nunavut,41651
+3993,2025-04,Canada,41604555
+3994,2025-04,Newfoundland and Labrador,549456
+3995,2025-04,Prince Edward Island,181289
+3996,2025-04,Nova Scotia,1091037
+3997,2025-04,New Brunswick,867014
+3998,2025-04,Quebec,9041123
+3999,2025-04,Ontario,16256538
+4000,2025-04,Manitoba,1508031
+4001,2025-04,Saskatchewan,1264537
+4002,2025-04,Alberta,5010078
+4003,2025-04,British Columbia,5699690
+4004,2025-04,Yukon,48089
+4005,2025-04,Northwest Territories,45875
+4006,2025-04,Nunavut,41798
+4007,2025-07,Canada,41651653
+4008,2025-07,Newfoundland and Labrador,549911
+4009,2025-07,Prince Edward Island,182657
+4010,2025-07,Nova Scotia,1093245
+4011,2025-07,New Brunswick,869682
+4012,2025-07,Quebec,9058297
+4013,2025-07,Ontario,16258260
+4014,2025-07,Manitoba,1509702
+4015,2025-07,Saskatchewan,1266959
+4016,2025-07,Alberta,5029346
+4017,2025-07,British Columbia,5697536
+4018,2025-07,Yukon,48278
+4019,2025-07,Northwest Territories,45950
+4020,2025-07,Nunavut,41830
+4021,2025-10,Canada,41575585
+4022,2025-10,Newfoundland and Labrador,549738
+4023,2025-10,Prince Edward Island,182508
+4024,2025-10,Nova Scotia,1091857
+4025,2025-10,New Brunswick,868630
+4026,2025-10,Quebec,9058089
+4027,2025-10,Ontario,16191372
+4028,2025-10,Manitoba,1507057
+4029,2025-10,Saskatchewan,1266234
+4030,2025-10,Alberta,5040871
+4031,2025-10,British Columbia,5683201
+4032,2025-10,Yukon,48261
+4033,2025-10,Northwest Territories,45848
+4034,2025-10,Nunavut,41919
+4035,2026-01,Canada,41472081
+4036,2026-01,Newfoundland and Labrador,548557
+4037,2026-01,Prince Edward Island,182001
+4038,2026-01,Nova Scotia,1090074
+4039,2026-01,New Brunswick,867383
+4040,2026-01,Quebec,9033887
+4041,2026-01,Ontario,16136480
+4042,2026-01,Manitoba,1505117
+4043,2026-01,Saskatchewan,1265936
+4044,2026-01,Alberta,5048151
+4045,2026-01,British Columbia,5658528
+4046,2026-01,Yukon,48218
+4047,2026-01,Northwest Territories,45803
+4048,2026-01,Nunavut,41946

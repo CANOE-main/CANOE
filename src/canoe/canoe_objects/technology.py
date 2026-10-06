@@ -24,6 +24,7 @@ from canoe_schema.v4_0 import (
     Efficiency,
     EmissionActivity,
     ExistingCapacity,
+    LifetimeProcess,
     LifetimeTech,
     LimitAnnualCapacityFactor,
     LimitTechInputSplit,
@@ -227,13 +228,16 @@ class TechnologyEntity:
         # input commodity -> input split
         self.input_splits: dict[str, InputSplit] = {}
         self.lifetime: Parameter[RegionalValuesArray] | None = None
+        self.process_lifetime: Parameter[RegionVintageArray] | None = None
         self.capacity_to_activity: Parameter[RegionalValuesArray] | None = None
         self.existing_capacity: Parameter[RegionVintageArray] | None = None
         self.investment_cost: Parameter[RegionVintageArray] | None = None
         self.fixed_cost: Parameter[RegionVintagePeriodArray] | None = None
         self.variable_cost: Parameter[RegionVintagePeriodArray] | None = None
-        # output commodity -> capacity factor limit
-        self.capacity_factor_limits: dict[str, CapacityFactorLimit] = {}
+        # (output commodity, operator) -> capacity factor limit
+        self.capacity_factor_limits: dict[
+            tuple[str, OperatorCode], CapacityFactorLimit
+        ] = {}
         # (emission commodity, input commodity) -> emission factor
         self.input_emission_factors: dict[tuple[str, str], InputEmissionFactor] = {}
 
@@ -449,6 +453,52 @@ class TechnologyEntity:
         )
         return self
 
+    def with_lifetime_process(
+        self,
+        lifetimes: RegionVintageArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = "year",
+    ):
+        """
+        Set the lifetime of each vintage, for technologies whose lifetime changes
+        between vintages.
+
+        Writes `lifetime_process`: one row per (region, vintage) with a value, rounded
+        to whole years. Where it is set, it overrides the technology's lifetime (see
+        `with_lifetime`).
+
+        Parameters
+        ----------
+        lifetimes : RegionVintageArray
+            Lifetime in years by region and vintage.
+
+        Examples
+        --------
+        LED lamps whose lifetime falls between vintages:
+
+        >>> from canoe.common import CANOEProvince, CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> lifetimes = RegionVintageArray(regions, [2025, 2030])
+        >>> lifetimes.set(36.0, vintage=2025)
+        >>> lifetimes.set(24.0, vintage=2030)
+        >>> led = (
+        ...     TechnologyEntity(
+        ...         "C_LGT_LED", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025, 2030], fill=2.8))
+        ...     .with_lifetime_process(lifetimes)
+        ... )
+        >>> led.build(db)
+        >>> db.execute("SELECT vintage, lifetime FROM lifetime_process").fetchall()
+        [(2025, 36.0), (2030, 24.0)]
+        """
+        self.process_lifetime = Parameter(
+            lifetimes, ParameterMetadata(notes, reference_code, data_quality, units)
+        )
+        return self
+
     def with_capacity_to_activity(
         self,
         capacity_to_activity: RegionalValuesArray,
@@ -633,7 +683,9 @@ class TechnologyEntity:
         full-capacity output the technology can deliver.
 
         Writes `limit_annual_capacity_factor`: one row per (region, vintage) with a
-        value. Calling it again with the same output replaces its limit.
+        value. An output can have one limit per operator (e.g. a lower and an upper
+        bound); calling it again with the same output and operator replaces that
+        limit.
 
         Parameters
         ----------
@@ -644,9 +696,33 @@ class TechnologyEntity:
         output_commodity : str, optional
             Output the limit applies to, the entity's `output_commodity` by default.
             Must be an output (see `with_efficiency`).
+
+        Examples
+        --------
+        A band: at least 95% and at most 100% of a capacity factor of 0.2:
+
+        >>> from canoe.common import CANOEProvince, CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> heater = (
+        ...     TechnologyEntity(
+        ...         "C_ELC_HTR", "C_D_DOC", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=1.0))
+        ...     .with_limit_annual_capacity_factor(
+        ...         RegionVintageArray(regions, [2025], fill=0.19), OperatorCode.GE
+        ...     )
+        ...     .with_limit_annual_capacity_factor(
+        ...         RegionVintageArray(regions, [2025], fill=0.2), OperatorCode.LE
+        ...     )
+        ... )
+        >>> heater.build(db)
+        >>> db.execute(
+        ...     "SELECT output_comm, operator, factor FROM limit_annual_capacity_factor"
+        ... ).fetchall()
+        [('C_D_DOC', 'ge', 0.19), ('C_D_DOC', 'le', 0.2)]
         """
         output = output_commodity or self.output_commodity
-        self.capacity_factor_limits[output] = CapacityFactorLimit(
+        self.capacity_factor_limits[(output, operator)] = CapacityFactorLimit(
             Parameter(
                 capacity_factors,
                 ParameterMetadata(notes, reference_code, data_quality),
@@ -761,9 +837,10 @@ class TechnologyEntity:
             "fixed cost": self.fixed_cost,
             "variable cost": self.variable_cost,
             **{
-                f"annual capacity factor limit ({o})": limit.parameter
-                for o, limit in self.capacity_factor_limits.items()
+                f"annual capacity factor limit ({o}, {operator})": limit.parameter
+                for (o, operator), limit in self.capacity_factor_limits.items()
             },
+            "process lifetime": self.process_lifetime,
         }
         for parameter_name, parameter in parameters.items():
             if parameter is not None and not parameter.values.to_records():
@@ -787,7 +864,7 @@ class TechnologyEntity:
                 efficiency_cells.add((record["region"], record["vintage"]))
 
         # Capacity factor limits
-        not_outputs = set(self.capacity_factor_limits) - set(self.outputs)
+        not_outputs = {o for o, _ in self.capacity_factor_limits} - set(self.outputs)
         if not_outputs:
             raise ValueError(
                 f"Technology {self.name}: capacity factor limits for commodities that are not outputs: {not_outputs}"
@@ -866,13 +943,31 @@ class TechnologyEntity:
                         + f"at {record['region']}, {record['vintage']}"
                     )
 
-        # Fixed and variable costs only while the vintage is alive
+        # Process lifetimes need an efficiency for their vintage
+        if self.process_lifetime:
+            for record in self.process_lifetime.values.to_records():
+                if (record["region"], record["vintage"]) not in efficiency_cells:
+                    raise ValueError(
+                        f"Technology {self.name}: process lifetime without efficiency "
+                        + f"at {record['region']}, {record['vintage']}"
+                    )
+
+        # Fixed and variable costs only while the vintage is alive (the process
+        # lifetime of the vintage where set, else the technology lifetime)
         lifetimes: dict[CANOEProvince, float] = (
             {
                 r["region"]: np.round(r["value"])
                 for r in self.lifetime.values.to_records()
             }
             if self.lifetime
+            else {}
+        )
+        process_lifetimes: dict[tuple[CANOEProvince, int], float] = (
+            {
+                (r["region"], r["vintage"]): np.round(r["value"])
+                for r in self.process_lifetime.values.to_records()
+            }
+            if self.process_lifetime
             else {}
         )
         period_parameters = {
@@ -891,7 +986,10 @@ class TechnologyEntity:
                         f"Technology {self.name}: {parameter_name} for period {period} "
                         + f"before vintage {vintage} at {region}"
                     )
-                if region in lifetimes and vintage + lifetimes[region] <= period:
+                lifetime = process_lifetimes.get(
+                    (region, vintage), lifetimes.get(region)
+                )
+                if lifetime is not None and vintage + lifetime <= period:
                     raise ValueError(
                         f"Technology {self.name}: {parameter_name} for period {period} "
                         + f"after the end of life of vintage {vintage} at {region}"
@@ -955,6 +1053,28 @@ class TechnologyEntity:
             ]
             sql, params = LifetimeTech.bulk_insert_or_ignore_sql(
                 lifetimes, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Lifetimes by vintage
+        if self.process_lifetime:
+            meta = self.process_lifetime.metadata
+            process_lifetimes = [
+                LifetimeProcess(
+                    region=row["region"].short(),
+                    tech=self.name,
+                    vintage=row["vintage"],
+                    lifetime=np.round(row["value"]),
+                    units=meta.units,
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(self.process_lifetime.values.to_records())
+            ]
+            sql, params = LifetimeProcess.bulk_insert_or_ignore_sql(
+                process_lifetimes, include_nulls=True
             )
             db_conn.executemany(sql, params)
 
@@ -1096,8 +1216,8 @@ class TechnologyEntity:
             )
             db_conn.executemany(sql, params)
 
-        # Annual capacity factor limits (one set of rows per output)
-        for output_commodity, limit in self.capacity_factor_limits.items():
+        # Annual capacity factor limits (one set of rows per output and operator)
+        for (output_commodity, _), limit in self.capacity_factor_limits.items():
             meta = limit.parameter.metadata
             capacity_factors = [
                 LimitAnnualCapacityFactor(

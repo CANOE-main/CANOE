@@ -2,19 +2,19 @@
 Loaders for the cached datasets used only by the agriculture sector.
 
 Each function reads a single dataset and is the only place that knows its path and
-layout (file names, row labels, missing-value markers), so when the cache changes
-shape the error points to the function to fix. They return tidy frames; everything
+layout (file names, row labels; the layout shared by the CEUD tables is in
+`canoe.common.ceud`), so when the cache changes shape the error points to the
+function to fix. They return tidy frames; everything
 downstream is independent of the source layout.
 """
 
-from dataclasses import dataclass
 from pathlib import Path
 
-import numpy as np
 import pandas as pd
 from loguru import logger
 
 from canoe.common import CANOEFuel, CANOEProvince, GoldConnectorConfig
+from canoe.common.ceud import CEUDEnergyUse, parse_ceud_energy_use
 
 CEUD_AGRICULTURE_SOURCES: dict[str, CANOEFuel | None] = {
     "Electricity": CANOEFuel.Electricity,
@@ -30,42 +30,18 @@ CEUD_AGRICULTURE_SOURCES: dict[str, CANOEFuel | None] = {
 """Energy sources of the NRCan CEUD agriculture tables (row labels) -> CANOE fuel, or
 None for sources with no CANOE fuel."""
 
-# Row labels of the CEUD agriculture tables
 _TOTAL_LABEL = "Total Energy Use (PJ)"
-_ENERGY_USE_HEADER = "Energy Use by Energy Source (PJ)"
-_SHARES_HEADER = "Shares (%)"
-_LABEL_COLUMN = "Unnamed: 0"
-# Values NRCan publishes instead of a number (not available, confidential, nil)
-_MISSING_MARKERS = {"n.a.", "X", "x", "..", "–", "-"}
-
-
-@dataclass(frozen=True)
-class CEUDAgricultureEnergyUse:
-    """
-    Energy use of one NRCan CEUD agriculture table in one year.
-
-    Parameters
-    ----------
-    total : float
-        Total energy use (PJ), all sources.
-    by_source : pd.DataFrame
-        One row per energy source (index: NRCan label) with columns `fuel`
-        (`CANOEFuel`, missing for sources with no CANOE fuel), `energy_use` (PJ) and
-        `share` (percent of the total, as published). Values NRCan does not publish
-        are NaN.
-    """
-
-    total: float
-    by_source: pd.DataFrame
+"""Row of the total energy use in the CEUD agriculture tables."""
 
 
 def get_ceud_agriculture_energy_use(
     nrcan_code: str,
     data_year: int,
     cache_config: GoldConnectorConfig,
-) -> CEUDAgricultureEnergyUse:
+) -> CEUDEnergyUse:
     """
-    Total energy use and energy use by source of an NRCan CEUD agriculture table.
+    Total energy use and energy use by source of an NRCan CEUD agriculture table, see
+    `canoe.common.ceud.parse_ceud_energy_use`.
 
     Parameters
     ----------
@@ -87,60 +63,12 @@ def get_ceud_agriculture_energy_use(
     cache_path = cache_config.cache_dir / Path("silver") / cache_config.cache_date
     file_path = cache_path / dataset / f"{dataset}_{cache_config.cache_date}.parquet"
     logger.debug(f"Loading cached CEUD agriculture table {nrcan_code} ({data_year})")
-    df = pd.read_parquet(file_path)
-
-    year_column = str(data_year)
-    if year_column not in df.columns:
-        years = [c for c in df.columns if c.isdigit()]
-        raise ValueError(
-            f"{dataset}: year {data_year} not in the table. Years: {years}"
-        )
-    labels = [str(label).strip() for label in df[_LABEL_COLUMN]]
-    values = df[year_column].tolist()
-
-    def value(row: int) -> float:
-        raw = values[row]
-        if raw is None or str(raw).strip() in _MISSING_MARKERS:
-            return np.nan
-        try:
-            return float(raw)
-        except ValueError:
-            raise ValueError(
-                f"{dataset}: unexpected value {raw!r} in row {labels[row]!r}, {data_year}"
-            ) from None
-
-    def block(header: str, start: int) -> dict[str, int]:
-        """Rows (label -> position) after the first `header` at or after `start`"""
-        if header not in labels[start:]:
-            raise ValueError(f"{dataset}: row {header!r} not found")
-        first = labels.index(header, start) + 1
-        rows: dict[str, int] = {}
-        for position in range(first, len(labels)):
-            if labels[position] not in CEUD_AGRICULTURE_SOURCES:
-                break
-            rows[labels[position]] = position
-        missing = set(CEUD_AGRICULTURE_SOURCES) - set(rows)
-        if missing:
-            raise ValueError(
-                f"{dataset}: energy sources {sorted(missing)} missing under {header!r}"
-            )
-        return rows
-
-    if _TOTAL_LABEL not in labels:
-        raise ValueError(f"{dataset}: row {_TOTAL_LABEL!r} not found")
-    energy_use_rows = block(_ENERGY_USE_HEADER, 0)
-    share_rows = block(_SHARES_HEADER, max(energy_use_rows.values()))
-
-    by_source = pd.DataFrame(
-        {
-            "fuel": list(CEUD_AGRICULTURE_SOURCES.values()),
-            "energy_use": [value(energy_use_rows[s]) for s in CEUD_AGRICULTURE_SOURCES],
-            "share": [value(share_rows[s]) for s in CEUD_AGRICULTURE_SOURCES],
-        },
-        index=pd.Index(list(CEUD_AGRICULTURE_SOURCES), name="source"),
-    )
-    return CEUDAgricultureEnergyUse(
-        total=value(labels.index(_TOTAL_LABEL)), by_source=by_source
+    return parse_ceud_energy_use(
+        pd.read_parquet(file_path),
+        dataset,
+        data_year,
+        _TOTAL_LABEL,
+        CEUD_AGRICULTURE_SOURCES,
     )
 
 

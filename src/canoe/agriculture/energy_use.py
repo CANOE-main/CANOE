@@ -13,28 +13,29 @@ import pandas as pd
 from loguru import logger
 
 from canoe.common import CANOEFuel, CANOEProvince, GoldConnectorConfig
+from canoe.common.ceud import CEUDEnergyUse
 from canoe.common.validation import ValidationBehavior, handle_validation_issue
 
-from .loaders import CEUDAgricultureEnergyUse, get_ceud_agriculture_energy_use
+from .loaders import get_ceud_agriculture_energy_use
 
 
 def load_ceud_tables(
     provinces: list[CANOEProvince],
     data_year: int,
     cache_config: GoldConnectorConfig,
-) -> dict[CANOEProvince, CEUDAgricultureEnergyUse]:
+) -> dict[CANOEProvince, CEUDEnergyUse]:
     """
     CEUD agriculture energy use of each province's table (the Atlantic provinces get
     the Atlantic table), reading each table once.
     """
-    tables: dict[str, CEUDAgricultureEnergyUse] = {}
+    tables: dict[str, CEUDEnergyUse] = {}
     for code in dict.fromkeys(province.get_nrcan_code() for province in provinces):
         tables[code] = get_ceud_agriculture_energy_use(code, data_year, cache_config)
     return {province: tables[province.get_nrcan_code()] for province in provinces}
 
 
 def compute_total_energy_use(
-    ceud: dict[CANOEProvince, CEUDAgricultureEnergyUse],
+    ceud: dict[CANOEProvince, CEUDEnergyUse],
     atlantic_shares: dict[CANOEProvince, float],
 ) -> pd.DataFrame:
     """
@@ -48,7 +49,7 @@ def compute_total_energy_use(
 
     Examples
     --------
-    >>> table = CEUDAgricultureEnergyUse(total=8.0, by_source=pd.DataFrame())
+    >>> table = CEUDEnergyUse(total=8.0, by_source=pd.DataFrame())
     >>> compute_total_energy_use(
     ...     {CANOEProvince.ONTARIO: table, CANOEProvince.NOVA_SCOTIA: table},
     ...     {CANOEProvince.NOVA_SCOTIA: 0.25},
@@ -69,7 +70,7 @@ def compute_total_energy_use(
 
 
 def compute_energy_use_by_source(
-    ceud: dict[CANOEProvince, CEUDAgricultureEnergyUse],
+    ceud: dict[CANOEProvince, CEUDEnergyUse],
     atlantic_shares: dict[CANOEProvince, float],
 ) -> pd.DataFrame:
     """
@@ -94,7 +95,7 @@ def compute_energy_use_by_source(
     ...     },
     ...     index=pd.Index(["Electricity", "Steam"], name="source"),
     ... )
-    >>> table = CEUDAgricultureEnergyUse(total=8.0, by_source=by_source)
+    >>> table = CEUDEnergyUse(total=8.0, by_source=by_source)
     >>> compute_energy_use_by_source(
     ...     {CANOEProvince.NOVA_SCOTIA: table}, {CANOEProvince.NOVA_SCOTIA: 0.5}
     ... )

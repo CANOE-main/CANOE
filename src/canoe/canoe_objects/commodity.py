@@ -33,6 +33,8 @@ class FuelCommodityEntity:
         fuels whose supply is balanced over the year.
     data_id : DatasetIdentifier
         Data set of the `commodity` row (sector-wide, no region).
+    units : str
+        Units of the commodity, PJ by default (fuel flows are energy).
 
     Examples
     --------
@@ -46,8 +48,10 @@ class FuelCommodityEntity:
     >>> natural_gas.name
     'C_ng'
     >>> natural_gas.build(db)
-    >>> db.execute("SELECT name, flag, description, data_id FROM commodity").fetchall()
-    [('C_ng', 'a', 'natural gas fuel for Commercial sector', 'COMDOC001')]
+    >>> db.execute(
+    ...     "SELECT name, flag, description, units, data_id FROM commodity"
+    ... ).fetchall()
+    [('C_ng', 'a', 'natural gas fuel for Commercial sector', 'PJ', 'COMDOC001')]
     """
 
     def __init__(
@@ -56,11 +60,13 @@ class FuelCommodityEntity:
         fuel: CANOEFuel,
         flag: CommodityTypeCode,
         data_id: DatasetIdentifier,
+        units: str = "PJ",
     ) -> None:
         self.sector: CANOESector = sector
         self.fuel: CANOEFuel = fuel
         self.flag: CommodityTypeCode = flag
         self.data_id: DatasetIdentifier = data_id
+        self.units: str = units
 
     @property
     def name(self) -> str:
@@ -80,6 +86,7 @@ class FuelCommodityEntity:
             name=self.name,
             flag=self.flag,
             description=f"{self.fuel.get_desc_name()} fuel for {self.sector.name} sector",
+            units=self.units,
             data_id=self.data_id.get_dataset_code(),
         )
         sql, params = Commodity.to_insert_or_ignore_sql(commodity)
@@ -104,6 +111,8 @@ class SourceCommodityEntity:
         Description in the `commodity` table.
     data_id : DatasetIdentifier
         Data set of the `commodity` row (sector-wide, no region).
+    units : str, optional
+        Units of the commodity, e.g. PJ for the supply point of fuels.
 
     Examples
     --------
@@ -112,15 +121,25 @@ class SourceCommodityEntity:
     ...     name="C_ethos",
     ...     description="supply point of the commercial fuels",
     ...     data_id=DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+    ...     units="PJ",
     ... ).build(db)
-    >>> db.execute("SELECT name, flag, description, data_id FROM commodity").fetchall()
-    [('C_ethos', 's', 'supply point of the commercial fuels', 'COMDOC001')]
+    >>> db.execute(
+    ...     "SELECT name, flag, description, units, data_id FROM commodity"
+    ... ).fetchall()
+    [('C_ethos', 's', 'supply point of the commercial fuels', 'PJ', 'COMDOC001')]
     """
 
-    def __init__(self, name: str, description: str, data_id: DatasetIdentifier) -> None:
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        data_id: DatasetIdentifier,
+        units: str | None = None,
+    ) -> None:
         self.name: str = name
         self.description: str = description
         self.data_id: DatasetIdentifier = data_id
+        self.units: str | None = units
 
     def build(self, db_conn: Connection):
         """
@@ -135,6 +154,7 @@ class SourceCommodityEntity:
             name=self.name,
             flag=CommodityTypeCode.S,
             description=self.description,
+            units=self.units,
             data_id=self.data_id.get_dataset_code(),
         )
         sql, params = Commodity.to_insert_or_ignore_sql(commodity)

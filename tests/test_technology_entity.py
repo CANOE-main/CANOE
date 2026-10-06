@@ -1,5 +1,5 @@
 import pytest
-from canoe_schema.v4_0 import CommodityTypeCode
+from canoe_schema.v4_0 import CommodityTypeCode, OperatorCode
 
 from canoe.canoe_objects.array_types import (
     RegionalValuesArray,
@@ -103,7 +103,54 @@ class TestTechnologyEntityValidation:
         )
         technology.validate()
         assert technology.outputs == ["OUT", "OUT2"]
-        assert list(technology.capacity_factor_limits) == ["OUT", "OUT2"]
+        assert list(technology.capacity_factor_limits) == [
+            ("OUT", OperatorCode.LE),
+            ("OUT2", OperatorCode.LE),
+        ]
+
+    def test_capacity_factor_limit_per_operator(self):
+        technology = (
+            _technology()
+            .with_efficiency("IN", _efficiency([2025]))
+            .with_limit_annual_capacity_factor(
+                RegionVintageArray(REGIONS, [2025], fill=0.4), OperatorCode.GE
+            )
+            .with_limit_annual_capacity_factor(
+                RegionVintageArray(REGIONS, [2025], fill=0.5), OperatorCode.LE
+            )
+            # Same output and operator: replaces the upper bound
+            .with_limit_annual_capacity_factor(
+                RegionVintageArray(REGIONS, [2025], fill=0.6), OperatorCode.LE
+            )
+        )
+        technology.validate()
+        limits = technology.capacity_factor_limits
+        assert list(limits) == [("OUT", OperatorCode.GE), ("OUT", OperatorCode.LE)]
+        assert (
+            limits[("OUT", OperatorCode.LE)].parameter.values.to_records()[0]["value"]
+            == 0.6
+        )
+
+    def test_process_lifetime_overrides_lifetime_for_costs(self):
+        lifetimes = RegionVintageArray(REGIONS, [2025], fill=5)
+        technology = (
+            _technology()
+            .with_efficiency("IN", _efficiency([2025]))
+            .with_lifetime(RegionalValuesArray(REGIONS, fill=20))
+            .with_lifetime_process(lifetimes)
+            .with_fixed_cost(RegionVintagePeriodArray(REGIONS, [2025], [2030], fill=1))
+        )
+        with pytest.raises(ValueError, match="after the end of life"):
+            technology.validate()
+
+    def test_process_lifetime_needs_efficiency(self):
+        technology = (
+            _technology()
+            .with_efficiency("IN", _efficiency([2025]))
+            .with_lifetime_process(RegionVintageArray(REGIONS, [2030], fill=5))
+        )
+        with pytest.raises(ValueError, match="process lifetime without efficiency"):
+            technology.validate()
 
     def test_fixed_cost_before_vintage(self):
         technology = (

@@ -1,5 +1,6 @@
 """
-GDP growth used to project demands, shared by all sectors.
+GDP growth used to project demands, shared by all sectors (and the growth of any other
+projected series, see `projected_growth_by_period`).
 
 Sectors scale base-year demands with the projected GDP of the CER Canada's Energy
 Future macro indicators (see `canoe.common.loaders.get_cer_gdp`). The scenario and the
@@ -60,7 +61,8 @@ def gdp_growth_by_period(
     projection_point: GDPProjectionPoint,
 ) -> dict[int, float]:
     """
-    GDP growth factor of each model period, to multiply base-year demands by.
+    GDP growth factor of each model period, to multiply base-year demands by, see
+    `projected_growth_by_period`.
 
     Parameters
     ----------
@@ -86,24 +88,60 @@ def gdp_growth_by_period(
     ... )
     >>> gdp_growth_by_period(gdp_index, [2025, 2030], 5, GDPProjectionPoint.PeriodEnd)
     {2025: 1.2, 2030: 1.5}
-    >>> gdp_growth_by_period(gdp_index, [2025, 2030], 5, GDPProjectionPoint.PeriodStart)
+    """
+    return projected_growth_by_period(
+        gdp_index.loc[:, "gdp"], future_periods, period_step, projection_point
+    )
+
+
+def projected_growth_by_period(
+    index: pd.Series,
+    future_periods: list[int],
+    period_step: int,
+    projection_point: GDPProjectionPoint,
+) -> dict[int, float]:
+    """
+    Growth factor of each model period of a projected series (GDP, population, ...),
+    to multiply base-year demands by.
+
+    Parameters
+    ----------
+    index : pd.Series
+        The series by year (index), relative to the year of the base demand data.
+    future_periods : list[int]
+        The model periods.
+    period_step : int
+        Length of the last period, see `canoe.common.periods.period_end_years`.
+    projection_point : GDPProjectionPoint
+        Year of each period at which the series is read.
+
+    Returns
+    -------
+    dict[int, float]
+        Model period -> growth factor.
+
+    Examples
+    --------
+    >>> index = pd.Series([1.0, 1.1, 1.2, 1.5], index=[2022, 2025, 2030, 2035])
+    >>> projected_growth_by_period(index, [2025, 2030], 5, GDPProjectionPoint.PeriodEnd)
+    {2025: 1.2, 2030: 1.5}
+    >>> projected_growth_by_period(index, [2025, 2030], 5, GDPProjectionPoint.PeriodStart)
     {2025: 1.1, 2030: 1.2}
-    >>> growth = gdp_growth_by_period(gdp_index, [2025, 2030], 5, GDPProjectionPoint.Legacy)
+    >>> growth = projected_growth_by_period(index, [2025, 2030], 5, GDPProjectionPoint.Legacy)
     >>> {period: round(factor, 4) for period, factor in growth.items()}
     {2025: 1.0, 2030: 1.0909}
     """
-    gdp = gdp_index["gdp"]
-
     if projection_point == GDPProjectionPoint.PeriodEnd:
         return {
-            period: float(gdp.loc[end_year])
+            period: float(index.loc[end_year])
             for period, end_year in period_end_years(
                 future_periods, period_step
             ).items()
         }
     if projection_point == GDPProjectionPoint.PeriodStart:
-        return {period: float(gdp.loc[period]) for period in future_periods}
-    first_period_gdp = float(gdp.loc[future_periods[0]])
+        return {period: float(index.loc[period]) for period in future_periods}
+    first_period_value = float(index.loc[future_periods[0]])
     return {
-        period: float(gdp.loc[period]) / first_period_gdp for period in future_periods
+        period: float(index.loc[period]) / first_period_value
+        for period in future_periods
     }

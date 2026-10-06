@@ -229,6 +229,7 @@ def _new_technology(
             output_commodity=_demand_commodity(end_use),
             notes=f"From AEO CDM ktekx technology menu for technology {spec.aeo_technologies[end_use]} (AEO, {2022})",
             data_quality=DataQualityProfile(cred=1, geog=2, struc=3, tech=2, time=2),
+            units="PJ/PJ",
         ).with_limit_annual_capacity_factor(
             RegionVintageArray(region=provinces, vintage=vintages).fill_from_df(
                 end_use_by_vintage, value_col="acf"

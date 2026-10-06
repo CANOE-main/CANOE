@@ -75,3 +75,71 @@ def projection_year_by_period(
     if projection_point == ProjectionPoint.PeriodEnd:
         return period_end_years(future_periods, period_step)
     return {period: period for period in future_periods}
+
+
+def existing_stock_vintages(
+    lifetime: float, first_period: int, period_step: int
+) -> dict[int, float]:
+    """
+    Vintages of a stock that stands at the start of the first model period, and the
+    share of the stock in each.
+
+    The stock is spread evenly over the years it was built in: the vintages are the
+    multiples of `period_step` still alive in `first_period` (built less than
+    `lifetime` years before it), each standing for `period_step` years of the stock.
+    If `first_period` is not a multiple of `period_step`, it is a vintage too,
+    standing for the years since the last multiple. The newest vintage is labelled
+    `first_period - 1`: existing vintages must come before the first model period.
+
+    Parameters
+    ----------
+    lifetime : float
+        Lifetime of the technology, in years.
+    first_period : int
+        First model period, the year the stock stands at.
+    period_step : int
+        Years between vintages.
+
+    Returns
+    -------
+    dict[int, float]
+        Vintage -> share of the stock (adding up to 1), oldest first.
+
+    Examples
+    --------
+    A 13-year lifetime: the 2015, 2020 and 2025 builds are alive in 2025, and the
+    newest is labelled 2024.
+
+    >>> existing_stock_vintages(13, 2025, 5)
+    {2015: 0.333..., 2020: 0.333..., 2024: 0.333...}
+
+    Off the grid of multiples, the first period stands for the years since the last
+    one (2025 for 2027):
+
+    >>> existing_stock_vintages(13, 2027, 5)
+    {2015: 0.294..., 2020: 0.294..., 2025: 0.294..., 2026: 0.117...}
+
+    A lifetime shorter than a step keeps all the stock in the newest vintage:
+
+    >>> existing_stock_vintages(3, 2025, 5)
+    {2024: 1.0}
+    """
+    last_multiple = first_period - first_period % period_step
+    # Years of the stock each vintage stands for: the multiples still alive in the
+    # first period stand for a whole step each ...
+    years_built = {
+        vintage: period_step
+        for vintage in range(last_multiple, int(first_period - lifetime), -period_step)
+    }
+    # ... and the first period itself for the years since the last multiple
+    if first_period not in years_built:
+        years_built[first_period] = first_period - last_multiple
+    # The newest vintage is labelled the year before the first period
+    years_built[first_period - 1] = years_built.get(
+        first_period - 1, 0
+    ) + years_built.pop(first_period)
+
+    total_years = sum(years_built.values())
+    return {
+        vintage: years / total_years for vintage, years in sorted(years_built.items())
+    }
