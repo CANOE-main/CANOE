@@ -106,6 +106,7 @@ all = [
     { name = "mkdocs-material" },
     { name = "mkdocstrings", extra = ["python"] },
     { name = "plotly" },
+    { name = "pyomo-pounce" },
     { name = "ruff" },
 ]
 dev = [
@@ -123,6 +124,7 @@ docs = [
 ]
 solvers = [
     { name = "gurobipy" },
+    { name = "pyomo-pounce" },
 ]
 
 [package.dev-dependencies]
@@ -152,9 +154,10 @@ requires-dist = [
     { name = "pandas", specifier = "==3.0.1" },
     { name = "plotly", marker = "extra == 'dev'" },
     { name = "pydantic", specifier = "==2.13.4" },
+    { name = "pyomo-pounce", marker = "extra == 'solvers'" },
     { name = "pyyaml" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "temoa", git = "https://github.com/TemoaProject/temoa.git?rev=4db1eaf52fef24697fa748e9228e97244ac56a38" },
+    { name = "temoa", git = "https://github.com/yamilbknsu/temoa.git?rev=e69223976bd9bdfbdeb25f8f73cc32922108215b" },
     { name = "tsam", git = "https://github.com/CANOE-main/tsam.git?rev=v3.2-patch" },
     { name = "typer", specifier = "==0.27.1" },
 ]
@@ -1906,6 +1909,23 @@ wheels = [
 ]
 
 [[package]]
+name = "pounce-solver"
+version = "0.12.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "scipy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5e/74/0491a1bbe6c6b219e20b8e9dbc08f0b3cf6fb236a30b58fc6898d830d3c3/pounce_solver-0.12.0.tar.gz", hash = "sha256:b377345421bf0fccd05b581e8d0d084f942a674a58968ddc9857671260719711", size = 3830932, upload-time = "2026-09-19T11:41:40.05Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/e6/0a0ccc881607bf52f17f333ea09d835e18d68a2e3473b63bfe56b9653964/pounce_solver-0.12.0-cp39-abi3-macosx_10_12_x86_64.whl", hash = "sha256:38017d9d36384ee71aab67a3bf52a0fec612d0ac25ec7c5f831b43eac67c4d0a", size = 8945706, upload-time = "2026-09-19T11:41:28.038Z" },
+    { url = "https://files.pythonhosted.org/packages/62/40/6c230c72c297b16ea1cc3d0b31aff117169628402c8687e5fc7289002342/pounce_solver-0.12.0-cp39-abi3-macosx_11_0_arm64.whl", hash = "sha256:b7dbb26597aefb351717e8d6064077ef9124f8d4a7e9a28c05bea5dec3e9dcc4", size = 7998837, upload-time = "2026-09-19T11:41:30.271Z" },
+    { url = "https://files.pythonhosted.org/packages/aa/2b/9414cc6bfa599a4ae3b143e36613f95914bf0b02b1772502c15f8624afea/pounce_solver-0.12.0-cp39-abi3-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:84be92124251e9a32a35ec817831eb665daa37b32a6dfc438562081bdf0b63e0", size = 17981451, upload-time = "2026-09-19T11:41:32.479Z" },
+    { url = "https://files.pythonhosted.org/packages/73/af/0f16787a53d2c0916040162d7665d7589682ed2f8848ac86b839844395c7/pounce_solver-0.12.0-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:fb4e3040d6bb2e90f55640f35733899cff339d8412352be6e1c6e404990613ef", size = 20846086, upload-time = "2026-09-19T11:41:34.986Z" },
+    { url = "https://files.pythonhosted.org/packages/78/63/b3319802f3acfd009a7cae456978fdab7deaa9161bd6e3ecd9d8cc1cbab7/pounce_solver-0.12.0-cp39-abi3-win_amd64.whl", hash = "sha256:e128654ab807ab9f3fd84ab0e87c4ec961d751b343934f209d4fd892c139b646", size = 9396856, upload-time = "2026-09-19T11:41:37.636Z" },
+]
+
+[[package]]
 name = "psutil"
 version = "7.2.2"
 source = { registry = "https://pypi.org/simple" }
@@ -2080,6 +2100,21 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/93/2058af0890b13f7e1a26e4925ff8d681c23d9cbdc2ecc9db17c744941617/pyomo-6.9.5-cp314-cp314t-manylinux_2_24_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:f94d03f122fcf04a769c28ad48c423cd7b6d3d2c40da20bc8ea1a41bb20d0c36", size = 4356089, upload-time = "2025-10-17T21:06:50.178Z" },
     { url = "https://files.pythonhosted.org/packages/de/30/c808931fc034851a16d3f8360d045b087ac743ea97bfe96cdb4b1df47c21/pyomo-6.9.5-cp314-cp314t-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:96ff300e96cdab75e2e6983c99e3a61eaff2a6d0f5ed83acd939e74e361de537", size = 4382150, upload-time = "2025-10-17T20:26:18.734Z" },
     { url = "https://files.pythonhosted.org/packages/68/29/394967f7df51788cbdf1b4aedfb7c5a3a62e11b85b4c9d806b86cc576be4/pyomo-6.9.5-py3-none-any.whl", hash = "sha256:60326f7d3143ee7d0f5c5c4a3cbf871b53e08cc6c2b0c9e6d25568880233472f", size = 3938900, upload-time = "2025-10-17T20:22:07.473Z" },
+]
+
+[[package]]
+name = "pyomo-pounce"
+version = "0.12.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+    { name = "pandas" },
+    { name = "pounce-solver" },
+    { name = "pyomo" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/17/2d/a7f9a50bc47fb0f64f9a33af108f0e2b7857c5e78a642239065b0de16eb2/pyomo_pounce-0.12.0.tar.gz", hash = "sha256:2b23cbc508885c23df122d6d6b6bde5d8463d5f03b35e8f22d32041245e99e0e", size = 228880, upload-time = "2026-09-19T11:33:05.125Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ee/e6/171caf3b13a472b8cfbf8a3899571abb7aa3c9e1e740054f589865406372/pyomo_pounce-0.12.0-py3-none-any.whl", hash = "sha256:159f87d2ae2c0c087dc7921fc20b1dbd8e8e736bd6d4c356ba37274222378694", size = 99158, upload-time = "2026-09-19T11:33:03.757Z" },
 ]
 
 [[package]]
@@ -2527,8 +2562,8 @@ wheels = [
 
 [[package]]
 name = "temoa"
-version = "4.0.0a2"
-source = { git = "https://github.com/TemoaProject/temoa.git?rev=4db1eaf52fef24697fa748e9228e97244ac56a38#4db1eaf52fef24697fa748e9228e97244ac56a38" }
+version = "4.0.1"
+source = { git = "https://github.com/yamilbknsu/temoa.git?rev=e69223976bd9bdfbdeb25f8f73cc32922108215b#e69223976bd9bdfbdeb25f8f73cc32922108215b" }
 dependencies = [
     { name = "deprecated" },
     { name = "graphviz" },
