@@ -90,10 +90,12 @@ def provincial_lamp_shares(
         "apartments": "multi_family",
     }
     survey = energy_saving_lights.loc[energy_saving_lights["year"].isin([2017, 2019])]
-    usage = survey.groupby(["province", "light_type"], as_index=False)["percent"].mean()
+    usage = survey.groupby(["province", "light_type"])["percent"].mean().reset_index()
     ontario = usage.loc[usage["province"].isin([CANOEProvince.ONTARIO])]
     index = usage.merge(
-        ontario[["light_type", "percent"]].rename(columns={"percent": "ontario"}),
+        ontario.loc[:, ["light_type", "percent"]].rename(
+            columns={"percent": "ontario"}
+        ),
         on="light_type",
     )
     index = index.assign(index=index["percent"] / index["ontario"])
@@ -101,7 +103,9 @@ def provincial_lamp_shares(
     households = household_shares.assign(
         housing=[housing[b] for b in household_shares["building_type"]]
     )
-    households = households.groupby(["province", "housing"])["share"].sum().unstack()
+    households = households.pivot_table(
+        index="province", columns="housing", values="share", aggfunc="sum"
+    ).reindex(columns=["single_family", "multi_family"], fill_value=0.0)
 
     frames: list[pd.DataFrame] = []
     for province in provinces:
@@ -238,7 +242,7 @@ def lighting_stock(
     first_demand = first_demand.assign(
         demand=first_demand["demand"] * first_demand["growth"]
     )
-    stock = shares.merge(first_demand[["region", "demand"]], on="region")
+    stock = shares.merge(first_demand.loc[:, ["region", "demand"]], on="region")
     stock = stock.assign(
         stock=stock["share"] * stock["demand"] / annual_capacity_factor
     )
@@ -257,17 +261,20 @@ def lighting_stock(
     vintages = pd.DataFrame(vintage_rows, columns=["technology", "vintage", "share"])
 
     regions = pd.DataFrame({"region": provinces})
+    lamp_efficiency = regions.merge(
+        vintages.loc[:, ["technology", "vintage"]], how="cross"
+    )
+    lamp_efficiency = lamp_efficiency.assign(
+        fuel=CANOEFuel.Electricity,
+        efficiency=[efficacy[t] for t in lamp_efficiency["technology"]],
+    )
+    capacity_factor = regions.merge(
+        pd.DataFrame({"technology": lamps}), how="cross"
+    ).assign(factor=annual_capacity_factor)
     existing_parameters = existing_technology_parameters(
-        stock=stock[["region", "technology", "stock"]],
-        efficiency=regions.merge(
-            vintages[["technology", "vintage"]], how="cross"
-        ).assign(
-            fuel=CANOEFuel.Electricity,
-            efficiency=lambda df: [efficacy[t] for t in df["technology"]],
-        ),
-        capacity_factor=regions.merge(
-            pd.DataFrame({"technology": lamps}), how="cross"
-        ).assign(factor=annual_capacity_factor),
+        stock=stock.loc[:, ["region", "technology", "stock"]],
+        efficiency=lamp_efficiency,
+        capacity_factor=capacity_factor,
         vintages=vintages,
         lifetime=pd.DataFrame(
             {"technology": lamps, "lifetime": [lifetime[t] for t in lamps]}
@@ -333,24 +340,26 @@ def lighting_stock(
         how="cross",
     ).assign(end_use=ResidentialEndUse.Lighting)
     new_fixed_cost = costs_while_alive(
-        new[["region", "technology", "vintage", "fixed_cost"]].rename(
+        new.loc[:, ["region", "technology", "vintage", "fixed_cost"]].rename(
             columns={"fixed_cost": "cost"}
         ),
-        new[["technology", "vintage", "lifetime"]].drop_duplicates(),
+        new.loc[:, ["technology", "vintage", "lifetime"]].drop_duplicates(),
         model_periods,
     )
     new_lamp_parameters = NewTechnologyParameters(
-        efficiency=new[["region", "technology", "vintage", "end_use", "efficiency"]],
-        investment_cost=new[
-            ["region", "technology", "vintage", "investment_cost"]
+        efficiency=new.loc[
+            :, ["region", "technology", "vintage", "end_use", "efficiency"]
+        ],
+        investment_cost=new.loc[
+            :, ["region", "technology", "vintage", "investment_cost"]
         ].rename(columns={"investment_cost": "cost"}),
-        fixed_cost=new_fixed_cost[
-            ["region", "technology", "vintage", "period", "cost"]
+        fixed_cost=new_fixed_cost.loc[
+            :, ["region", "technology", "vintage", "period", "cost"]
         ],
         lifetime=pd.DataFrame(columns=["region", "technology", "lifetime"]),
-        lifetime_process=new[["region", "technology", "vintage", "lifetime"]],
+        lifetime_process=new.loc[:, ["region", "technology", "vintage", "lifetime"]],
         capacity_factor=capacity_factor_band(
-            new[["region", "technology", "vintage", "end_use"]].assign(
+            new.loc[:, ["region", "technology", "vintage", "end_use"]].assign(
                 factor=annual_capacity_factor
             )
         ),
@@ -374,10 +383,7 @@ def lighting_stock(
             demand_notes=f"Lighting energy use (NRCan CEUD table 3, {ceud_data_year}) "
             + "times the average efficacy of the existing lamps. Indexed to the "
             + "demand driver",
-            capacity_factor=existing_parameters.capacity_factor.loc[
-                lambda df: df["operator"].astype(str) == "le",
-                ["region", "technology", "factor"],
-            ].drop_duplicates(),
+            capacity_factor=capacity_factor,
         ),
         new_lamps=new_lamp_parameters,
     )

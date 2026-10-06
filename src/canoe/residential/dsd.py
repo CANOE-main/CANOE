@@ -42,7 +42,7 @@ def demand_specific_distributions(
 
     Returns region, end_use, season, tod, dsd (8760 rows per region and end use)
     """
-    hours = np.arange(8760)
+    hours = range(8760)
     seasons = [hour_to_day(h) for h in hours]
     tods = [hour_to_tod(h) for h in hours]
     frames: list[pd.DataFrame] = []

@@ -90,7 +90,7 @@ def gdp_growth_by_period(
     {2025: 1.2, 2030: 1.5}
     """
     return projected_growth_by_period(
-        gdp_index["gdp"], future_periods, period_step, projection_point
+        gdp_index.loc[:, "gdp"], future_periods, period_step, projection_point
     )
 
 

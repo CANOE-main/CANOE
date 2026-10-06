@@ -177,7 +177,7 @@ def new_technology_parameters(
     )
     fixed_cost = fixed_cost.loc[fixed_cost["cost"] > 0]
     fixed_cost = costs_while_alive(
-        investment_cost[["region", "technology", "vintage"]].merge(
+        investment_cost.loc[:, ["region", "technology", "vintage"]].merge(
             fixed_cost, on="technology"
         ),
         lifetime,
@@ -203,13 +203,17 @@ def new_technology_parameters(
     return NewTechnologyParameters(
         efficiency=efficiency,
         investment_cost=investment_cost,
-        fixed_cost=fixed_cost[["region", "technology", "vintage", "period", "cost"]],
+        fixed_cost=fixed_cost.loc[
+            :, ["region", "technology", "vintage", "period", "cost"]
+        ],
         lifetime=regions.merge(lifetime, how="cross"),
         lifetime_process=pd.DataFrame(
             columns=["region", "technology", "vintage", "lifetime"]
         ),
         capacity_factor=capacity_factor_band(
-            capacity_factor[["region", "technology", "vintage", "end_use", "factor"]]
+            capacity_factor.loc[
+                :, ["region", "technology", "vintage", "end_use", "factor"]
+            ]
         ),
         efficiency_notes="AEO efficiency of the equipment in the vintage's data year "
         + "(EER times 0.293 to PJ/PJ); appliances: efficiency of the equivalent "

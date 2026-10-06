@@ -110,7 +110,7 @@ def appliance_stock(
     )
     efficiency = single_fuel.assign(
         efficiency=single_fuel["activity"] / single_fuel["energy_use"]
-    )[["region", "technology", "fuel", "efficiency"]]
+    ).loc[:, ["region", "technology", "fuel", "efficiency"]]
     two_fuel_technologies = [t for t in appliances if t.spec().end_use in two_fuels]
     if two_fuel_technologies:
         if unit_consumption is None:
@@ -147,7 +147,7 @@ def appliance_stock(
         efficiency["technology"].isin([ExistingTechnology.OtherAppliances])
     ]
     efficiency = efficiency.loc[efficiency["technology"].isin(appliances)].merge(
-        vintages[["technology", "vintage"]], on="technology"
+        vintages.loc[:, ["technology", "vintage"]], on="technology"
     )
     capacity_factor = pd.DataFrame(
         [
@@ -157,10 +157,8 @@ def appliance_stock(
         ],
         columns=["region", "technology", "factor"],
     )
-    base_demand = (
-        activity.groupby(["region", "end_use"], as_index=False)["activity"]
-        .sum()
-        .rename(columns={"activity": "demand"})
+    base_demand = activity.groupby(["region", "end_use"], as_index=False).agg(
+        demand=("activity", "sum")
     )
     appliance_rows = technology_stock["technology"].isin(appliances)
     return ApplianceStock(
@@ -170,8 +168,8 @@ def appliance_stock(
                 stock=technology_stock.loc[
                     appliance_rows, ["region", "technology", "stock"]
                 ],
-                efficiency=efficiency[
-                    ["region", "technology", "vintage", "fuel", "efficiency"]
+                efficiency=efficiency.loc[
+                    :, ["region", "technology", "vintage", "fuel", "efficiency"]
                 ],
                 capacity_factor=capacity_factor,
                 vintages=vintages,
@@ -195,13 +193,13 @@ def appliance_stock(
                 fixed_cost_notes="Fixed cost of the equivalent new technology (EIA, "
                 + "2023)",
             ),
-            base_demand=base_demand[["region", "end_use", "demand"]],
+            base_demand=base_demand.loc[:, ["region", "end_use", "demand"]],
             demand_notes=f"Stock (NRCan CEUD table 31, {ceud_data_year}) times an "
             + f"arbitrary annual capacity factor of {annual_capacity_factor}, so the "
             + "existing stock can meet the peak demand. Indexed to the demand driver",
             capacity_factor=capacity_factor,
         ),
-        other_appliances_efficiency=other[["region", "efficiency"]].reset_index(
+        other_appliances_efficiency=other.loc[:, ["region", "efficiency"]].reset_index(
             drop=True
         ),
     )

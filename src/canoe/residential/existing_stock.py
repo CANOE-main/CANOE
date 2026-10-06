@@ -242,9 +242,9 @@ def existing_technology_parameters(
     """
     capacity = stock.merge(vintages, on="technology")
     capacity = capacity.assign(capacity=capacity["stock"] * capacity["share"])
-    totals = capacity.groupby(["region", "technology"], as_index=False)[
-        "capacity"
-    ].sum()
+    totals = capacity.groupby(["region", "technology"], as_index=False).agg(
+        capacity=("capacity", "sum")
+    )
     kept = totals.loc[
         (totals["capacity"] >= capacity_tolerance) & (totals["capacity"] > 0)
     ]
@@ -257,12 +257,12 @@ def existing_technology_parameters(
             + f"{total:.3g} below the tolerance {capacity_tolerance}"
         )
     capacity = capacity.merge(
-        kept[["region", "technology"]], on=["region", "technology"]
+        kept.loc[:, ["region", "technology"]], on=["region", "technology"]
     )
     capacity = capacity.loc[capacity["capacity"] > 0]
     # Capacity needs an efficiency to run (e.g. no energy use to weigh the
     # efficiencies of a technology's NRCan rows with)
-    with_efficiency = efficiency[["region", "technology"]].drop_duplicates()
+    with_efficiency = efficiency.loc[:, ["region", "technology"]].drop_duplicates()
     no_efficiency = capacity.merge(
         with_efficiency, on=["region", "technology"], how="left", indicator=True
     )
@@ -277,16 +277,18 @@ def existing_technology_parameters(
 
     regions = pd.DataFrame({"region": provinces})
     with_vintages = capacity_factor.merge(
-        vintages[["technology", "vintage"]], on="technology"
+        vintages.loc[:, ["technology", "vintage"]], on="technology"
     )
     costs = fixed_cost.loc[fixed_cost["cost"] > 0].merge(
-        vintages[["technology", "vintage"]], on="technology"
+        vintages.loc[:, ["technology", "vintage"]], on="technology"
     )
     return ExistingTechnologyParameters(
         efficiency=efficiency,
-        existing_capacity=capacity[["region", "technology", "vintage", "capacity"]],
+        existing_capacity=capacity.loc[
+            :, ["region", "technology", "vintage", "capacity"]
+        ],
         capacity_factor=capacity_factor_band(
-            with_vintages[["region", "technology", "vintage", "factor"]]
+            with_vintages.loc[:, ["region", "technology", "vintage", "factor"]]
         ),
         lifetime=regions.merge(lifetime, how="cross"),
         fixed_cost=regions.merge(

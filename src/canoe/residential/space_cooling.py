@@ -77,7 +77,7 @@ def space_cooling_stock(
 
     technology_stock = by_technology(stock)
     with_stock = technology_stock.merge(
-        by_technology(cooling)[["region", "technology", "cooling"]],
+        by_technology(cooling).loc[:, ["region", "technology", "cooling"]],
         on=["region", "technology"],
     )
     with_stock = with_stock.loc[with_stock["stock"] > 0]
@@ -88,26 +88,26 @@ def space_cooling_stock(
     # Efficiency of each vintage: that of its year, or of the last year of the table
     last_year = int(stock_efficiency["year"].max())
     efficiency = by_technology(stock_efficiency).merge(
-        vintages[["technology", "vintage"]].assign(
+        vintages.loc[:, ["technology", "vintage"]].assign(
             year=vintages["vintage"].clip(upper=last_year)
         ),
         on=["technology", "year"],
     )
 
     base_demand = (
-        cooling.groupby("province", as_index=False)["cooling"]
-        .sum()
-        .rename(columns={"province": "region", "cooling": "demand"})
+        cooling.rename(columns={"province": "region"})
+        .groupby("region", as_index=False)
+        .agg(demand=("cooling", "sum"))
         .assign(end_use=ResidentialEndUse.SpaceCooling)
     )
     return EndUseStock(
         technologies=technologies,
         parameters=existing_technology_parameters(
-            stock=technology_stock[["region", "technology", "stock"]],
-            efficiency=efficiency.assign(fuel=CANOEFuel.Electricity)[
-                ["region", "technology", "vintage", "fuel", "efficiency"]
+            stock=technology_stock.loc[:, ["region", "technology", "stock"]],
+            efficiency=efficiency.assign(fuel=CANOEFuel.Electricity).loc[
+                :, ["region", "technology", "vintage", "fuel", "efficiency"]
             ],
-            capacity_factor=capacity_factor[["region", "technology", "factor"]],
+            capacity_factor=capacity_factor.loc[:, ["region", "technology", "factor"]],
             vintages=vintages,
             lifetime=lifetime,
             fixed_cost=fixed_cost,
@@ -127,9 +127,9 @@ def space_cooling_stock(
             + "equivalent new technology",
             fixed_cost_notes="Fixed cost of the equivalent new technology (EIA, 2023)",
         ),
-        base_demand=base_demand[["region", "end_use", "demand"]],
+        base_demand=base_demand.loc[:, ["region", "end_use", "demand"]],
         demand_notes="Energy use times stock efficiency of each cooling system type "
         + f"(NRCan CEUD tables 4 and 27, {ceud_data_year}). Indexed to the demand "
         + "driver",
-        capacity_factor=capacity_factor[["region", "technology", "factor"]],
+        capacity_factor=capacity_factor.loc[:, ["region", "technology", "factor"]],
     )

@@ -80,7 +80,8 @@ def water_heating_stock(
     )
     technology_stock = by_technology(stock)
     with_stock = technology_stock.merge(
-        hot_water[["region", "technology", "hot_water"]], on=["region", "technology"]
+        hot_water.loc[:, ["region", "technology", "hot_water"]],
+        on=["region", "technology"],
     )
     with_stock = with_stock.loc[with_stock["stock"] > 0]
     capacity_factor = with_stock.assign(
@@ -94,22 +95,21 @@ def water_heating_stock(
             for t in technologies
         ],
         columns=["region", "technology", "fuel", "efficiency"],
-    ).merge(vintages[["technology", "vintage"]], on="technology")
+    ).merge(vintages.loc[:, ["technology", "vintage"]], on="technology")
 
     base_demand = (
-        hot_water.groupby("region", as_index=False)["hot_water"]
-        .sum()
-        .rename(columns={"hot_water": "demand"})
+        hot_water.groupby("region", as_index=False)
+        .agg(demand=("hot_water", "sum"))
         .assign(end_use=ResidentialEndUse.WaterHeating)
     )
     return EndUseStock(
         technologies=technologies,
         parameters=existing_technology_parameters(
-            stock=technology_stock[["region", "technology", "stock"]],
-            efficiency=efficiency[
-                ["region", "technology", "vintage", "fuel", "efficiency"]
+            stock=technology_stock.loc[:, ["region", "technology", "stock"]],
+            efficiency=efficiency.loc[
+                :, ["region", "technology", "vintage", "fuel", "efficiency"]
             ],
-            capacity_factor=capacity_factor[["region", "technology", "factor"]],
+            capacity_factor=capacity_factor.loc[:, ["region", "technology", "factor"]],
             vintages=vintages,
             lifetime=lifetime,
             fixed_cost=fixed_cost,
@@ -128,9 +128,9 @@ def water_heating_stock(
             + "equivalent new technology",
             fixed_cost_notes="Fixed cost of the equivalent new technology (EIA, 2023)",
         ),
-        base_demand=base_demand[["region", "end_use", "demand"]],
+        base_demand=base_demand.loc[:, ["region", "end_use", "demand"]],
         demand_notes="Energy use of each energy source (NRCan CEUD table 10, "
         + f"{ceud_data_year}) times the AEO base efficiency of its water heaters. "
         + "Indexed to the demand driver",
-        capacity_factor=capacity_factor[["region", "technology", "factor"]],
+        capacity_factor=capacity_factor.loc[:, ["region", "technology", "factor"]],
     )

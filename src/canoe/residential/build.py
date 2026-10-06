@@ -293,7 +293,7 @@ def build_residential(cfg: "CANOEResidentialConfig") -> CANOEModuleOutput:
                 aeo_lighting,
                 ontario_lighting_shares,
                 energy_saving_lights,
-                stock_growth[["region", "growth"]],
+                stock_growth.loc[:, ["region", "growth"]],
                 [t for t in new_technologies if t.spec().lamp is not None],
                 cfg.end_uses.lighting.annual_capacity_factor,
                 currency_factor,

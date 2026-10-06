@@ -470,7 +470,7 @@ def build_new_technology(
         return frame.loc[frame["technology"].isin([technology])]
 
     efficiency = rows_of(parameters.efficiency)
-    end_uses = [e for e in spec.end_uses if efficiency["end_use"].isin([e]).any()]
+    end_uses = [e for e in spec.end_uses if bool(efficiency["end_use"].isin([e]).any())]
     if not end_uses:
         return None
 

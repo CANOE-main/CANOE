@@ -35,12 +35,12 @@ def system_heat(energy_use: pd.DataFrame, efficiencies: pd.DataFrame) -> pd.Data
         efficiencies["fuel"].isna() | (efficiencies["fuel"] == first_fuel)
     ]
     heat = energy_use.merge(
-        own[["province", "system", "efficiency"]],
+        own.loc[:, ["province", "system", "efficiency"]],
         on=["province", "system"],
         validate="one_to_one",
     )
-    return heat.assign(heat=heat["energy_use"] * heat["efficiency"])[
-        ["province", "system", "heat"]
+    return heat.assign(heat=heat["energy_use"] * heat["efficiency"]).loc[
+        :, ["province", "system", "heat"]
     ]
 
 
@@ -58,6 +58,7 @@ def system_efficiencies(
     """
     spec = technology.spec()
     rows = efficiencies.loc[efficiencies["system"].isin(spec.nrcan_rows)]
+    fuel = spec.fuels[0]
     if len(spec.fuels) > 1:
         return pd.DataFrame(
             {
@@ -69,9 +70,9 @@ def system_efficiencies(
         ).reset_index(drop=True)
     weighted = rows.merge(energy_use, on=["province", "system"])
     weighted = weighted.assign(weighted=weighted["efficiency"] * weighted["energy_use"])
-    by_province = weighted.groupby("province", as_index=False)[
-        ["weighted", "energy_use"]
-    ].sum()
+    by_province = weighted.groupby("province", as_index=False).agg(
+        weighted=("weighted", "sum"), energy_use=("energy_use", "sum")
+    )
     if len(spec.nrcan_rows) > 1:
         by_province = by_province.loc[by_province["energy_use"] > 0]
         efficiency = by_province["weighted"] / by_province["energy_use"]
@@ -83,7 +84,7 @@ def system_efficiencies(
         {
             "region": by_province["province"].to_numpy(),
             "technology": technology,
-            "fuel": spec.fuels[0],
+            "fuel": fuel,
             "efficiency": efficiency.to_numpy(),
         }
     )
@@ -127,8 +128,8 @@ def space_heating_stock(
         """`value` of the NRCan rows of each technology, summed"""
         rows = [
             df.loc[df["system"].isin(t.spec().nrcan_rows)]
-            .groupby("province", as_index=False)[value]
-            .sum()
+            .groupby("province", as_index=False)
+            .agg(**{value: (value, "sum")})
             .assign(technology=t)
             for t in technologies
         ]
@@ -143,22 +144,22 @@ def space_heating_stock(
     efficiency = pd.concat(
         [system_efficiencies(t, energy_use, efficiencies) for t in technologies],
         ignore_index=True,
-    ).merge(vintages[["technology", "vintage"]], on="technology")
+    ).merge(vintages.loc[:, ["technology", "vintage"]], on="technology")
 
     base_demand = (
-        heat.groupby("province", as_index=False)["heat"]
-        .sum()
-        .rename(columns={"province": "region", "heat": "demand"})
+        heat.rename(columns={"province": "region"})
+        .groupby("region", as_index=False)
+        .agg(demand=("heat", "sum"))
         .assign(end_use=ResidentialEndUse.SpaceHeating)
     )
     return EndUseStock(
         technologies=technologies,
         parameters=existing_technology_parameters(
             stock=technology_stock,
-            efficiency=efficiency[
-                ["region", "technology", "vintage", "fuel", "efficiency"]
+            efficiency=efficiency.loc[
+                :, ["region", "technology", "vintage", "fuel", "efficiency"]
             ],
-            capacity_factor=capacity_factor[["region", "technology", "factor"]],
+            capacity_factor=capacity_factor.loc[:, ["region", "technology", "factor"]],
             vintages=vintages,
             lifetime=lifetime,
             fixed_cost=fixed_cost,
@@ -178,9 +179,9 @@ def space_heating_stock(
             + "equivalent new technology",
             fixed_cost_notes="Fixed cost of the equivalent new technology (EIA, 2023)",
         ),
-        base_demand=base_demand[["region", "end_use", "demand"]],
+        base_demand=base_demand.loc[:, ["region", "end_use", "demand"]],
         demand_notes="Energy use times stock efficiency of each heating system type "
         + f"(NRCan CEUD tables 8 and 26, {ceud_data_year}); dual systems with the "
         + "efficiency of their first fuel. Indexed to the demand driver",
-        capacity_factor=capacity_factor[["region", "technology", "factor"]],
+        capacity_factor=capacity_factor.loc[:, ["region", "technology", "factor"]],
     )
