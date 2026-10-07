@@ -22,7 +22,7 @@ class GoldConnector:
     """
 
     # File ID specifically for the `silver.zip` file to bypass rate limits
-    SILVER_ZIP_FILE_ID: str = "1_B2pXfQtxdP6F7s2EZZv6iZCkWDUMBri"
+    SILVER_ZIP_FILE_ID: str = "163zEbqGWosuEih9Al83-MuT_fW7VnZgU"
 
     def __init__(
         self, cache_dir: str = "./gold_data_cache", target_date: str | None = None

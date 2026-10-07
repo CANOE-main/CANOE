@@ -39,7 +39,7 @@ if TYPE_CHECKING:
     from .config import CANOEFuelConfig
 
 FUELS_SUPPLIED_ELSEWHERE: tuple[CANOEFuel, ...] = (CANOEFuel.Electricity,)
-"""Fuels the sectors import that this module does not supply. Electricity will be
+"""Fuels the sectors import that this module does not supply. Electricity is
 supplied by the electricity module."""
 
 

@@ -70,8 +70,8 @@ dependencies = [
 
 [tool.pytest.ini_options]
 # Doctests are collected from canoe_objects (see src/canoe/canoe_objects/conftest.py),
-# the commercial and agriculture configurations, the fuel, industry and residential
-# modules, and the census divisions, ceud, gdp, periods, provinces, fuels, sectors and
+# the commercial and agriculture configurations, the electricity, fuel, industry and
+# residential modules, and the census divisions, ceud, gdp, periods, provinces, fuels, sectors and
 # emissions modules
 testpaths = [
   "tests",
@@ -90,6 +90,7 @@ testpaths = [
   "src/canoe/common/provinces.py",
   "src/canoe/common/fuels.py",
   "src/canoe/common/sectors.py",
+  "src/canoe/electricity",
   "src/canoe/emissions",
   "src/canoe/fuel",
   "src/canoe/industry",
