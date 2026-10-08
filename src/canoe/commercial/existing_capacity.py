@@ -74,7 +74,9 @@ def _load_all_ceud_tables(
     """
     Secondary energy consumption by end use and fuel from NRCan Comprehensive Energy Use Database
     """
-    atlantic_fraction = get_statcan_atlantic_fractions_table(data_cache_config)
+    atlantic_fraction = get_statcan_atlantic_fractions_table(
+        ceud_config.data_year, data_cache_config
+    )
 
     province_ceud: dict[CANOEProvince, pd.DataFrame] = {}
     for province in provinces:
@@ -116,7 +118,9 @@ def load_total_secondary_energy(
     Total commercial secondary energy use by fuel from NRCan CEUD (table 1).
     Returns one row per (province, fuel) with columns `province`, `fuel` (CANOEFuel), `sec`.
     """
-    atlantic_fraction = get_statcan_atlantic_fractions_table(data_cache_config)
+    atlantic_fraction = get_statcan_atlantic_fractions_table(
+        ceud_config.data_year, data_cache_config
+    )
 
     frames: list[pd.DataFrame] = []
     for province in provinces:

@@ -25,6 +25,7 @@ from canoe.common import (
     GoldConnectorConfig,
     naming,
 )
+from canoe.common.periods import ProjectionPoint
 from canoe.common.validation import ValidationBehavior
 from canoe.electricity.build import build_electricity
 from canoe.electricity.catalogue import (
@@ -175,6 +176,7 @@ class CANOEElectricityConfig(InheritsFromBase):
     ...         "future_periods": [2025, 2030],
     ...         "period_step": 5,
     ...         "provinces": ["ON", "QC"],
+    ...         "price_projection_point": "period_end",
     ...         "model_currency_year": 2020,
     ...         "source_years": {
     ...             "coders_hourly": 2018,
@@ -224,6 +226,11 @@ class CANOEElectricityConfig(InheritsFromBase):
 
     provinces: list[CANOEProvince] = inherit()
     """Regions written. Inherited."""
+
+    # Costs
+    price_projection_point: ProjectionPoint = inherit()
+    """Year of each period at which projected costs (e.g. transmission and
+    distribution) are read. Inherited."""
 
     model_currency_year: int = inherit()
     """Year of the Canadian dollars costs are written in. Inherited."""

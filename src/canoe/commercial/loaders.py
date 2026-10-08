@@ -80,12 +80,16 @@ def get_ceud_table(
 
 
 def get_statcan_atlantic_fractions_table(
+    year: int,
     data_cache_config: GoldConnectorConfig,
 ) -> pd.Series:
     """
     For the comprehensive energy use database in commercial, the atlantic provinces are all aggregated.
     To slice them up, we use energy proportions from Statcan data. The system scope of the Statcan
     data is different from NRCan, including upstream energy use, so we dont want to use it directly.
+
+    The cache holds the full StatCan table 25-10-0029-01; only the commercial rows of the four
+    Atlantic provinces in `year` are used.
     """
 
     cache_path = (
@@ -94,14 +98,36 @@ def get_statcan_atlantic_fractions_table(
     file_path = (
         cache_path
         / Path("statcan_25100029")
-        / Path(f"statcan_25100029_{data_cache_config.cache_date}.csv")
+        / Path(f"statcan_25100029_{data_cache_config.cache_date}.parquet")
     )
 
-    df = pd.read_csv(file_path).fillna(0)
+    df = pd.read_parquet(file_path)
+    df = df.loc[
+        (df["REF_DATE"] == year)
+        & (
+            df["Supply and demand characteristics"]
+            == "Commercial and other institutional"
+        )
+        & df["GEO"].isin(
+            [
+                "Newfoundland and Labrador",
+                "Prince Edward Island",
+                "Nova Scotia",
+                "New Brunswick",
+            ]
+        )
+        & df["Fuel type"].isin(
+            [
+                "Primary electricity, hydro and nuclear",
+                "Total refined petroleum products",
+                "Natural gas",
+            ]
+        )
+    ].fillna({"VALUE": 0})
 
     df["region"] = df["GEO"].str.lower()
     df["fuel"] = df["Fuel type"].map(
-        {  # pyright: ignore[reportArgumentType]
+        {
             "Primary electricity, hydro and nuclear": "electricity",
             "Total refined petroleum products": "oil",
             "Natural gas": "natural gas",
@@ -110,10 +136,10 @@ def get_statcan_atlantic_fractions_table(
     df_fuel = df.groupby(["fuel"])["VALUE"].sum()
 
     for idx, row in df.iterrows():
-        df.loc[idx, "fraction"] = row["VALUE"] / df_fuel.loc[row["fuel"]]  # pyright: ignore[reportAttributeAccessIssue]
+        df.loc[idx, "fraction"] = row["VALUE"] / df_fuel.loc[row["fuel"]]
 
     df = df.set_index(["region", "fuel"])["fraction"]
-    return df  # pyright: ignore[reportReturnType]
+    return df
 
 
 def get_epa_emission_factors_table(cache_config: GoldConnectorConfig) -> pd.DataFrame:

@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING
 
+from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
 from canoe.common import (
@@ -12,8 +13,21 @@ from canoe.common import (
     CANOESector,
     atomic_transaction,
 )
+from canoe.common.currency import currency_conversion_factor
+from canoe.common.loaders import get_exchange_and_inflation_tables
 from canoe.common.naming import DatasetIdentifier
+from canoe.common.periods import (
+    ProjectionPoint,
+    horizon_length,
+    projection_year_by_period,
+)
 
+from .loaders import (
+    get_aeo_transmission_distribution_costs,
+    get_coders_system_line_losses,
+)
+from .supply.entities import build_grid
+from .supply.parameters import grid_variable_costs, transmission_efficiencies
 from .validation import validate_db_against_config
 
 if TYPE_CHECKING:
@@ -53,22 +67,89 @@ def build_electricity(
     # Wrap everything in an atomic transaction
     with atomic_transaction(cfg.database_file) as db_conn:
         # Validate canoe-base DB structure against module config
-        validate_db_against_config(cfg, db_conn)
+        validate_db_against_config(cfg, imports, db_conn)
 
         # Load and pre-process data sources
         # ----------------------------------
-        # TODO: CODERS (fleet, generic, losses, reserve, interties, demand), NREL
-        # ATB, new VRE bins, IESO, StatCan, renewables.ninja, EIA T&D, ramp rates
+        # Grid: CODERS system line losses (fraction), EIA AEO transmission and
+        # distribution costs (2024 USD c/kWh)
+        line_losses = get_coders_system_line_losses()
+        grid_costs = get_aeo_transmission_distribution_costs()
+        # Exchange rates and inflation, to convert costs to CAD of model_currency_year
+        exchange, inflation = get_exchange_and_inflation_tables()
+        logger.debug(
+            f"Loaded line losses of {len(line_losses)} provinces, "
+            + f"{len(grid_costs.costs)} grid costs "
+            + f"({grid_costs.costs['year'].min()}-{grid_costs.costs['year'].max()})"
+        )
+        # TODO: CODERS (fleet, generic, reserve, interties, demand), NREL ATB, new
+        # VRE bins, IESO, StatCan, renewables.ninja, ramp rates
 
         # Compute parameters
         # ------------------
-        # TODO: grid, generation, capacity factors, storage, CCS, reliability, trade
+        # - Grid: transmission to distribution efficiency (region), variable cost
+        #   (level, period) in M$/PJ read at price_projection_point, and the
+        #   lifetime of the single vintage of the pass-through technologies
+        transmission = transmission_efficiencies(line_losses, cfg.provinces)
+        projection_years = projection_year_by_period(
+            cfg.future_periods, cfg.period_step, cfg.price_projection_point
+        )
+        costs = grid_variable_costs(
+            grid_costs,
+            projection_years,
+            currency_conversion_factor(
+                grid_costs.currency,
+                grid_costs.currency_year,
+                cfg.model_currency_year,
+                exchange,
+                inflation,
+            ),
+        )
+        # Single vintage (the first period) serving every period
+        lifetime = horizon_length(cfg.future_periods, cfg.period_step)
+        # TODO: generation, capacity factors, storage, CCS, reliability, trade
 
         # Build TEMOA Objects
         # -------------------
-        # TODO: grid and delivery, generators, storage, CCS retrofits, interties
+        # Write data_id labels (first because they impact everything)
+        datasets = [
+            DataSet(data_id=electricity_data_id.get_dataset_code(province=province))
+            for province in cfg.provinces + [None]
+        ]
+        sql, params = DataSet.bulk_insert_or_ignore_sql(
+            datasets, include_nulls=True, include_defaults=True
+        )
+        db_conn.executemany(sql, params)
+
+        # Grid commodities and technologies, and the delivery to each sector
+        grid = build_grid(
+            transmission,
+            costs,
+            imports,
+            first_period=cfg.future_periods[0],
+            lifetime=lifetime,
+            cost_notes=_cost_notes(cfg, grid_costs.reference),
+            data_id=electricity_data_id,
+        )
+        logger.info(
+            f"Building the grid of {len(transmission)} provinces and "
+            + f"{len(grid.deliveries)} delivery technologies"
+        )
+        grid.build(db_conn)
+        # TODO: generators, storage, CCS retrofits, interties
 
     return CANOEModuleOutput(fuel_imports=[])
+
+
+def _cost_notes(cfg: "CANOEElectricityConfig", reference: str) -> str:
+    point = {
+        ProjectionPoint.PeriodEnd: "the end of each period",
+        ProjectionPoint.PeriodStart: "the label year of each period",
+    }[cfg.price_projection_point]
+    return (
+        f"{reference}, read at {point}, in M$/PJ of {cfg.model_currency_year} CAD "
+        + "(GDP deflator)"
+    )
 
 
 def electricity_imports(fuel_imports: list[CANOEFuelImport]) -> list[CANOEFuelImport]:
