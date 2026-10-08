@@ -28,6 +28,7 @@ from canoe_schema.v4_0 import (
     LifetimeTech,
     LimitActivity,
     LimitAnnualCapacityFactor,
+    LimitCapacity,
     LimitTechInputSplit,
     LimitTechInputSplitAnnual,
     OperatorCode,
@@ -249,6 +250,8 @@ class TechnologyEntity:
         self.storage_duration: Parameter[RegionalValuesArray] | None = None
         # operator -> activity limit
         self.activity_limits: dict[OperatorCode, Parameter[RegionPeriodArray]] = {}
+        # operator -> capacity limit
+        self.capacity_limits: dict[OperatorCode, Parameter[RegionPeriodArray]] = {}
 
     @property
     def inputs(self) -> list[str]:
@@ -914,6 +917,55 @@ class TechnologyEntity:
         )
         return self
 
+    def with_limit_capacity(
+        self,
+        capacity: RegionPeriodArray,
+        operator: OperatorCode = OperatorCode.LE,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        """
+        Limit the technology's total installed capacity in each period, all vintages
+        together, e.g. the resource available to a wind farm.
+
+        Writes `limit_capacity`: one row per (region, period) with a value. The
+        technology can have one limit per operator; calling it again with the same
+        operator replaces that limit.
+
+        Parameters
+        ----------
+        capacity : RegionPeriodArray
+            Capacity by region and period.
+        operator : OperatorCode
+            Upper bound (`le`, default), lower bound (`ge`) or exact capacity (`e`).
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> panels = (
+        ...     TechnologyEntity(
+        ...         "C_PV", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=1.0))
+        ...     .with_limit_capacity(
+        ...         RegionPeriodArray(regions, [2025, 2030], fill=0.5), units="GW"
+        ...     )
+        ... )
+        >>> panels.build(db)
+        >>> db.execute(
+        ...     "SELECT region, period, tech_or_group, operator, capacity, units"
+        ...     " FROM limit_capacity"
+        ... ).fetchall()
+        [('ON', 2025, 'C_PV', 'le', 0.5, 'GW'), ('ON', 2030, 'C_PV', 'le', 0.5, 'GW')]
+        """
+        self.capacity_limits[operator] = Parameter(
+            capacity, ParameterMetadata(notes, reference_code, data_quality, units)
+        )
+        return self
+
     def validate(self) -> None:
         """
         Check the parameters are consistent before writing them (called by `build`).
@@ -969,6 +1021,10 @@ class TechnologyEntity:
             **{
                 f"activity limit ({operator})": limit
                 for operator, limit in self.activity_limits.items()
+            },
+            **{
+                f"capacity limit ({operator})": limit
+                for operator, limit in self.capacity_limits.items()
             },
         }
         for parameter_name, parameter in parameters.items():
@@ -1497,5 +1553,28 @@ class TechnologyEntity:
             ]
             sql, params = LimitActivity.bulk_insert_or_ignore_sql(
                 activity_limits, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Capacity limits (one set of rows per operator)
+        for operator, limit in self.capacity_limits.items():
+            meta = limit.metadata
+            capacity_limits = [
+                LimitCapacity(
+                    region=row["region"].short(),
+                    period=row["period"],
+                    tech_or_group=self.name,
+                    operator=operator,
+                    capacity=row["value"],
+                    units=meta.units,
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(limit.values.to_records())
+            ]
+            sql, params = LimitCapacity.bulk_insert_or_ignore_sql(
+                capacity_limits, include_nulls=True
             )
             db_conn.executemany(sql, params)

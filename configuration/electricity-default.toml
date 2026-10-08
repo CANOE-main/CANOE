@@ -59,12 +59,10 @@ existing_capacity_threshold = 0.001
 # historical output (the upper bound); below 1 for feasbility slack
 cogeneration_floor = 0.95
 
-# New generators the model can build (-NEW); [] for none. Options: "biogas",
-# "biomass", "biomass_cg", "coal", "coal_ccs", "diesel_ct", "diesel_st", "geothermal",
-# "gasoline_ct", "hydro_daily", "hydro_monthly", "hydro_run", "ng_cc", "ng_ccs",
-# "ng_cg", "ng_ct", "nuclear_candu", "nuclear_pwr", "nuclear_smr", "oil_ct", "oil_st",
-# "solar", "wind_offshore", "wind_onshore". Solar and onshore wind come as resource
-# bins.
+# New generators the model can build (-NEW); [] for none. Options (those with NREL
+# ATB costs, and capacity factors if they burn no fuel): "biomass", "biomass_cg",
+# "coal", "coal_ccs", "ng_cc", "ng_ccs", "ng_ct", "nuclear_pwr", "nuclear_smr",
+# "solar", "wind_onshore". Solar and onshore wind come as resource bins.
 new_technologies = [
   "biomass",
   "ng_cc",

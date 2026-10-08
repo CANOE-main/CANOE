@@ -96,8 +96,9 @@ class GenerationConfig(BaseModel):
     historical output (the upper bound). Below 1 to give the solver slack."""
 
     new_technologies: list[GenerationTechnology]
-    """New generators the model can build (`-NEW`); empty for none. Solar and
-    onshore wind come as resource bins (`E_SOL_PV-NEW-<n>`, `E_WND_ON-NEW-<n>`)."""
+    """New generators the model can build (`-NEW`); empty for none. Only those with
+    data (see `GenerationTechnology.can_be_new`). Solar and onshore wind come as
+    resource bins (`E_SOL_PV-NEW-<n>`, `E_WND_ON-NEW-<n>`)."""
 
     ccs_retrofits: list[CCSRetrofit]
     """Carbon capture retrofits the model can build on coal and natural gas combined
@@ -107,6 +108,20 @@ class GenerationConfig(BaseModel):
     @classmethod
     def _check_technologies[T](cls, value: list[T]) -> list[T]:
         return _check_unique(value)
+
+    @field_validator("new_technologies")
+    @classmethod
+    def _check_new_data(
+        cls, value: list[GenerationTechnology]
+    ) -> list[GenerationTechnology]:
+        without_data = [t.value for t in value if not t.can_be_new()]
+        if without_data:
+            raise ValueError(
+                f"no data to build new {without_data}: new technologies need NREL ATB "
+                + "costs, and capacity factors if they burn no fuel (only solar and "
+                + "onshore wind have them)"
+            )
+        return value
 
     @model_validator(mode="after")
     def _check_retrofitted_generators(self) -> Self:

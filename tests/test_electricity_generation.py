@@ -9,23 +9,31 @@ from canoe.common import CANOEFuel, CANOEProvince, CANOESector
 from canoe.common.naming import DatasetIdentifier
 from canoe.electricity.catalogue import GenerationTechnology, GridLevel
 from canoe.electricity.generation.entities import (
-    ExistingGeneration,
-    ExistingGenerationNotes,
+    GenerationEntities,
+    GenerationNotes,
     build_existing_generation,
+    build_new_generation,
+    build_vre_bins,
 )
 from canoe.electricity.generation.parameters import (
     cogeneration_activity,
-    existing_efficiencies,
-    existing_om_costs,
+    existing_processes,
+    new_processes,
+    process_efficiencies,
+    process_investment_costs,
+    process_om_costs,
+    vre_bin_costs,
+    vre_bin_limits,
 )
 from canoe.electricity.supply.entities import build_grid
 
 ON, QC = CANOEProvince.ONTARIO, CANOEProvince.QUEBEC
 DATA_ID = DatasetIdentifier(CANOESector.Electricity, "HR", "000")
 PERIODS = [2025, 2030, 2035]
-NOTES = ExistingGenerationNotes(
+NOTES = GenerationNotes(
     capacity="capacity", atb_costs="atb", coders_costs="coders",
-    atb_efficiency="atb", cogeneration="cogeneration",
+    atb_efficiency="atb", cogeneration="cogeneration", vre_bin_costs="bins",
+    vre_bin_limits="limits",
 )  # fmt: skip
 CG = GenerationTechnology.NaturalGasCogeneration
 MLY = GenerationTechnology.HydroMonthly
@@ -65,7 +73,7 @@ def db() -> sqlite3.Connection:
     return db
 
 
-def _build(db: sqlite3.Connection) -> ExistingGeneration:
+def _build(db: sqlite3.Connection) -> GenerationEntities:
     # Ontario gas cogeneration (2000 retires in 2030) and wind; Quebec monthly hydro
     fleet = pd.DataFrame(
         {
@@ -93,11 +101,12 @@ def _build(db: sqlite3.Connection) -> ExistingGeneration:
             "value": [30.0],
         }
     )
+    processes = existing_processes(fleet)
     generation = build_existing_generation(
         fleet,
         LIFETIMES,
-        existing_efficiencies(fleet, generic, atb),
-        existing_om_costs(fleet, generic, atb, LIFETIMES, PERIODS, 1.0, 1.0),
+        process_efficiencies(processes, generic, atb),
+        process_om_costs(processes, generic, atb, LIFETIMES, PERIODS, 1.0, 1.0),
         cogeneration_activity(fleet, LIFETIMES, PERIODS, 0.95),
         NOTES,
         DATA_ID,
@@ -176,3 +185,112 @@ def test_fuels_and_sources(db: sqlite3.Connection):
         ).fetchone()[0]
         == 0
     )
+
+
+def test_new_generation_reads_atb_at_projection_year(db: sqlite3.Connection):
+    SMR = GenerationTechnology.NuclearSMR
+    # Period end: 2025 -> 2030, 2030 -> 2035, 2035 -> 2040
+    processes = new_processes([SMR], [ON], {2025: 2030, 2030: 2035, 2035: 2040})
+    atb = pd.DataFrame(
+        [
+            ("Nuclear - Small", parameter, year, value + year - 2030)
+            for parameter, value in (
+                ("Heat Rate", 10.0),
+                ("OCC", 9000.0),
+                ("Fixed O&M", 150.0),
+                ("Variable O&M", 3.6),
+            )
+            for year in (2030, 2035, 2040)
+        ],
+        columns=["display_name", "parameter", "year", "value"],
+    )
+    generation = build_new_generation(
+        process_efficiencies(processes, pd.DataFrame(), atb),
+        process_investment_costs(processes, atb, 2.0),
+        process_om_costs(processes, pd.DataFrame(), atb, {SMR: 60}, PERIODS, 2.0, 1.0),
+        {SMR: 60},
+        NOTES,
+        DATA_ID,
+    )
+    generation.build(db)
+    assert db.execute(
+        "SELECT tech, flag, reserve FROM technology WHERE tech = 'E_NUC_SMR-NEW'"
+    ).fetchall() == [("E_NUC_SMR-NEW", "pb", 1)]
+    assert db.execute(
+        "SELECT vintage, cost, units FROM cost_invest ORDER BY vintage"
+    ).fetchall() == [
+        (2025, 18000.0, "M$/GW"),
+        (2030, 18010.0, "M$/GW"),
+        (2035, 18020.0, "M$/GW"),
+    ]
+    # Fixed cost of a vintage is constant over the periods it lives
+    assert db.execute(
+        "SELECT vintage, period, cost FROM cost_fixed ORDER BY vintage, period"
+    ).fetchall() == [
+        (2025, 2025, 300.0),
+        (2025, 2030, 300.0),
+        (2025, 2035, 300.0),
+        (2030, 2030, 310.0),
+        (2030, 2035, 310.0),
+        (2035, 2035, 320.0),
+    ]
+    assert db.execute(
+        "SELECT DISTINCT input_comm, output_comm FROM efficiency"
+        + " WHERE tech = 'E_NUC_SMR-NEW'"
+    ).fetchall() == [("E_eur", "E_elc_tx")]
+    imports = declare_fuel_imports(CANOESector.Electricity, generation.technologies)
+    assert [(i.fuel, i.provinces) for i in imports] == [
+        (CANOEFuel.EnrichedUranium, (ON,))
+    ]
+
+
+def test_vre_bins(db: sqlite3.Connection):
+    costs = pd.DataFrame(
+        [
+            (region, WIND, number, vintage, 1000.0 * number)
+            for region in (ON, QC)
+            for number in (1, 2)
+            for vintage in PERIODS
+        ],
+        columns=["region", "technology", "bin", "vintage", "cost"],
+    )
+    limits = pd.DataFrame(
+        [
+            (region, WIND, number, period, 0.5)
+            for region in (ON, QC)
+            for number in (1, 2)
+            for period in PERIODS
+        ],
+        columns=["region", "technology", "bin", "period", "capacity"],
+    )
+    investment, fixed = vre_bin_costs(
+        costs, costs.assign(cost=30.0), [WIND], [ON], PERIODS, LIFETIMES, 0.5
+    )
+    generation = build_vre_bins(
+        investment,
+        fixed,
+        vre_bin_limits(limits, [WIND], [ON], PERIODS),
+        LIFETIMES,
+        NOTES,
+        DATA_ID,
+    )
+    generation.build(db)
+    assert db.execute(
+        "SELECT tech, reserve, curtail FROM technology ORDER BY tech"
+    ).fetchall()[-2:] == [("E_WND_ON-NEW-1", 1, 1), ("E_WND_ON-NEW-2", 1, 1)]
+    # Only the modelled province, costs converted
+    assert db.execute(
+        "SELECT DISTINCT region, tech, cost FROM cost_invest ORDER BY tech"
+    ).fetchall() == [("ON", "E_WND_ON-NEW-1", 500.0), ("ON", "E_WND_ON-NEW-2", 1000.0)]
+    assert db.execute(
+        "SELECT region, period, operator, capacity, units FROM limit_capacity"
+        + " WHERE tech_or_group = 'E_WND_ON-NEW-1' ORDER BY period"
+    ).fetchall() == [("ON", p, "le", 0.5, "GW") for p in PERIODS]
+    assert db.execute(
+        "SELECT COUNT(*), MIN(cost), MAX(cost) FROM cost_fixed"
+        + " WHERE tech = 'E_WND_ON-NEW-1'"
+    ).fetchone() == (6, 15.0, 15.0)
+    assert db.execute(
+        "SELECT DISTINCT input_comm, efficiency FROM efficiency"
+        + " WHERE tech LIKE 'E_WND_ON-NEW-%'"
+    ).fetchall() == [("E_ethos", 1.0)]

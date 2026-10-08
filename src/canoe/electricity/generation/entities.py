@@ -1,11 +1,12 @@
 """
-Temoa objects of the existing generators (`-EXS`), one technology per
-`GenerationTechnology` in the fleet:
+Temoa objects of the generators: existing (`-EXS`), new (`-NEW`) and the new wind and
+solar resource bins (`-NEW-<n>`), one technology per `GenerationTechnology` (and
+bin):
 
-    E_<fuel> or E_ethos --<TECH>-EXS--> E_elc_tx or E_elc_dx
+    E_<fuel> or E_ethos --<TECH>-EXS/-NEW--> E_elc_tx or E_elc_dx
 
-Monthly hydro is split in two around its reservoir, so the water can be generated
-in another season than it arrives in:
+Existing monthly hydro is split in two around its reservoir, so the water can be
+generated in another season than it arrives in:
 
     E_ethos --E_HYD_MLY-EXS-IN--> E_hyd_mly_stor --E_HYD_MLY-EXS--> E_elc_tx
 
@@ -50,9 +51,9 @@ def source_commodity_name() -> str:
 
 
 @dataclass(frozen=True)
-class ExistingGenerationNotes:
+class GenerationNotes:
     """
-    Notes of the rows of the existing generators.
+    Notes of the rows of the generators.
 
     Parameters
     ----------
@@ -64,6 +65,9 @@ class ExistingGenerationNotes:
         Source of the ATB heat rates.
     cogeneration : str
         Source and meaning of the cogeneration activity limits.
+    vre_bin_costs, vre_bin_limits : str
+        Source (and currency) of the costs and capacity limits of the wind and
+        solar bins.
     """
 
     capacity: str
@@ -71,11 +75,13 @@ class ExistingGenerationNotes:
     coders_costs: str
     atb_efficiency: str
     cogeneration: str
+    vre_bin_costs: str
+    vre_bin_limits: str
 
 
 @dataclass
-class ExistingGeneration:
-    """The commodities and technologies of the existing generators."""
+class GenerationEntities:
+    """The commodities and technologies of a set of generators."""
 
     commodities: list[
         FuelCommodityEntity | SourceCommodityEntity | PhysicalCommodityEntity
@@ -96,9 +102,9 @@ def build_existing_generation(
     efficiencies: pd.DataFrame,
     costs: pd.DataFrame,
     cogeneration: pd.DataFrame,
-    notes: ExistingGenerationNotes,
+    notes: GenerationNotes,
     data_id: DatasetIdentifier,
-) -> ExistingGeneration:
+) -> GenerationEntities:
     """
     One `-EXS` technology per technology of the fleet, in the regions and vintages
     where it has capacity; monthly hydro also gets its reservoir inflow (`-IN`).
@@ -108,51 +114,23 @@ def build_existing_generation(
     fleet : pd.DataFrame
         See `fleet.existing_generators`.
     lifetimes : dict[GenerationTechnology, int]
-        See `generation.parameters.existing_lifetimes`.
+        See `generation.parameters.generation_lifetimes`.
     efficiencies : pd.DataFrame
-        See `generation.parameters.existing_efficiencies`.
+        See `generation.parameters.process_efficiencies`.
     costs : pd.DataFrame
-        See `generation.parameters.existing_om_costs`.
+        See `generation.parameters.process_om_costs`.
     cogeneration : pd.DataFrame
         See `generation.parameters.cogeneration_activity`.
-    notes : ExistingGenerationNotes
+    notes : GenerationNotes
         Notes of the rows.
     data_id : DatasetIdentifier
         Data set of the electricity module.
     """
-    # Capacity to activity: PJ produced by 1 GW over a year
-    CAPACITY_TO_ACTIVITY = 31.536
     # Monthly hydro reservoir: a month of output at full capacity
     RESERVOIR_HOURS = 730
 
-    entities = ExistingGeneration()
     technologies: list[GenerationTechnology] = list(dict.fromkeys(fleet["technology"]))
-
-    # Commodities: the fuels burned, the free resources, the reservoir
-    fuels = list(
-        dict.fromkeys(
-            fuel for t in technologies if (fuel := t.get_input_fuel()) is not None
-        )
-    )
-    for fuel in fuels:
-        entities.commodities.append(
-            FuelCommodityEntity(
-                sector=CANOESector.Electricity,
-                fuel=fuel,
-                flag=CommodityTypeCode.A,
-                data_id=data_id,
-            )
-        )
-    if any(t.get_input_fuel() is None for t in technologies):
-        entities.commodities.append(
-            SourceCommodityEntity(
-                name=source_commodity_name(),
-                description="free resources of the generators (water, wind, sun, "
-                + "heat)",
-                data_id=data_id,
-                units="PJ",
-            )
-        )
+    entities = GenerationEntities(commodities=_commodities(technologies, data_id))
     reservoir = "E_hyd_mly_stor"
     if GenerationTechnology.HydroMonthly in technologies:
         entities.commodities.append(
@@ -165,116 +143,44 @@ def build_existing_generation(
         )
 
     for technology in technologies:
-        rows = fleet["technology"] == technology
-        of_technology = fleet.loc[rows]
-        regions: list[CANOEProvince] = list(dict.fromkeys(of_technology["region"]))
-        vintages = sorted({int(v) for v in of_technology["vintage"]})
+        of_fleet = fleet.loc[fleet["technology"] == technology]
+        regions: list[CANOEProvince] = list(dict.fromkeys(of_fleet["region"]))
+        vintages = sorted({int(v) for v in of_fleet["vintage"]})
         name = f"{technology.get_tech_code()}-EXS"
-        fuel = technology.get_input_fuel()
-        source = (
-            source_commodity_name()
-            if fuel is None
-            else get_fuel_commodity_in_sector(CANOESector.Electricity, fuel)
-        )
         is_reservoir = technology == GenerationTechnology.HydroMonthly
+        capacity = _region_vintage(of_fleet, "capacity", regions, vintages)
 
-        capacity = RegionVintageArray(regions, vintages)
-        for region, vintage, value in zip(
-            of_technology["region"], of_technology["vintage"], of_technology["capacity"]
-        ):
-            capacity.set(float(value), region=region, vintage=int(vintage))
-        efficiency = RegionVintageArray(regions, vintages)
-        of_efficiency = efficiencies.loc[efficiencies["technology"] == technology]
-        for region, vintage, value in zip(
-            of_efficiency["region"],
-            of_efficiency["vintage"],
-            of_efficiency["efficiency"],
-        ):
-            efficiency.set(float(value), region=region, vintage=int(vintage))
-
-        generic_type = technology.get_coders_generic_type()
-        lifetime_notes = (
-            "Never retires: kept for the whole horizon"
-            if technology.never_retires()
-            else f"CODERS generation_generic service_life ({generic_type})"
-        )
-        capacity_notes = notes.capacity + (
-            "; never retires, so all units are in the last existing vintage"
-            if technology.never_retires()
-            else ""
-        )
-
-        entity = (
-            TechnologyEntity(
-                name=name,
-                output_commodity=technology.get_grid_level().get_commodity(),
-                data_id=data_id,
-                description=f"{technology.get_description()} - existing",
-                sector=CANOESector.Electricity,
-                flag=TechnologyTypeCode.PS
-                if is_reservoir
-                else TechnologyTypeCode.PB
-                if technology.is_baseload()
-                else TechnologyTypeCode.P,
-            )
-            .set_reserve()
-            .set_curtailable(technology.is_curtailable())
-            .with_efficiency(
-                reservoir if is_reservoir else source,
-                efficiency,
-                notes=_efficiency_notes(technology, notes),
-                units="PJ/PJ",
-            )
-            .with_existing_capacity(capacity, notes=capacity_notes, units="GW")
-            .with_lifetime(
-                RegionalValuesArray(regions, fill=lifetimes[technology]),
-                notes=lifetime_notes,
-            )
-            .with_capacity_to_activity(
-                RegionalValuesArray(regions, fill=CAPACITY_TO_ACTIVITY),
-                notes="PJ produced by 1 GW over a year (8760 h)",
-                units="PJ/GWy",
-            )
+        entity = _generator(
+            technology,
+            name,
+            "existing",
+            _region_vintage(
+                efficiencies.loc[efficiencies["technology"] == technology],
+                "efficiency",
+                regions,
+                vintages,
+            ),
+            lifetimes[technology],
+            notes,
+            data_id,
+            input_commodity=reservoir if is_reservoir else None,
+        ).with_existing_capacity(
+            capacity,
+            notes=notes.capacity
+            + (
+                "; never retires, so all units are in the last existing vintage"
+                if technology.never_retires()
+                else ""
+            ),
+            units="GW",
         )
         if is_reservoir:
+            entity.flag = TechnologyTypeCode.PS
             entity.set_seasonal_storage().with_storage_duration(
                 RegionalValuesArray(regions, fill=RESERVOIR_HOURS),
                 notes="Hours of output at full capacity: about a month",
             )
-
-        # Operation and maintenance costs
-        of_costs = costs.loc[costs["technology"] == technology]
-        periods = sorted({int(p) for p in of_costs["period"]})
-        cost_notes = (
-            notes.coders_costs
-            if technology.get_atb_display_name() is None
-            else notes.atb_costs
-        )
-        source_name = technology.get_atb_display_name() or generic_type
-        for column, set_cost, units in (
-            ("fixed", entity.with_fixed_cost, "M$/GWy"),
-            ("variable", entity.with_variable_cost, "M$/PJ"),
-        ):
-            values = RegionVintagePeriodArray(regions, vintages, periods)
-            written = of_costs.dropna(subset=[column])
-            for region, vintage, period, value in zip(
-                written["region"],
-                written["vintage"],
-                written["period"],
-                written[column],
-            ):
-                values.set(
-                    float(value),
-                    region=region,
-                    vintage=int(vintage),
-                    period=int(period),
-                )
-            if not written.empty:
-                set_cost(
-                    values,
-                    notes=f"{column.capitalize()} O&M ({source_name}): {cost_notes}",
-                    units=units,
-                )
+        _with_om_costs(entity, technology, costs, regions, vintages, notes)
 
         # Cogeneration output held at its historical level
         of_cogeneration = cogeneration.loc[cogeneration["technology"] == technology]
@@ -312,7 +218,7 @@ def build_existing_generation(
                     flag=TechnologyTypeCode.PB,
                 )
                 .with_efficiency(
-                    source,
+                    source_commodity_name(),
                     inflow,
                     notes="Water counted as the electricity it generates",
                     units="PJ/PJ",
@@ -323,7 +229,7 @@ def build_existing_generation(
                     notes=f"Same as {name}",
                 )
                 .with_capacity_to_activity(
-                    RegionalValuesArray(regions, fill=CAPACITY_TO_ACTIVITY),
+                    RegionalValuesArray(regions, fill=_capacity_to_activity()),
                     notes="PJ produced by 1 GW over a year (8760 h)",
                     units="PJ/GWy",
                 )
@@ -332,11 +238,290 @@ def build_existing_generation(
     return entities
 
 
+def build_new_generation(
+    efficiencies: pd.DataFrame,
+    investment: pd.DataFrame,
+    costs: pd.DataFrame,
+    lifetimes: dict[GenerationTechnology, int],
+    notes: GenerationNotes,
+    data_id: DatasetIdentifier,
+) -> GenerationEntities:
+    """
+    One `-NEW` technology per new (not binned) technology, in the regions and
+    vintages of `efficiencies`.
+
+    Parameters
+    ----------
+    efficiencies : pd.DataFrame
+        See `generation.parameters.process_efficiencies` (of `new_processes`).
+    investment : pd.DataFrame
+        See `generation.parameters.process_investment_costs`.
+    costs : pd.DataFrame
+        See `generation.parameters.process_om_costs`.
+    lifetimes : dict[GenerationTechnology, int]
+        See `generation.parameters.generation_lifetimes`.
+    notes : GenerationNotes
+        Notes of the rows.
+    data_id : DatasetIdentifier
+        Data set of the electricity module.
+    """
+    technologies: list[GenerationTechnology] = list(
+        dict.fromkeys(efficiencies["technology"])
+    )
+    entities = GenerationEntities(commodities=_commodities(technologies, data_id))
+    for technology in technologies:
+        of_efficiency = efficiencies.loc[efficiencies["technology"] == technology]
+        regions: list[CANOEProvince] = list(dict.fromkeys(of_efficiency["region"]))
+        vintages = sorted({int(v) for v in of_efficiency["vintage"]})
+        entity = _generator(
+            technology,
+            f"{technology.get_tech_code()}-NEW",
+            "new",
+            _region_vintage(of_efficiency, "efficiency", regions, vintages),
+            lifetimes[technology],
+            notes,
+            data_id,
+        ).with_investment_cost(
+            _region_vintage(
+                investment.loc[investment["technology"] == technology],
+                "cost",
+                regions,
+                vintages,
+            ),
+            notes=f"OCC ({technology.get_atb_display_name()}): {notes.atb_costs}",
+            units="M$/GW",
+        )
+        _with_om_costs(entity, technology, costs, regions, vintages, notes)
+        entities.technologies.append(entity)
+    return entities
+
+
+def build_vre_bins(
+    investment: pd.DataFrame,
+    fixed: pd.DataFrame,
+    limits: pd.DataFrame,
+    lifetimes: dict[GenerationTechnology, int],
+    notes: GenerationNotes,
+    data_id: DatasetIdentifier,
+) -> GenerationEntities:
+    """
+    One technology per new wind and solar resource bin (`<code>-NEW-<n>`), in the
+    regions and vintages of its investment costs, limited to the bin's capacity.
+
+    Parameters
+    ----------
+    investment, fixed : pd.DataFrame
+        See `generation.parameters.vre_bin_costs`.
+    limits : pd.DataFrame
+        See `generation.parameters.vre_bin_limits`.
+    lifetimes : dict[GenerationTechnology, int]
+        See `generation.parameters.generation_lifetimes`.
+    notes : GenerationNotes
+        Notes of the rows.
+    data_id : DatasetIdentifier
+        Data set of the electricity module.
+    """
+    technologies: list[GenerationTechnology] = list(
+        dict.fromkeys(investment["technology"])
+    )
+    entities = GenerationEntities(commodities=_commodities(technologies, data_id))
+    bins = investment[["technology", "bin"]].drop_duplicates()
+    for technology, number in zip(bins["technology"], bins["bin"]):
+        of_investment = investment.loc[
+            (investment["technology"] == technology) & (investment["bin"] == number)
+        ]
+        of_fixed = fixed.loc[
+            (fixed["technology"] == technology) & (fixed["bin"] == number)
+        ]
+        of_limits = limits.loc[
+            (limits["technology"] == technology) & (limits["bin"] == number)
+        ]
+        regions: list[CANOEProvince] = list(dict.fromkeys(of_investment["region"]))
+        vintages = sorted({int(v) for v in of_investment["vintage"]})
+        periods = sorted({int(p) for p in of_limits["period"]})
+        efficiency = RegionVintageArray(regions, vintages)
+        for region, vintage in zip(of_investment["region"], of_investment["vintage"]):
+            efficiency.set(1.0, region=region, vintage=int(vintage))
+        capacity = RegionPeriodArray(regions, periods)
+        for region, period, value in zip(
+            of_limits["region"], of_limits["period"], of_limits["capacity"]
+        ):
+            capacity.set(float(value), region=region, period=int(period))
+
+        entity = (
+            _generator(
+                technology,
+                f"{technology.get_tech_code()}-NEW-{number}",
+                f"new - resource bin {number}",
+                efficiency,
+                lifetimes[technology],
+                notes,
+                data_id,
+            )
+            .with_investment_cost(
+                _region_vintage(of_investment, "cost", regions, vintages),
+                notes=f"Investment: {notes.vre_bin_costs}",
+                units="M$/GW",
+            )
+            .with_fixed_cost(
+                _region_vintage_period(of_fixed, "cost", regions, vintages),
+                notes=f"Fixed O&M: {notes.vre_bin_costs}",
+                units="M$/GWy",
+            )
+            .with_limit_capacity(capacity, notes=notes.vre_bin_limits, units="GW")
+        )
+        entities.technologies.append(entity)
+    return entities
+
+
+def _commodities(
+    technologies: list[GenerationTechnology], data_id: DatasetIdentifier
+) -> list[FuelCommodityEntity | SourceCommodityEntity | PhysicalCommodityEntity]:
+    """The fuels `technologies` burn, and the free resources if some burn none"""
+    fuels = [fuel for t in technologies if (fuel := t.get_input_fuel()) is not None]
+    commodities: list[
+        FuelCommodityEntity | SourceCommodityEntity | PhysicalCommodityEntity
+    ] = [
+        FuelCommodityEntity(
+            sector=CANOESector.Electricity,
+            fuel=fuel,
+            flag=CommodityTypeCode.A,
+            data_id=data_id,
+        )
+        for fuel in dict.fromkeys(fuels)
+    ]
+    if any(t.get_input_fuel() is None for t in technologies):
+        commodities.append(
+            SourceCommodityEntity(
+                name=source_commodity_name(),
+                description="free resources of the generators (water, wind, sun, "
+                + "heat)",
+                data_id=data_id,
+                units="PJ",
+            )
+        )
+    return commodities
+
+
+def _generator(
+    technology: GenerationTechnology,
+    name: str,
+    kind: str,
+    efficiency: RegionVintageArray,
+    lifetime: int,
+    notes: GenerationNotes,
+    data_id: DatasetIdentifier,
+    input_commodity: str | None = None,
+) -> TechnologyEntity:
+    """
+    A generator from its fuel (or `E_ethos`, or `input_commodity`) to its grid
+    level, with its flags, lifetime and capacity to activity.
+    """
+    fuel = technology.get_input_fuel()
+    source = input_commodity or (
+        source_commodity_name()
+        if fuel is None
+        else get_fuel_commodity_in_sector(CANOESector.Electricity, fuel)
+    )
+    regions: list[CANOEProvince] = list(efficiency.coords["region"])
+    return (
+        TechnologyEntity(
+            name=name,
+            output_commodity=technology.get_grid_level().get_commodity(),
+            data_id=data_id,
+            description=f"{technology.get_description()} - {kind}",
+            sector=CANOESector.Electricity,
+            flag=TechnologyTypeCode.PB
+            if technology.is_baseload()
+            else TechnologyTypeCode.P,
+        )
+        .set_reserve()
+        .set_curtailable(technology.is_curtailable())
+        .with_efficiency(
+            source,
+            efficiency,
+            notes=_efficiency_notes(technology, notes, input_commodity),
+            units="PJ/PJ",
+        )
+        .with_lifetime(
+            RegionalValuesArray(regions, fill=lifetime),
+            notes="Never retires: kept for the whole horizon"
+            if technology.never_retires()
+            else "CODERS generation_generic service_life "
+            + f"({technology.get_coders_generic_type()})",
+        )
+        .with_capacity_to_activity(
+            RegionalValuesArray(regions, fill=_capacity_to_activity()),
+            notes="PJ produced by 1 GW over a year (8760 h)",
+            units="PJ/GWy",
+        )
+    )
+
+
+def _with_om_costs(
+    entity: TechnologyEntity,
+    technology: GenerationTechnology,
+    costs: pd.DataFrame,
+    regions: list[CANOEProvince],
+    vintages: list[int],
+    notes: GenerationNotes,
+):
+    """Set the fixed and variable O&M costs of `technology` that are not NaN"""
+    of_costs = costs.loc[costs["technology"] == technology]
+    display_name = technology.get_atb_display_name()
+    cost_notes = notes.coders_costs if display_name is None else notes.atb_costs
+    source_name = display_name or technology.get_coders_generic_type()
+    for column, set_cost, units in (
+        ("fixed", entity.with_fixed_cost, "M$/GWy"),
+        ("variable", entity.with_variable_cost, "M$/PJ"),
+    ):
+        written = of_costs.dropna(subset=[column])
+        if written.empty:
+            continue
+        set_cost(
+            _region_vintage_period(written, column, regions, vintages),
+            notes=f"{column.capitalize()} O&M ({source_name}): {cost_notes}",
+            units=units,
+        )
+
+
+def _region_vintage(
+    df: pd.DataFrame, column: str, regions: list[CANOEProvince], vintages: list[int]
+) -> RegionVintageArray:
+    """`column` of `df` (columns `region`, `vintage`) as an array"""
+    values = RegionVintageArray(regions, vintages)
+    for region, vintage, value in zip(df["region"], df["vintage"], df[column]):
+        values.set(float(value), region=region, vintage=int(vintage))
+    return values
+
+
+def _region_vintage_period(
+    df: pd.DataFrame, column: str, regions: list[CANOEProvince], vintages: list[int]
+) -> RegionVintagePeriodArray:
+    """`column` of `df` (columns `region`, `vintage`, `period`) as an array"""
+    periods = sorted({int(p) for p in df["period"]})
+    values = RegionVintagePeriodArray(regions, vintages, periods)
+    for region, vintage, period, value in zip(
+        df["region"], df["vintage"], df["period"], df[column]
+    ):
+        values.set(
+            float(value), region=region, vintage=int(vintage), period=int(period)
+        )
+    return values
+
+
+def _capacity_to_activity() -> float:
+    """PJ produced by 1 GW over a year"""
+    return 31.536
+
+
 def _efficiency_notes(
-    technology: GenerationTechnology, notes: ExistingGenerationNotes
+    technology: GenerationTechnology,
+    notes: GenerationNotes,
+    input_commodity: str | None,
 ) -> str:
     """Where the efficiency of `technology` comes from"""
-    if technology == GenerationTechnology.HydroMonthly:
+    if input_commodity is not None:
         return "Reservoir to electricity, no losses"
     if technology.get_input_fuel() is None:
         return "Free resource, counted as the electricity it generates"

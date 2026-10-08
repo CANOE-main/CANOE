@@ -223,6 +223,55 @@ class GenerationTechnology(StrEnum):
             GenerationTechnology.WindOnshore,
         )
 
+    def is_resource_binned(self) -> bool:
+        """
+        Whether new capacity comes as resource bins, each with its own costs,
+        capacity limit and profile (`<code>-NEW-<n>`): onshore wind and solar.
+
+        Examples
+        --------
+        >>> GenerationTechnology.WindOnshore.is_resource_binned()
+        True
+        """
+        return self in (GenerationTechnology.SolarPV, GenerationTechnology.WindOnshore)
+
+    def can_be_new(self) -> bool:
+        """
+        Whether the model can build new capacity of the technology: it needs NREL
+        ATB costs, and, if it burns no fuel, capacity factors (only the resource bins
+        have them). Technologies without ATB data would need CODERS investment
+        costs, which the previous module never got to work.
+
+        Examples
+        --------
+        >>> GenerationTechnology.NaturalGasCC.can_be_new()
+        True
+        >>> GenerationTechnology.WindOffshore.can_be_new()  # no capacity factors
+        False
+        >>> GenerationTechnology.Biogas.can_be_new()  # no ATB data
+        False
+        """
+        if self.get_atb_display_name() is None:
+            return False
+        return self.get_input_fuel() is not None or self.is_resource_binned()
+
+    def get_atb_first_year(self) -> int | None:
+        """
+        Earliest year the NREL ATB values of the technology are read at, if later
+        than the first ATB year: 2030 for new nuclear, which cannot be built
+        sooner.
+
+        Examples
+        --------
+        >>> GenerationTechnology.NuclearSMR.get_atb_first_year()
+        2030
+        >>> GenerationTechnology.NaturalGasCC.get_atb_first_year() is None
+        True
+        """
+        if self in (GenerationTechnology.NuclearPWR, GenerationTechnology.NuclearSMR):
+            return 2030
+        return None
+
     def is_cogeneration(self) -> bool:
         """
         Whether the technology also produces heat for a host site: its existing
