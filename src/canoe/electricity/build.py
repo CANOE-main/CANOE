@@ -5,6 +5,7 @@ from typing import TYPE_CHECKING
 from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
+from canoe.canoe_objects.fuel_imports import declare_fuel_imports
 from canoe.common import (
     CANOEFuel,
     CANOEFuelImport,
@@ -21,9 +22,26 @@ from canoe.common.periods import (
     horizon_length,
     projection_year_by_period,
 )
+from canoe.common.validation import check_missing_existing_periods
 
+from .catalogue import GenerationTechnology
+from .fleet import existing_generators
+from .generation.entities import (
+    ExistingGeneration,
+    ExistingGenerationNotes,
+    build_existing_generation,
+)
+from .generation.parameters import (
+    cogeneration_activity,
+    existing_efficiencies,
+    existing_lifetimes,
+    existing_om_costs,
+)
 from .loaders import (
     get_aeo_transmission_distribution_costs,
+    get_atb_generation,
+    get_coders_generation_generic,
+    get_coders_generators,
     get_coders_system_line_losses,
 )
 from .supply.entities import build_grid
@@ -82,8 +100,27 @@ def build_electricity(
             + f"{len(grid_costs.costs)} grid costs "
             + f"({grid_costs.costs['year'].min()}-{grid_costs.costs['year'].max()})"
         )
-        # TODO: CODERS (fleet, generic, reserve, interties, demand), NREL ATB, new
-        # VRE bins, IESO, StatCan, renewables.ninja, ramp rates
+        # Generation: CODERS generators (MW, GWh) and generic parameters (CAD),
+        # NREL ATB heat rates and O&M costs of the ATB technologies (USD)
+        units = get_coders_generators(cfg.data_cache_config)
+        generic = get_coders_generation_generic(cfg.data_cache_config)
+        atb = get_atb_generation(
+            cfg.data_cache_config,
+            sorted(
+                {
+                    name
+                    for t in GenerationTechnology
+                    if (name := t.get_atb_display_name()) is not None
+                }
+            ),
+            cfg.atb_scenario,
+        )
+        logger.debug(
+            f"Loaded {len(units)} CODERS generating units, {len(generic)} generic "
+            + f"types and {len(atb)} ATB values"
+        )
+        # TODO: CODERS (storage, reserve, interties, demand), new VRE bins, IESO,
+        # StatCan, renewables.ninja, ramp rates
 
         # Compute parameters
         # ------------------
@@ -107,7 +144,65 @@ def build_electricity(
         )
         # Single vintage (the first period) serving every period
         lifetime = horizon_length(cfg.future_periods, cfg.period_step)
-        # TODO: generation, capacity factors, storage, CCS, reliability, trade
+
+        # - Existing generation: CODERS units grouped by (region, technology,
+        #   vintage), lifetimes, efficiencies, O&M costs (M$ of model_currency_year)
+        #   and the activity bounds of cogeneration
+        existing_generation: ExistingGeneration | None = None
+        if not cfg.generation.skip_existing:
+            lifetimes = existing_lifetimes(generic)
+            fleet = existing_generators(
+                units,
+                cfg.provinces,
+                lifetimes,
+                cfg.future_periods[0],
+                cfg.period_step,
+                cfg.generation.existing_capacity_threshold,
+            )
+            check_missing_existing_periods(
+                db_conn,
+                sorted({int(v) for v in fleet["vintage"]}),
+                cfg.validation_behavior,
+            )
+            existing_generation = build_existing_generation(
+                fleet,
+                lifetimes,
+                existing_efficiencies(fleet, generic, atb),
+                existing_om_costs(
+                    fleet,
+                    generic,
+                    atb,
+                    lifetimes,
+                    cfg.future_periods,
+                    atb_conversion=currency_conversion_factor(
+                        "USD",
+                        cfg.source_years.atb_currency,
+                        cfg.model_currency_year,
+                        exchange,
+                        inflation,
+                    ),
+                    coders_conversion=currency_conversion_factor(
+                        "CAD",
+                        cfg.source_years.coders_currency,
+                        cfg.model_currency_year,
+                        exchange,
+                        inflation,
+                    ),
+                ),
+                cogeneration_activity(
+                    fleet,
+                    lifetimes,
+                    cfg.future_periods,
+                    cfg.generation.cogeneration_floor,
+                ),
+                _existing_generation_notes(cfg),
+                electricity_data_id,
+            )
+            logger.debug(
+                f"Existing generation: {len(fleet)} (region, technology, vintage), "
+                + f"{fleet['capacity'].sum():.1f} GW"
+            )
+        # TODO: new generation, capacity factors, storage, CCS, reliability, trade
 
         # Build TEMOA Objects
         # -------------------
@@ -136,9 +231,21 @@ def build_electricity(
             + f"{len(grid.deliveries)} delivery technologies"
         )
         grid.build(db_conn)
-        # TODO: generators, storage, CCS retrofits, interties
 
-    return CANOEModuleOutput(fuel_imports=[])
+        # Existing generators, and the fuels they burn for the fuel module
+        generator_imports: list[CANOEFuelImport] = []
+        if existing_generation is not None:
+            logger.info(
+                f"Building {len(existing_generation.technologies)} existing "
+                + "generation technologies"
+            )
+            existing_generation.build(db_conn)
+            generator_imports = declare_fuel_imports(
+                CANOESector.Electricity, existing_generation.technologies
+            )
+        # TODO: new generators, storage, CCS retrofits, interties
+
+    return CANOEModuleOutput(fuel_imports=generator_imports)
 
 
 def _cost_notes(cfg: "CANOEElectricityConfig", reference: str) -> str:
@@ -149,6 +256,30 @@ def _cost_notes(cfg: "CANOEElectricityConfig", reference: str) -> str:
     return (
         f"{reference}, read at {point}, in M$/PJ of {cfg.model_currency_year} CAD "
         + "(GDP deflator)"
+    )
+
+
+def _existing_generation_notes(
+    cfg: "CANOEElectricityConfig",
+) -> ExistingGenerationNotes:
+    to_model = f"to {cfg.model_currency_year} CAD (GDP deflator)"
+    atb = (
+        f"NREL ATB 2024 ({cfg.atb_scenario}, market case) at the vintage year, "
+        + "2022 at the earliest"
+    )
+    return ExistingGenerationNotes(
+        capacity=f"CODERS generators (cache {cfg.data_cache_config.cache_date}): "
+        + "units by last renewal (or start) year, rounded to "
+        + f"{cfg.period_step}-year vintages before {cfg.future_periods[0]}; groups "
+        + f"of {cfg.generation.existing_capacity_threshold} GW or less left out",
+        atb_costs=f"{atb}, {cfg.source_years.atb_currency} USD {to_model}",
+        coders_costs=f"CODERS generation_generic, {cfg.source_years.coders_currency} "
+        + f"CAD {to_model}",
+        atb_efficiency=atb,
+        cogeneration="CODERS average annual output of the surviving units. The "
+        + "model does not represent the heat the host sites need, so the output is "
+        + f"held between {cfg.generation.cogeneration_floor} and 1 times its "
+        + "historical level",
     )
 
 

@@ -13,9 +13,9 @@ The grid itself always runs; each table says which of its parts are left out.
 
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any, ClassVar, Self
+from typing import Any, ClassVar, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from canoe.common import (
     CANOEFuelImport,
@@ -75,6 +75,10 @@ class SourceYears(BaseModel):
     """Year of the US dollars of NREL ATB 2024 costs, 2022. The previous module used
     2021 (see `ELECTRICITY_MODULE_BUGS.md`); set it to reproduce its databases."""
 
+    coders_currency: int = 2020
+    """Year of the Canadian dollars of CODERS `generation_generic` costs. The table
+    gives none; the previous module took 2020."""
+
 
 class GenerationConfig(BaseModel):
     """Generators, `[generation]` in TOML."""
@@ -83,6 +87,13 @@ class GenerationConfig(BaseModel):
 
     skip_existing: bool = False
     """Leave out the existing generators (`-EXS`), the CODERS fleet."""
+
+    existing_capacity_threshold: float = Field(default=0.001, ge=0)
+    """Smallest existing capacity kept for a (region, technology, vintage), GW."""
+
+    cogeneration_floor: float = Field(default=0.95, ge=0, le=1)
+    """Lower bound of the annual output of existing cogeneration, as a share of its
+    historical output (the upper bound). Below 1 to give the solver slack."""
 
     new_technologies: list[GenerationTechnology]
     """New generators the model can build (`-NEW`); empty for none. Solar and
@@ -238,6 +249,9 @@ class CANOEElectricityConfig(InheritsFromBase):
     # Data sources
     source_years: SourceYears
     """Year of each data source."""
+
+    atb_scenario: Literal["Advanced", "Moderate", "Conservative"] = "Moderate"
+    """NREL ATB scenario of the efficiencies and costs taken from the ATB."""
 
     # Demand
     exogenous_demand: bool = False

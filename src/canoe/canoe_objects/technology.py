@@ -26,10 +26,12 @@ from canoe_schema.v4_0 import (
     ExistingCapacity,
     LifetimeProcess,
     LifetimeTech,
+    LimitActivity,
     LimitAnnualCapacityFactor,
     LimitTechInputSplit,
     LimitTechInputSplitAnnual,
     OperatorCode,
+    StorageDuration,
     Technology,
     TechnologyTypeCode,
 )
@@ -129,6 +131,7 @@ class TechnologyEntity:
     - capacity factor limits for commodities that are not outputs
     - emission factors for commodities that are not inputs, or for a (region, vintage)
       without efficiency for that input
+    - a storage duration or seasonal storage on a technology that is not storage
 
     Parameters
     ----------
@@ -220,6 +223,9 @@ class TechnologyEntity:
 
         self.annual: int = 0
         self.unlimited_capacity: int = 0
+        self.reserve: int = 0
+        self.curtailable: int = 0
+        self.seasonal_storage: int = 0
 
         # Set-able parameters
         # -------------------
@@ -240,6 +246,9 @@ class TechnologyEntity:
         ] = {}
         # (emission commodity, input commodity) -> emission factor
         self.input_emission_factors: dict[tuple[str, str], InputEmissionFactor] = {}
+        self.storage_duration: Parameter[RegionalValuesArray] | None = None
+        # operator -> activity limit
+        self.activity_limits: dict[OperatorCode, Parameter[RegionPeriodArray]] = {}
 
     @property
     def inputs(self) -> list[str]:
@@ -295,6 +304,30 @@ class TechnologyEntity:
         does not track its capacity, only its activity.
         """
         self.unlimited_capacity = int(unlimited)
+        return self
+
+    def set_reserve(self, reserve: bool = True):
+        """
+        Mark the technology as counting towards the planning reserve margin
+        (`reserve` column).
+        """
+        self.reserve = int(reserve)
+        return self
+
+    def set_curtailable(self, curtailable: bool = True):
+        """
+        Mark the technology's output as curtailable (`curtail` column): it may
+        produce less than its capacity factor allows, e.g. wind and solar.
+        """
+        self.curtailable = int(curtailable)
+        return self
+
+    def set_seasonal_storage(self, seasonal: bool = True):
+        """
+        Mark a storage technology (flag `ps`) as seasonal (`seas_stor` column): its
+        stored energy carries over from one season to the next.
+        """
+        self.seasonal_storage = int(seasonal)
         return self
 
     def with_efficiency(
@@ -790,6 +823,97 @@ class TechnologyEntity:
         )
         return self
 
+    def with_storage_duration(
+        self,
+        hours: RegionalValuesArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+    ):
+        """
+        Set the energy a storage technology (flag `ps`) holds, in hours of output at
+        full capacity.
+
+        Writes `storage_duration`: one row per region with a value.
+
+        Parameters
+        ----------
+        hours : RegionalValuesArray
+            Duration in hours, by region.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> battery = (
+        ...     TechnologyEntity(
+        ...         "C_BAT", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+        ...         flag=TechnologyTypeCode.PS,
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=0.85))
+        ...     .with_storage_duration(RegionalValuesArray(regions, fill=4))
+        ... )
+        >>> battery.build(db)
+        >>> db.execute("SELECT region, tech, duration FROM storage_duration").fetchall()
+        [('ON', 'C_BAT', 4.0)]
+        """
+        self.storage_duration = Parameter(
+            hours, ParameterMetadata(notes, reference_code, data_quality)
+        )
+        return self
+
+    def with_limit_activity(
+        self,
+        activity: RegionPeriodArray,
+        operator: OperatorCode = OperatorCode.LE,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        """
+        Limit the technology's total output over each period's year, all vintages
+        together.
+
+        Writes `limit_activity`: one row per (region, period) with a value. The
+        technology can have one limit per operator (e.g. a lower and an upper
+        bound); calling it again with the same operator replaces that limit.
+
+        Parameters
+        ----------
+        activity : RegionPeriodArray
+            Annual output by region and period.
+        operator : OperatorCode
+            Upper bound (`le`, default), lower bound (`ge`) or exact output (`e`).
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> chp = (
+        ...     TechnologyEntity(
+        ...         "C_CHP", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025], fill=0.4))
+        ...     .with_limit_activity(
+        ...         RegionPeriodArray(regions, [2025], fill=9.5), OperatorCode.GE, units="PJ"
+        ...     )
+        ...     .with_limit_activity(
+        ...         RegionPeriodArray(regions, [2025], fill=10.0), OperatorCode.LE, units="PJ"
+        ...     )
+        ... )
+        >>> chp.build(db)
+        >>> db.execute(
+        ...     "SELECT region, period, tech_or_group, operator, activity, units"
+        ...     " FROM limit_activity"
+        ... ).fetchall()
+        [('ON', 2025, 'C_CHP', 'ge', 9.5, 'PJ'), ('ON', 2025, 'C_CHP', 'le', 10.0, 'PJ')]
+        """
+        self.activity_limits[operator] = Parameter(
+            activity, ParameterMetadata(notes, reference_code, data_quality, units)
+        )
+        return self
+
     def validate(self) -> None:
         """
         Check the parameters are consistent before writing them (called by `build`).
@@ -841,12 +965,26 @@ class TechnologyEntity:
                 for (o, operator), limit in self.capacity_factor_limits.items()
             },
             "process lifetime": self.process_lifetime,
+            "storage duration": self.storage_duration,
+            **{
+                f"activity limit ({operator})": limit
+                for operator, limit in self.activity_limits.items()
+            },
         }
         for parameter_name, parameter in parameters.items():
             if parameter is not None and not parameter.values.to_records():
                 raise ValueError(
                     f"Technology {self.name}: {parameter_name} was set but has no values"
                 )
+
+        # Storage parameters only for storage technologies
+        if self.flag != TechnologyTypeCode.PS and (
+            self.storage_duration or self.seasonal_storage
+        ):
+            raise ValueError(
+                f"Technology {self.name}: storage duration or seasonal storage on a "
+                + f"technology that is not storage (flag {self.flag})"
+            )
 
         # (region, vintage) cells with at least one efficiency
         efficiency_cells: set[tuple[CANOEProvince, int]] = set()
@@ -1029,6 +1167,9 @@ class TechnologyEntity:
             description=self.description,
             unlim_cap=self.unlimited_capacity,
             annual=self.annual,
+            reserve=self.reserve,
+            curtail=self.curtailable,
+            seas_stor=self.seasonal_storage,
             data_id=options.dataset_code(),
         )
         sql, params = Technology.to_insert_or_ignore_sql(technology)
@@ -1313,5 +1454,48 @@ class TechnologyEntity:
                 continue
             sql, params = EmissionActivity.bulk_insert_or_ignore_sql(
                 emission_activities, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Storage duration
+        if self.storage_duration:
+            meta = self.storage_duration.metadata
+            durations = [
+                StorageDuration(
+                    region=row["region"].short(),
+                    tech=self.name,
+                    duration=row["value"],
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(self.storage_duration.values.to_records())
+            ]
+            sql, params = StorageDuration.bulk_insert_or_ignore_sql(
+                durations, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Activity limits (one set of rows per operator)
+        for operator, limit in self.activity_limits.items():
+            meta = limit.metadata
+            activity_limits = [
+                LimitActivity(
+                    region=row["region"].short(),
+                    period=row["period"],
+                    tech_or_group=self.name,
+                    operator=operator,
+                    activity=row["value"],
+                    units=meta.units,
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(limit.values.to_records())
+            ]
+            sql, params = LimitActivity.bulk_insert_or_ignore_sql(
+                activity_limits, include_nulls=True
             )
             db_conn.executemany(sql, params)

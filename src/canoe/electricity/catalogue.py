@@ -223,6 +223,202 @@ class GenerationTechnology(StrEnum):
             GenerationTechnology.WindOnshore,
         )
 
+    def is_cogeneration(self) -> bool:
+        """
+        Whether the technology also produces heat for a host site: its existing
+        units must keep their historical electricity output (see
+        `generation.parameters.cogeneration_activity`).
+
+        Examples
+        --------
+        >>> GenerationTechnology.NaturalGasCogeneration.is_cogeneration()
+        True
+        """
+        return self in (
+            GenerationTechnology.BiomassCogeneration,
+            GenerationTechnology.NaturalGasCogeneration,
+        )
+
+    def never_retires(self) -> bool:
+        """
+        Whether existing units are kept for the whole horizon, whatever their age
+        (hydro): they are grouped in a single vintage, the year before the first
+        period, with a lifetime of 100 years.
+
+        Examples
+        --------
+        >>> GenerationTechnology.HydroDaily.never_retires()
+        True
+        """
+        return self in (
+            GenerationTechnology.HydroDaily,
+            GenerationTechnology.HydroMonthly,
+            GenerationTechnology.HydroRunOfRiver,
+        )
+
+    def get_description(self) -> str:
+        """
+        Description in the `technology` table, before the `existing`/`new` suffix.
+
+        Examples
+        --------
+        >>> GenerationTechnology.NaturalGasCT.get_description()
+        'natural gas combustion turbine generation'
+        """
+        DESCRIPTIONS = {
+            GenerationTechnology.Biogas: "biogas generation",
+            GenerationTechnology.Biomass: "biomass generation",
+            GenerationTechnology.BiomassCogeneration: "biomass heat and power "
+            + "cogeneration",
+            GenerationTechnology.Coal: "coal generation",
+            GenerationTechnology.CoalCCS: "coal generation with 95% ccs",
+            GenerationTechnology.DieselCT: "diesel combustion turbine generation",
+            GenerationTechnology.DieselST: "diesel steam turbine generation",
+            GenerationTechnology.Geothermal: "geothermal generation",
+            GenerationTechnology.GasolineCT: "gasoline combustion turbine generation",
+            GenerationTechnology.HydroDaily: "hydroelectric generation with daily "
+            + "reservoir storage",
+            GenerationTechnology.HydroMonthly: "hydroelectric generation with monthly "
+            + "reservoir storage",
+            GenerationTechnology.HydroRunOfRiver: "hydroelectric run-of-river "
+            + "generation",
+            GenerationTechnology.NaturalGasCC: "natural gas combined cycle generation",
+            GenerationTechnology.NaturalGasCCS: "natural gas combined cycle "
+            + "generation with 95% ccs",
+            GenerationTechnology.NaturalGasCogeneration: "natural gas heat and power "
+            + "cogeneration",
+            GenerationTechnology.NaturalGasCT: "natural gas combustion turbine "
+            + "generation",
+            GenerationTechnology.NuclearCANDU: "nuclear candu generation",
+            GenerationTechnology.NuclearPWR: "nuclear pressurised water reactor "
+            + "generation",
+            GenerationTechnology.NuclearSMR: "nuclear small modular reactor generation",
+            GenerationTechnology.OilCT: "oil combustion turbine generation",
+            GenerationTechnology.OilST: "oil steam turbine generation",
+            GenerationTechnology.SolarPV: "utility-scale solar photovoltaic generation",
+            GenerationTechnology.WindOffshore: "offshore wind generation",
+            GenerationTechnology.WindOnshore: "onshore wind generation",
+        }
+        return DESCRIPTIONS[self]
+
+    def get_coders_fleet_types(self) -> tuple[str, ...]:
+        """
+        CODERS `generators` types (`gen_type`, lowercase) whose units are this
+        technology's existing capacity; empty if CODERS has none.
+
+        Examples
+        --------
+        >>> GenerationTechnology.NaturalGasCT.get_coders_fleet_types()
+        ('ng_sc', 'ng_ct', 'gas_ct')
+        """
+        FLEET_TYPES: dict[GenerationTechnology, tuple[str, ...]] = {
+            GenerationTechnology.Biogas: ("biogas",),
+            GenerationTechnology.Biomass: ("biomass", "msw"),
+            GenerationTechnology.BiomassCogeneration: ("biomass_cg",),
+            GenerationTechnology.Coal: ("coal",),
+            GenerationTechnology.CoalCCS: ("coal_ccs",),
+            GenerationTechnology.DieselCT: ("diesel_ct",),
+            GenerationTechnology.DieselST: ("diesel_st",),
+            GenerationTechnology.Geothermal: ("geothermal",),
+            GenerationTechnology.GasolineCT: ("gasoline_ct",),
+            GenerationTechnology.HydroDaily: ("hydro_daily",),
+            GenerationTechnology.HydroMonthly: ("hydro_monthly",),
+            GenerationTechnology.HydroRunOfRiver: ("hydro_run",),
+            GenerationTechnology.NaturalGasCC: ("ng_cc",),
+            GenerationTechnology.NaturalGasCCS: ("ng_ccs",),
+            GenerationTechnology.NaturalGasCogeneration: ("ng_cg",),
+            GenerationTechnology.NaturalGasCT: ("ng_sc", "ng_ct", "gas_ct"),
+            GenerationTechnology.NuclearCANDU: ("nuclear",),
+            GenerationTechnology.NuclearPWR: (),
+            GenerationTechnology.NuclearSMR: ("nuclear_smr",),
+            GenerationTechnology.OilCT: ("oil_ct",),
+            GenerationTechnology.OilST: ("oil_st",),
+            GenerationTechnology.SolarPV: ("solar_pv", "solar"),
+            GenerationTechnology.WindOffshore: ("wind_ofs",),
+            GenerationTechnology.WindOnshore: ("wind_ons",),
+        }
+        return FLEET_TYPES[self]
+
+    def get_coders_generic_type(self) -> str:
+        """
+        CODERS `generation_generic` type (`gen_type`, lowercase) the technology takes
+        its lifetime from, and its efficiency and costs when it has no NREL ATB
+        equivalent.
+
+        Examples
+        --------
+        >>> GenerationTechnology.NaturalGasCT.get_coders_generic_type()
+        'ng_sc'
+        """
+        GENERIC_TYPES = {
+            GenerationTechnology.Biogas: "biogas",
+            GenerationTechnology.Biomass: "biomass",
+            GenerationTechnology.BiomassCogeneration: "biomass_cg",
+            GenerationTechnology.Coal: "coal",
+            GenerationTechnology.CoalCCS: "coal_ccs",
+            GenerationTechnology.DieselCT: "diesel_ct",
+            GenerationTechnology.DieselST: "diesel_st",
+            GenerationTechnology.Geothermal: "geothermal",
+            GenerationTechnology.GasolineCT: "gasoline_ct",
+            GenerationTechnology.HydroDaily: "hydro_daily",
+            GenerationTechnology.HydroMonthly: "hydro_monthly",
+            GenerationTechnology.HydroRunOfRiver: "hydro_run",
+            GenerationTechnology.NaturalGasCC: "ng_cc",
+            GenerationTechnology.NaturalGasCCS: "ng_ccs",
+            GenerationTechnology.NaturalGasCogeneration: "ng_cg",
+            GenerationTechnology.NaturalGasCT: "ng_sc",
+            GenerationTechnology.NuclearCANDU: "nuclear",
+            GenerationTechnology.NuclearPWR: "nuclear",
+            GenerationTechnology.NuclearSMR: "nuclear_smr",
+            GenerationTechnology.OilCT: "oil_ct",
+            GenerationTechnology.OilST: "oil_st",
+            GenerationTechnology.SolarPV: "solar_pv",
+            GenerationTechnology.WindOffshore: "wind_offshore",
+            GenerationTechnology.WindOnshore: "wind_onshore",
+        }
+        return GENERIC_TYPES[self]
+
+    def get_atb_display_name(self) -> str | None:
+        """
+        NREL ATB technology (`display_name`) the technology takes its efficiency
+        (heat rate) and costs from, or `None` to take them from CODERS.
+
+        Examples
+        --------
+        >>> GenerationTechnology.NaturalGasCT.get_atb_display_name()
+        'NG Combustion Turbine (F-Frame)'
+        >>> GenerationTechnology.NuclearCANDU.get_atb_display_name() is None
+        True
+        """
+        DISPLAY_NAMES: dict[GenerationTechnology, str | None] = {
+            GenerationTechnology.Biogas: None,
+            GenerationTechnology.Biomass: "Biopower - Dedicated",
+            GenerationTechnology.BiomassCogeneration: "Biopower - Dedicated",
+            GenerationTechnology.Coal: "Coal-new",
+            GenerationTechnology.CoalCCS: "Coal-95%-CCS",
+            GenerationTechnology.DieselCT: None,
+            GenerationTechnology.DieselST: None,
+            GenerationTechnology.Geothermal: "Geothermal - Hydro / Flash",
+            GenerationTechnology.GasolineCT: None,
+            GenerationTechnology.HydroDaily: None,
+            GenerationTechnology.HydroMonthly: None,
+            GenerationTechnology.HydroRunOfRiver: None,
+            GenerationTechnology.NaturalGasCC: "NG 2-on-1 Combined Cycle (H-Frame)",
+            GenerationTechnology.NaturalGasCCS: "NG 2-on-1 Combined Cycle (H-Frame) "
+            + "95% CCS",
+            GenerationTechnology.NaturalGasCogeneration: None,
+            GenerationTechnology.NaturalGasCT: "NG Combustion Turbine (F-Frame)",
+            GenerationTechnology.NuclearCANDU: None,
+            GenerationTechnology.NuclearPWR: "Nuclear - Large",
+            GenerationTechnology.NuclearSMR: "Nuclear - Small",
+            GenerationTechnology.OilCT: None,
+            GenerationTechnology.OilST: None,
+            GenerationTechnology.SolarPV: "Utility PV - Class 3",
+            GenerationTechnology.WindOffshore: "Offshore Wind - Class 3",
+            GenerationTechnology.WindOnshore: "Land-Based Wind - Class 7 - Technology 1",
+        }
+        return DISPLAY_NAMES[self]
+
 
 class StorageTechnology(StrEnum):
     """Electricity storage technologies, on the transmission level. Configs take

@@ -18,10 +18,17 @@
 exogenous_demand = false
 
 # ----------------------------------------------------------
+#                       COST SOURCES
+# ----------------------------------------------------------
+# NREL ATB scenario of the efficiencies and costs taken from the ATB: "Advanced",
+# "Moderate" or "Conservative"
+atb_scenario = "Moderate"
+
+# ----------------------------------------------------------
 #                     RUNTIME SWITCHES
 # ----------------------------------------------------------
 # "error" or "warning"
-validation_behavior = "error"      # database lacks periods or regions
+validation_behavior = "error"  # database lacks periods or regions
 missing_data_behavior = "warning"  # data missing for a modelled component
 
 # ----------------------------------------------------------
@@ -30,13 +37,15 @@ missing_data_behavior = "warning"  # data missing for a modelled component
 # Each source keeps its own year, as in the previous module (to be harmonized into one
 # weather year once the cache has every source for the same year).
 [source_years]
-coders_hourly = 2018          # CODERS hourly demand and transfers
-ieso_hourly = 2018            # IESO hourly output (Ontario wind, solar, hydro)
+coders_hourly = 2018  # CODERS hourly demand and transfers
+ieso_hourly = 2018  # IESO hourly output (Ontario wind, solar, hydro)
 statcan_monthly_hydro = 2018  # StatCan 25-10-0015-01 (hydro outside Ontario)
-renewables_ninja = 2018       # existing wind and solar outside Ontario
+renewables_ninja = 2018  # existing wind and solar outside Ontario
 # Year of the US dollars of NREL ATB 2024 costs (2022). Set 2021 to reproduce the
 # previous module (see ELECTRICITY_MODULE_BUGS.md).
 atb_currency = 2022
+# Year of the Canadian dollars of CODERS generation_generic costs (the table gives none)
+coders_currency = 2020
 
 # ----------------------------------------------------------
 #                       GENERATION
@@ -44,6 +53,11 @@ atb_currency = 2022
 [generation]
 # Leave out the existing generators (-EXS), the CODERS fleet
 skip_existing = false
+# Smallest existing capacity kept for a (region, technology, vintage), GW
+existing_capacity_threshold = 0.001
+# Lower bound of the annual output of existing cogeneration, as a share of its
+# historical output (the upper bound); below 1 for feasbility slack
+cogeneration_floor = 0.95
 
 # New generators the model can build (-NEW); [] for none. Options: "biogas",
 # "biomass", "biomass_cg", "coal", "coal_ccs", "diesel_ct", "diesel_st", "geothermal",
@@ -52,24 +66,24 @@ skip_existing = false
 # "solar", "wind_offshore", "wind_onshore". Solar and onshore wind come as resource
 # bins.
 new_technologies = [
-    "biomass",
-    "ng_cc",
-    "ng_ccs",
-    "ng_ct",
-    "nuclear_pwr",
-    "nuclear_smr",
-    "solar",
-    "wind_onshore",
+  "biomass",
+  "ng_cc",
+  "ng_ccs",
+  "ng_ct",
+  "nuclear_pwr",
+  "nuclear_smr",
+  "solar",
+  "wind_onshore",
 ]
 
 # Carbon capture retrofits of coal and natural gas combined cycle generators; [] for
 # none. Options: "coal_ccs_retrofit_90", "coal_ccs_retrofit_95",
 # "ng_ccs_retrofit_90", "ng_ccs_retrofit_95"
 ccs_retrofits = [
-    "coal_ccs_retrofit_90",
-    "coal_ccs_retrofit_95",
-    "ng_ccs_retrofit_90",
-    "ng_ccs_retrofit_95",
+  "coal_ccs_retrofit_90",
+  "coal_ccs_retrofit_95",
+  "ng_ccs_retrofit_90",
+  "ng_ccs_retrofit_95",
 ]
 
 # ----------------------------------------------------------
