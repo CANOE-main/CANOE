@@ -41,6 +41,7 @@ coders_hourly = 2018  # CODERS hourly demand and transfers
 ieso_hourly = 2018  # IESO hourly output (Ontario wind, solar, hydro)
 statcan_monthly_hydro = 2018  # StatCan 25-10-0015-01 (hydro outside Ontario)
 renewables_ninja = 2018  # existing wind and solar outside Ontario
+ieso_reliability_outlook = 2025  # IESO Reliability Outlook (capacity credits, derates)
 # Year of the US dollars of NREL ATB 2024 costs (2022). Set 2021 to reproduce the
 # previous module (see ELECTRICITY_MODULE_BUGS.md).
 atb_currency = 2022
@@ -126,3 +127,10 @@ skip_boundary = false
 # Leave out the planning reserve margin, capacity credits (static reserve margin) and
 # reserve capacity derates (dynamic); Temoa's reserve_margin setting picks which applies
 skip = false
+# Capacity credits and derates: IESO Reliability Outlook capability at summer peak
+# over installed capacity, by fuel ("Firm" or "Planned"); Ontario's, used everywhere
+ieso_peak_type = "Firm"
+# true -> derate the monthly hydro reservoir as the previous module did, counting its
+# low availability twice in Temoa's dynamic reserve margin (see
+# ELECTRICITY_MODULE_BUGS.md)
+reproduce_previous_hydro_storage_derate = false

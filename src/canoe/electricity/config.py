@@ -71,6 +71,10 @@ class SourceYears(BaseModel):
     """Year of the renewables.ninja profiles (existing wind and solar capacity factors
     outside Ontario)."""
 
+    ieso_reliability_outlook: int
+    """Year of the IESO Reliability Outlook (Table 4.1, capability at summer peak by
+    fuel: capacity credits and reserve capacity derates)."""
+
     atb_currency: int = 2022
     """Year of the US dollars of NREL ATB 2024 costs, 2022. The previous module used
     2021 (see `ELECTRICITY_MODULE_BUGS.md`); set it to reproduce its databases."""
@@ -223,6 +227,17 @@ class ReliabilityConfig(BaseModel):
     credits (static reserve margin) and reserve capacity derates (dynamic). Temoa's
     `reserve_margin` setting picks which one applies."""
 
+    ieso_peak_type: Literal["Firm", "Planned"] = "Firm"
+    """Capability at summer peak of the IESO Reliability Outlook the capacity credits
+    and derates are read from: firm (resources under contract) or planned."""
+
+    reproduce_previous_hydro_storage_derate: bool = False
+    """Derate the monthly hydro reservoir (`E_HYD_MLY-EXS`) as the previous module
+    did. In dynamic mode Temoa counts a storage technology's discharge in each time
+    slice times its derate; that discharge is already limited by the water stored,
+    so the derate counts the low availability twice (see
+    `ELECTRICITY_MODULE_BUGS.md`). Off: the reservoir gets no derate (Temoa's 1)."""
+
 
 class CANOEElectricityConfig(InheritsFromBase):
     """
@@ -249,6 +264,7 @@ class CANOEElectricityConfig(InheritsFromBase):
     ...             "ieso_hourly": 2018,
     ...             "statcan_monthly_hydro": 2018,
     ...             "renewables_ninja": 2018,
+    ...             "ieso_reliability_outlook": 2025,
     ...         },
     ...         "generation": {
     ...             "new_technologies": ["ng_cc", "wind_onshore"],

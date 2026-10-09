@@ -51,6 +51,7 @@ from .generation.entities import (
     CarbonCapture,
     GenerationEntities,
     GenerationNotes,
+    Reliability,
     build_ccs_retrofits,
     build_existing_generation,
     build_new_generation,
@@ -74,17 +75,28 @@ from .loaders import (
     get_atb_generation,
     get_coders_generation_generic,
     get_coders_generators,
+    get_coders_reserve_margins,
     get_coders_storage,
     get_coders_system_line_losses,
     get_ieso_generator_output,
     get_ieso_hydro_types,
     get_ieso_output_by_fuel,
+    get_ieso_summer_peak_capability,
+    get_ramp_rates,
     get_renewables_ninja_facility_profiles,
     get_statcan_monthly_hydro,
+    get_vre_bin_capacity_credits,
     get_vre_bin_capacity_factors,
     get_vre_bin_capacity_limits,
     get_vre_bin_fixed_costs,
     get_vre_bin_investment_costs,
+)
+from .reliability import (
+    ieso_capacity_ratios,
+    planning_reserve_margins,
+    process_capacity_credits,
+    process_reserve_derates,
+    vre_bin_capacity_credits,
 )
 from .storage.entities import build_existing_storage, build_new_storage
 from .storage.parameters import storage_efficiencies, storage_lifetimes
@@ -186,7 +198,18 @@ def build_electricity(
             bin_factors = get_vre_bin_capacity_factors(cfg.data_cache_config)
         # Carbon capture: CO2 of burning each fuel (kt/PJ), shared with the fuel module
         combustion_factors = get_combustion_emission_factors()
-        # TODO: CODERS (reserve, interties, demand), ramp rates
+        # Reliability: CODERS planning reserve margins (fraction), IESO capability at
+        # the summer peak by fuel (MW), capacity credits of the wind and solar bins;
+        # ramp rates (fraction of capacity per hour) whether or not
+        reliability = cfg.reliability
+        margins = capability = bin_credits = None
+        if not reliability.skip:
+            margins = get_coders_reserve_margins()
+            capability = get_ieso_summer_peak_capability(years.ieso_reliability_outlook)
+            if binned:
+                bin_credits = get_vre_bin_capacity_credits(cfg.data_cache_config)
+        ramp_rates = get_ramp_rates()
+        # TODO: CODERS (interties, demand)
 
         # Compute parameters
         # ------------------
@@ -240,6 +263,15 @@ def build_electricity(
                 for generator in dict.fromkeys(r.get_generator() for r in retrofits)
             },
             factors=generator_capture_factors(list(GenerationTechnology), co2_factors),
+        )
+
+        # - Reliability: the share of each generator's capacity available at the
+        #   summer peak (Ontario's, by fuel), as capacity credits and derates; none if
+        #   the reserve margin is left out
+        ratios = (
+            {}
+            if capability is None
+            else ieso_capacity_ratios(capability, reliability.ieso_peak_type)
         )
 
         # - Existing generation: CODERS units grouped by (region, technology,
@@ -304,6 +336,17 @@ def build_electricity(
                 capture,
                 notes,
                 electricity_data_id,
+                Reliability(
+                    credits=process_capacity_credits(
+                        existing, ratios, lifetimes, cfg.future_periods
+                    ),
+                    derates=process_reserve_derates(
+                        existing,
+                        ratios,
+                        reliability.reproduce_previous_hydro_storage_derate,
+                    ),
+                    ramp_rates=ramp_rates,
+                ),
             )
             logger.debug(
                 f"Existing generation: {len(fleet)} (region, technology, vintage), "
@@ -333,9 +376,18 @@ def build_electricity(
             capture,
             notes,
             electricity_data_id,
+            Reliability(
+                credits=process_capacity_credits(
+                    new, ratios, lifetimes, cfg.future_periods
+                ),
+                derates=process_reserve_derates(
+                    new, ratios, reliability.reproduce_previous_hydro_storage_derate
+                ),
+                ramp_rates=ramp_rates,
+            ),
         )
 
-        # - New wind and solar bins: their costs and capacity limits
+        # - New wind and solar bins: their costs, capacity limits and capacity credits
         vre_bins: GenerationEntities | None = None
         if (
             bin_investment is not None
@@ -373,6 +425,11 @@ def build_electricity(
                 lifetimes,
                 notes,
                 electricity_data_id,
+                None
+                if bin_credits is None
+                else vre_bin_capacity_credits(
+                    bin_credits, binned, cfg.provinces, cfg.future_periods
+                ),
             )
         # - Storage: existing CODERS facilities grouped as the generators, new storage
         #   in every province; round-trip efficiencies from the config, costs as the
@@ -465,7 +522,7 @@ def build_electricity(
                 notes,
                 electricity_data_id,
             )
-        # TODO: reliability, trade
+        # TODO: trade
 
         # Build TEMOA Objects
         # -------------------
@@ -488,6 +545,9 @@ def build_electricity(
             lifetime=lifetime,
             cost_notes=_cost_notes(cfg, grid_costs.reference),
             data_id=electricity_data_id,
+            reserve_margins=None
+            if margins is None
+            else planning_reserve_margins(margins, cfg.provinces),
         )
         logger.info(
             f"Building the grid of {len(transmission)} provinces and "
@@ -553,6 +613,11 @@ def _generation_notes(cfg: "CANOEElectricityConfig") -> GenerationNotes:
         + f"year, new ones at {point} of their period; 2022 at the earliest (2030 "
         + "for nuclear)"
     )
+    ieso = (
+        f"IESO Reliability Outlook {years.ieso_reliability_outlook}, Table 4.1: "
+        + f"{cfg.reliability.ieso_peak_type.lower()} capability at summer peak over "
+        + "installed capacity of the fuel type, Ontario's applied to every province"
+    )
     return GenerationNotes(
         capacity=f"CODERS generators (cache {cfg.data_cache_config.cache_date}): "
         + "units by last renewal (or start) year, rounded to "
@@ -588,6 +653,16 @@ def _generation_notes(cfg: "CANOEElectricityConfig") -> GenerationNotes:
         + "(electricity sector, shared with the fuel module, which accounts the "
         + "emissions); retrofits per unit of the generator's electricity, with the "
         + "configured generator heat rate (ccs_retrofit_heat_rates)",
+        capacity_credits=f"{ieso}; the share of capacity counted in each period",
+        reserve_derates=f"{ieso}; the share of available output counted in each "
+        + "season",
+        vre_bin_capacity_credits="NREL ReEDS method (Frew et al., 2017): reduction of "
+        + "the top 100 hours of the net load duration curve per unit of capacity, "
+        + "bins built out in order of LCOE, one technology at a time (Sutubra, 2024; "
+        + "2018 load and weather)",
+        ramp_rates="Fraction of capacity per hour, up and down: Dolter & Rivers "
+        + "(2018), The cost of decarbonizing the Canadian electricity system, SI "
+        + "Table 7",
     )
 
 

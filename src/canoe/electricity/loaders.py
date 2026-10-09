@@ -13,6 +13,9 @@ the previous module (see `DATA_LAKE_REQUESTS.md`):
   previous module cached it (system line losses, reserve requirements).
 - `data/aeo_transmission_distribution_costs.csv`: EIA AEO2025 transmission and
   distribution costs.
+- `data/ieso_reliability_outlook_2025_table_4_1.csv`: IESO Reliability Outlook,
+  June 2025, Table 4.1 (capability at summer peak by fuel).
+- `data/dolter_rivers_ramp_rates.csv`: hourly ramp rates of Dolter & Rivers (2018).
 
 Weather data, 2018 only (the reference weather year; the cache has other years or
 lacks them). Gzipped, read in memory. To move to the cache, then update
@@ -88,6 +91,81 @@ def get_coders_system_line_losses() -> pd.DataFrame:
         {
             "region": _coders_provinces(df, "province", "CA_system_parameters"),
             "line_losses": df["system_line_losses_percent"].astype(float),
+        }
+    )
+
+
+def get_coders_reserve_margins() -> pd.DataFrame:
+    """
+    Planning reserve margin of the provincial grids: capacity required above the
+    peak load, as a fraction of it (CODERS `CA_system_parameters`,
+    `reserve_requirements_percent`, a fraction despite its name).
+
+    Returns columns `region` (`CANOEProvince`) and `margin`.
+    """
+    resource = files("canoe.electricity").joinpath(
+        "data/coders_ca_system_parameters.csv"
+    )
+    with resource.open("rb") as f:
+        df = pd.read_csv(f, encoding="utf-8-sig")
+    return pd.DataFrame(
+        {
+            "region": _coders_provinces(df, "province", "CA_system_parameters"),
+            "margin": df["reserve_requirements_percent"].astype(float),
+        }
+    )
+
+
+def get_ieso_summer_peak_capability(year: int) -> pd.DataFrame:
+    """
+    Installed capacity of Ontario by fuel, and the capability forecast at the summer
+    peak (IESO Reliability Outlook, Table 4.1), in MW. Firm counts the resources
+    under contract; planned adds those expected.
+
+    Only the June 2025 outlook is available (copied into `data/`), so `year`
+    (`source_years.ieso_reliability_outlook`) must be 2025.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns `fuel_type` (lower case, e.g. `gas/oil`), `installed`, `Firm` and
+        `Planned`.
+    """
+    _check_stand_in_year("IESO Reliability Outlook", year, 2025)
+    resource = files("canoe.electricity").joinpath(
+        f"data/ieso_reliability_outlook_{year}_table_4_1.csv"
+    )
+    with resource.open("rb") as f:
+        df = pd.read_csv(f, encoding="utf-8-sig")
+    return pd.DataFrame(
+        {
+            "fuel_type": df["Fuel Type"].str.lower(),
+            "installed": df["Total Installed Capacity\n(MW)"].astype(float),
+            **{
+                peak_type: df[
+                    f"Forecast Capability at {year} Summer Peak [{peak_type}] (MW)"
+                ].astype(float)
+                for peak_type in ("Firm", "Planned")
+            },
+        }
+    )
+
+
+def get_ramp_rates() -> pd.DataFrame:
+    """
+    Largest change of output from one hour to the next, as a fraction of capacity,
+    up and down alike (Dolter & Rivers, 2018, The cost of decarbonizing the Canadian
+    electricity system, SI Table 7).
+
+    Returns columns `technology` (`GenerationTechnology`) and `rate`.
+    """
+    resource = files("canoe.electricity").joinpath("data/dolter_rivers_ramp_rates.csv")
+    with resource.open("rb") as f:
+        df = pd.read_csv(f, encoding="utf-8-sig")
+    return pd.DataFrame(
+        {
+            "technology": df["code"].map(GenerationTechnology),
+            "rate": df["hourly_rate"].astype(float),
         }
     )
 
@@ -372,6 +450,27 @@ def get_vre_bin_capacity_limits(cache_config: GoldConnectorConfig) -> pd.DataFra
             **_vre_bin_columns(df, "tech_or_group"),
             "period": df["period"].astype(int),
             "capacity": df["capacity"].astype(float),
+        }
+    ).reset_index(drop=True)
+
+
+def get_vre_bin_capacity_credits(cache_config: GoldConnectorConfig) -> pd.DataFrame:
+    """
+    Capacity credit of each new wind and solar resource bin by vintage and period:
+    the NREL ReEDS method (Frew et al., 2017), the reduction of the top 100 hours of
+    the net load duration curve per unit of capacity, with the bins built out in
+    order of LCOE, one technology at a time (2018 load and weather), from
+    `renewables/capacity_credit.parquet`.
+
+    Returns columns `region`, `technology`, `bin`, `vintage`, `period` and `credit`.
+    """
+    df = _read_vre_bins(cache_config, "capacity_credit", "tech")
+    return pd.DataFrame(
+        {
+            **_vre_bin_columns(df, "tech"),
+            "vintage": df["vintage"].astype(int),
+            "period": df["period"].astype(int),
+            "credit": df["credit"].astype(float),
         }
     ).reset_index(drop=True)
 

@@ -29,6 +29,8 @@ NOTES = GenerationNotes(
     atb_efficiency="atb", cogeneration="cogeneration", vre_bin_costs="bins",
     vre_bin_limits="limits", vre_bin_capacity_factors="bin profiles",
     vre_capacity_factors="vre", hydro_capacity_factors="hydro", capture="capture",
+    capacity_credits="credits", reserve_derates="derates",
+    vre_bin_capacity_credits="bin credits", ramp_rates="ramps",
 )  # fmt: skip
 BAT2, PUMP4 = StorageTechnology.Battery2h, StorageTechnology.PumpedHydro4h
 LIFETIMES = {t: 100 if t.never_retires() else 15 for t in StorageTechnology}

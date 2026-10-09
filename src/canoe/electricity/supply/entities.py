@@ -5,13 +5,15 @@ Temoa objects of the grid and of the delivery to the sectors:
 
 All are pass-throughs with unlimited capacity and a single vintage, the first model
 period, whose lifetime reaches the end of the horizon (see
-`canoe.common.periods.horizon_length`).
+`canoe.common.periods.horizon_length`). The grid also carries the planning reserve
+margin of each province.
 """
 
 from dataclasses import dataclass, field
 from sqlite3 import Connection
 
 import pandas as pd
+from canoe_schema.v4_0 import PlanningReserveMargin
 
 from canoe.canoe_objects.array_types import (
     RegionalValuesArray,
@@ -40,18 +42,26 @@ def delivery_technology_name(sector: CANOESector) -> str:
 
 @dataclass
 class GridEntities:
-    """The grid commodities and technologies, and the delivery technologies."""
+    """The grid commodities and technologies, the delivery technologies, and the
+    planning reserve margins."""
 
     commodities: list[PhysicalCommodityEntity] = field(default_factory=list)
     grid: list[TechnologyEntity] = field(default_factory=list)
     deliveries: list[TechnologyEntity] = field(default_factory=list)
+    reserve_margins: list[PlanningReserveMargin] = field(default_factory=list)
 
     def build(self, db_conn: Connection):
-        """Write the commodities first, then the technologies that use them."""
+        """Write the commodities first, then the technologies that use them, then
+        the reserve margins."""
         for commodity in self.commodities:
             commodity.build(db_conn)
         for technology in self.grid + self.deliveries:
             technology.build(db_conn)
+        if self.reserve_margins:
+            sql, params = PlanningReserveMargin.bulk_insert_or_ignore_sql(
+                self.reserve_margins, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
 
 
 def build_grid(
@@ -62,10 +72,11 @@ def build_grid(
     lifetime: int,
     cost_notes: str,
     data_id: DatasetIdentifier,
+    reserve_margins: pd.DataFrame | None = None,
 ) -> GridEntities:
     """
-    The grid of every province in `efficiencies`, and the delivery to each sector
-    in the provinces where it imports electricity.
+    The grid of every province in `efficiencies`, the delivery to each sector in
+    the provinces where it imports electricity, and the planning reserve margins.
 
     Parameters
     ----------
@@ -85,6 +96,9 @@ def build_grid(
         Notes of the cost rows (source, projection year, currency).
     data_id : DatasetIdentifier
         Data set of the electricity module.
+    reserve_margins : pd.DataFrame, optional
+        Planning reserve margin of each province, columns `region` and `margin`,
+        see `reliability.planning_reserve_margins`; none if not given.
     """
     regions: list[CANOEProvince] = list(efficiencies["region"])
     demand_commodity = "E_elc_dem"  # electricity ready for the sectors
@@ -160,6 +174,22 @@ def build_grid(
                 data_id=data_id,
             )
         )
+
+    if reserve_margins is not None:
+        entities.reserve_margins = [
+            PlanningReserveMargin(
+                region=region.short(),
+                margin=float(margin),
+                notes="Capacity above the peak load, as a fraction of it: CODERS "
+                + "CA_system_parameters reserve_requirements_percent"
+                if i == 0
+                else None,
+                data_id=data_id.get_dataset_code(province=region),
+            )
+            for i, (region, margin) in enumerate(
+                zip(reserve_margins["region"], reserve_margins["margin"])
+            )
+        ]
     return entities
 
 

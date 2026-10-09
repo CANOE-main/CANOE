@@ -319,6 +319,66 @@ class GenerationTechnology(StrEnum):
             GenerationTechnology.HydroRunOfRiver,
         )
 
+    def has_hourly_capacity_factor(self) -> bool:
+        """
+        Whether the weather sets the technology's output hour by hour (an hourly
+        capacity factor): run-of-river, solar and wind. Their capacity factor already
+        is their availability, so they get no reserve capacity derate.
+
+        Examples
+        --------
+        >>> GenerationTechnology.HydroRunOfRiver.has_hourly_capacity_factor()
+        True
+        >>> GenerationTechnology.HydroDaily.has_hourly_capacity_factor()  # daily limits
+        False
+        """
+        return self in (
+            GenerationTechnology.HydroRunOfRiver,
+            GenerationTechnology.SolarPV,
+            GenerationTechnology.WindOffshore,
+            GenerationTechnology.WindOnshore,
+        )
+
+    def get_ieso_fuel_type(self) -> str | None:
+        """
+        Fuel type of the IESO Reliability Outlook (Table 4.1) whose capability at
+        summer peak gives the technology's capacity credit and derate, lower case;
+        `None` for geothermal, which IESO does not have. Coal counts as gas/oil.
+
+        Examples
+        --------
+        >>> GenerationTechnology.Coal.get_ieso_fuel_type()
+        'gas/oil'
+        >>> GenerationTechnology.Geothermal.get_ieso_fuel_type() is None
+        True
+        """
+        FUEL_TYPES = {
+            GenerationTechnology.Biogas: "biofuel",
+            GenerationTechnology.Biomass: "biofuel",
+            GenerationTechnology.BiomassCogeneration: "biofuel",
+            GenerationTechnology.Coal: "gas/oil",
+            GenerationTechnology.CoalCCS: "gas/oil",
+            GenerationTechnology.DieselCT: "gas/oil",
+            GenerationTechnology.DieselST: "gas/oil",
+            GenerationTechnology.GasolineCT: "gas/oil",
+            GenerationTechnology.HydroDaily: "hydroelectric",
+            GenerationTechnology.HydroMonthly: "hydroelectric",
+            GenerationTechnology.HydroRunOfRiver: "hydroelectric",
+            GenerationTechnology.NaturalGasCC: "gas/oil",
+            GenerationTechnology.NaturalGasCCS: "gas/oil",
+            GenerationTechnology.NaturalGasCogeneration: "gas/oil",
+            GenerationTechnology.NaturalGasCT: "gas/oil",
+            GenerationTechnology.NuclearCANDU: "nuclear",
+            GenerationTechnology.NuclearPWR: "nuclear",
+            GenerationTechnology.NuclearSMR: "nuclear",
+            GenerationTechnology.OilCT: "gas/oil",
+            GenerationTechnology.OilST: "gas/oil",
+            GenerationTechnology.SolarPV: "solar",
+            GenerationTechnology.WindOffshore: "wind",
+            GenerationTechnology.WindOnshore: "wind",
+        }
+        return FUEL_TYPES.get(self)
+
     def get_description(self) -> str:
         """
         Description in the `technology` table, before the `existing`/`new` suffix.

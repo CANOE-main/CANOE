@@ -18,6 +18,7 @@ from dataclasses import dataclass, field
 from sqlite3 import Connection
 from typing import cast
 
+import numpy as np
 import pandas as pd
 from canoe_schema.v4_0 import CommodityTypeCode, OperatorCode, TechnologyTypeCode
 
@@ -28,6 +29,7 @@ from canoe.canoe_objects.array_types import (
     RegionSeasonTodArray,
     RegionVintageArray,
     RegionVintagePeriodArray,
+    RegionVintageSeasonArray,
     RegionVintageSeasonTodArray,
 )
 from canoe.canoe_objects.commodity import (
@@ -82,6 +84,11 @@ class GenerationNotes:
         Source of the capacity factors of the existing wind and solar, and hydro.
     capture : str
         How the CO2 captured is computed.
+    capacity_credits, reserve_derates, vre_bin_capacity_credits : str
+        Source of the capacity credits and reserve capacity derates, and of the
+        capacity credits of the wind and solar bins.
+    ramp_rates : str
+        Source of the ramp rates.
     """
 
     capacity: str
@@ -95,6 +102,10 @@ class GenerationNotes:
     vre_capacity_factors: str
     hydro_capacity_factors: str
     capture: str
+    capacity_credits: str
+    reserve_derates: str
+    vre_bin_capacity_credits: str
+    ramp_rates: str
 
 
 @dataclass
@@ -133,6 +144,49 @@ class CarbonCapture:
     factors: dict[GenerationTechnology, float] = field(default_factory=dict)
 
 
+def _no_rows(*columns: str) -> pd.DataFrame:
+    return pd.DataFrame(columns=list(columns))
+
+
+@dataclass(frozen=True)
+class Reliability:
+    """
+    What the generators count towards the planning reserve margin, and how fast
+    they ramp. Empty frames leave the generators out of the reserve margin (Temoa's
+    defaults: no capacity credit, a derate of 1).
+
+    Parameters
+    ----------
+    credits : pd.DataFrame
+        Capacity credits, see `reliability.process_capacity_credits`.
+    derates : pd.DataFrame
+        Reserve capacity derates, see `reliability.process_reserve_derates`.
+    bin_credits : pd.DataFrame
+        Capacity credits of the wind and solar bins, see
+        `reliability.vre_bin_capacity_credits`.
+    ramp_rates : pd.DataFrame
+        Hourly ramp rates (up and down), columns `technology` and `rate`, see
+        `loaders.get_ramp_rates`.
+    """
+
+    credits: pd.DataFrame = field(
+        default_factory=lambda: _no_rows(
+            "region", "technology", "vintage", "period", "credit"
+        )
+    )
+    derates: pd.DataFrame = field(
+        default_factory=lambda: _no_rows("region", "technology", "vintage", "factor")
+    )
+    bin_credits: pd.DataFrame = field(
+        default_factory=lambda: _no_rows(
+            "region", "technology", "bin", "vintage", "period", "credit"
+        )
+    )
+    ramp_rates: pd.DataFrame = field(
+        default_factory=lambda: _no_rows("technology", "rate")
+    )
+
+
 def retrofit_intermediate_commodity(generator: GenerationTechnology) -> str:
     """
     Commodity between a retrofitted generator and the grid.
@@ -156,11 +210,12 @@ def build_existing_generation(
     capture: CarbonCapture,
     notes: GenerationNotes,
     data_id: DatasetIdentifier,
+    reliability: Reliability | None = None,
 ) -> GenerationEntities:
     """
     One `-EXS` technology per technology of the fleet, in the regions and vintages
     where it has capacity; monthly hydro also gets its reservoir inflow (`-IN`),
-    which carries the monthly hydro's daily limits.
+    which carries the monthly hydro's daily limits (and is not in the reserve).
 
     Parameters
     ----------
@@ -186,9 +241,13 @@ def build_existing_generation(
         Notes of the rows.
     data_id : DatasetIdentifier
         Data set of the electricity module.
+    reliability : Reliability, optional
+        Capacity credits, derates and ramp rates; none if not given.
     """
     # Monthly hydro reservoir: a month of output at full capacity
     RESERVOIR_HOURS = 730
+
+    reliability = reliability or Reliability()
 
     technologies: list[GenerationTechnology] = list(dict.fromkeys(fleet["technology"]))
     entities = GenerationEntities(commodities=_commodities(technologies, data_id))
@@ -243,6 +302,7 @@ def build_existing_generation(
                 notes="Hours of output at full capacity: about a month",
             )
         with_om_costs(entity, technology, costs, regions, vintages, notes)
+        with_reliability(entity, technology, reliability, regions, vintages, notes)
 
         # Cogeneration output held at its historical level
         of_cogeneration = cogeneration.loc[cogeneration["technology"] == technology]
@@ -337,6 +397,7 @@ def build_new_generation(
     capture: CarbonCapture,
     notes: GenerationNotes,
     data_id: DatasetIdentifier,
+    reliability: Reliability | None = None,
 ) -> GenerationEntities:
     """
     One `-NEW` technology per new (not binned) technology, in the regions and
@@ -358,7 +419,10 @@ def build_new_generation(
         Notes of the rows.
     data_id : DatasetIdentifier
         Data set of the electricity module.
+    reliability : Reliability, optional
+        Capacity credits, derates and ramp rates; none if not given.
     """
+    reliability = reliability or Reliability()
     technologies: list[GenerationTechnology] = list(
         dict.fromkeys(efficiencies["technology"])
     )
@@ -387,6 +451,7 @@ def build_new_generation(
             units="M$/GW",
         )
         with_om_costs(entity, technology, costs, regions, vintages, notes)
+        with_reliability(entity, technology, reliability, regions, vintages, notes)
         entities.technologies.append(entity)
     return entities
 
@@ -399,11 +464,13 @@ def build_vre_bins(
     lifetimes: dict[GenerationTechnology, int],
     notes: GenerationNotes,
     data_id: DatasetIdentifier,
+    credits: pd.DataFrame | None = None,
 ) -> GenerationEntities:
     """
     One technology per new wind and solar resource bin (`<code>-NEW-<n>`), in the
     regions and vintages of its investment costs, limited to the bin's capacity,
-    with an hourly capacity factor for each vintage.
+    with an hourly capacity factor for each vintage and, if given, its capacity
+    credits. No derate: their capacity factor already is their availability.
 
     Parameters
     ----------
@@ -419,6 +486,8 @@ def build_vre_bins(
         Notes of the rows.
     data_id : DatasetIdentifier
         Data set of the electricity module.
+    credits : pd.DataFrame, optional
+        See `reliability.vre_bin_capacity_credits`; none if not given.
     """
     technologies: list[GenerationTechnology] = list(
         dict.fromkeys(investment["technology"])
@@ -479,6 +548,14 @@ def build_vre_bins(
                 notes=notes.vre_bin_capacity_factors,
             )
         )
+        if credits is not None:
+            of_credits = credits.loc[
+                (credits["technology"] == technology) & (credits["bin"] == number)
+            ]
+            entity.with_capacity_credit(
+                region_vintage_period(of_credits, "credit", regions, vintages),
+                notes=notes.vre_bin_capacity_credits,
+            )
         entities.technologies.append(entity)
     return entities
 
@@ -749,6 +826,48 @@ def with_om_costs(
             notes=f"{column.capitalize()} O&M ({source_name}): {cost_notes}",
             units=units,
         )
+
+
+def with_reliability(
+    entity: TechnologyEntity,
+    technology: GenerationTechnology,
+    reliability: Reliability,
+    regions: list[CANOEProvince],
+    vintages: list[int],
+    notes: GenerationNotes,
+):
+    """Set the capacity credits, reserve capacity derates and ramp rates of
+    `technology` that `reliability` has (not those of the bins)"""
+    of_credits = reliability.credits.loc[
+        reliability.credits["technology"] == technology
+    ]
+    if not of_credits.empty:
+        entity.with_capacity_credit(
+            region_vintage_period(of_credits, "credit", regions, vintages),
+            notes=notes.capacity_credits,
+        )
+    of_derates = reliability.derates.loc[
+        reliability.derates["technology"] == technology
+    ]
+    if not of_derates.empty:
+        seasons, _ = _time_slices()
+        derates = RegionVintageSeasonArray(regions, vintages, seasons)
+        for region, vintage, factor in zip(
+            of_derates["region"], of_derates["vintage"], of_derates["factor"]
+        ):
+            derates.set_block(
+                np.full(len(seasons), float(factor)),
+                dims=("season",),
+                region=region,
+                vintage=int(vintage),
+            )
+        entity.with_reserve_capacity_derate(derates, notes=notes.reserve_derates)
+    of_rates = reliability.ramp_rates.loc[
+        reliability.ramp_rates["technology"] == technology, "rate"
+    ]
+    if not of_rates.empty:
+        rates = RegionalValuesArray(regions, fill=float(of_rates.iloc[0]))
+        entity.with_ramp_rates(rates, rates, notes=notes.ramp_rates)
 
 
 def region_vintage(

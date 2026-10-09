@@ -128,6 +128,24 @@ class RegionSeasonArray(LabeledArray):
         super().__init__(coords, fill)
 
 
+class RegionVintageSeasonArray(LabeledArray):
+    """Values by region, vintage and season (time slice season, e.g. a day `D001`)."""
+
+    def __init__(
+        self,
+        region: list[CANOEProvince],
+        vintage: list[int],
+        season: list[str],
+        fill: float = np.nan,
+    ):
+        coords = {
+            "region": region,
+            "vintage": vintage,
+            "season": season,
+        }
+        super().__init__(coords, fill)
+
+
 class RegionSeasonTodArray(LabeledArray):
     """Values by region and time slice (season and time of day, e.g. `D001`, `H01`)."""
 
