@@ -157,6 +157,31 @@ def get_coders_generators(cache_config: GoldConnectorConfig) -> pd.DataFrame:
     )
 
 
+def get_coders_storage(cache_config: GoldConnectorConfig) -> pd.DataFrame:
+    """
+    Storage facilities in Canada (CODERS `storage`), one row per facility.
+
+    Returns columns `region` (`CANOEProvince`, the operating region), `coders_type`
+    (`storage_type`, lowercase), `facility` (name), `capacity` (MW), `duration`
+    (hours at full power), `start_year` and `renewal_year` (last renewal, the start
+    year if never renewed).
+    """
+    file_path = _cache_file(cache_config, "coders_storage")
+    logger.debug(f"Loading cached CODERS storage from {file_path}")
+    df = pd.read_parquet(file_path)
+    return pd.DataFrame(
+        {
+            "region": _coders_provinces(df, "operating_region", "storage"),
+            "coders_type": df["storage_type"].str.lower(),
+            "facility": df["storage_facility_name"],
+            "capacity": df["storage_capacity"].astype(float),
+            "duration": df["storage_duration"].astype(float),
+            "start_year": df["start_year"].astype(int),
+            "renewal_year": df["previous_renewal_year"].astype(int),
+        }
+    )
+
+
 def get_coders_generation_generic(cache_config: GoldConnectorConfig) -> pd.DataFrame:
     """
     Generic parameters of each type of generator (CODERS `generation_generic`), in

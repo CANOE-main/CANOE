@@ -41,6 +41,7 @@ from canoe.common.naming import DatasetIdentifier, get_fuel_commodity_in_sector
 from canoe.common.time_slices import hour_to_day, hour_to_tod
 
 from ..catalogue import GenerationTechnology
+from .parameters import Technology
 
 
 def source_commodity_name() -> str:
@@ -167,13 +168,13 @@ def build_existing_generation(
         vintages = sorted({int(v) for v in of_fleet["vintage"]})
         name = f"{technology.get_tech_code()}-EXS"
         is_reservoir = technology == GenerationTechnology.HydroMonthly
-        capacity = _region_vintage(of_fleet, "capacity", regions, vintages)
+        capacity = region_vintage(of_fleet, "capacity", regions, vintages)
 
         entity = _generator(
             technology,
             name,
             "existing",
-            _region_vintage(
+            region_vintage(
                 efficiencies.loc[efficiencies["technology"] == technology],
                 "efficiency",
                 regions,
@@ -199,7 +200,7 @@ def build_existing_generation(
                 RegionalValuesArray(regions, fill=RESERVOIR_HOURS),
                 notes="Hours of output at full capacity: about a month",
             )
-        _with_om_costs(entity, technology, costs, regions, vintages, notes)
+        with_om_costs(entity, technology, costs, regions, vintages, notes)
 
         # Cogeneration output held at its historical level
         of_cogeneration = cogeneration.loc[cogeneration["technology"] == technology]
@@ -272,7 +273,7 @@ def build_existing_generation(
                     notes=f"Same as {name}",
                 )
                 .with_capacity_to_activity(
-                    RegionalValuesArray(regions, fill=_capacity_to_activity()),
+                    RegionalValuesArray(regions, fill=capacity_to_activity()),
                     notes="PJ produced by 1 GW over a year (8760 h)",
                     units="PJ/GWy",
                 )
@@ -325,12 +326,12 @@ def build_new_generation(
             technology,
             f"{technology.get_tech_code()}-NEW",
             "new",
-            _region_vintage(of_efficiency, "efficiency", regions, vintages),
+            region_vintage(of_efficiency, "efficiency", regions, vintages),
             lifetimes[technology],
             notes,
             data_id,
         ).with_investment_cost(
-            _region_vintage(
+            region_vintage(
                 investment.loc[investment["technology"] == technology],
                 "cost",
                 regions,
@@ -339,7 +340,7 @@ def build_new_generation(
             notes=f"OCC ({technology.get_atb_display_name()}): {notes.atb_costs}",
             units="M$/GW",
         )
-        _with_om_costs(entity, technology, costs, regions, vintages, notes)
+        with_om_costs(entity, technology, costs, regions, vintages, notes)
         entities.technologies.append(entity)
     return entities
 
@@ -415,12 +416,12 @@ def build_vre_bins(
                 data_id,
             )
             .with_investment_cost(
-                _region_vintage(of_investment, "cost", regions, vintages),
+                region_vintage(of_investment, "cost", regions, vintages),
                 notes=f"Investment: {notes.vre_bin_costs}",
                 units="M$/GW",
             )
             .with_fixed_cost(
-                _region_vintage_period(of_fixed, "cost", regions, vintages),
+                region_vintage_period(of_fixed, "cost", regions, vintages),
                 notes=f"Fixed O&M: {notes.vre_bin_costs}",
                 units="M$/GWy",
             )
@@ -513,22 +514,23 @@ def _generator(
             + f"({technology.get_coders_generic_type()})",
         )
         .with_capacity_to_activity(
-            RegionalValuesArray(regions, fill=_capacity_to_activity()),
+            RegionalValuesArray(regions, fill=capacity_to_activity()),
             notes="PJ produced by 1 GW over a year (8760 h)",
             units="PJ/GWy",
         )
     )
 
 
-def _with_om_costs(
+def with_om_costs(
     entity: TechnologyEntity,
-    technology: GenerationTechnology,
+    technology: Technology,
     costs: pd.DataFrame,
     regions: list[CANOEProvince],
     vintages: list[int],
     notes: GenerationNotes,
 ):
-    """Set the fixed and variable O&M costs of `technology` that are not NaN"""
+    """Set the fixed and variable O&M costs of `technology` (a generator or storage)
+    that are not NaN"""
     of_costs = costs.loc[costs["technology"] == technology]
     display_name = technology.get_atb_display_name()
     cost_notes = notes.coders_costs if display_name is None else notes.atb_costs
@@ -541,13 +543,13 @@ def _with_om_costs(
         if written.empty:
             continue
         set_cost(
-            _region_vintage_period(written, column, regions, vintages),
+            region_vintage_period(written, column, regions, vintages),
             notes=f"{column.capitalize()} O&M ({source_name}): {cost_notes}",
             units=units,
         )
 
 
-def _region_vintage(
+def region_vintage(
     df: pd.DataFrame, column: str, regions: list[CANOEProvince], vintages: list[int]
 ) -> RegionVintageArray:
     """`column` of `df` (columns `region`, `vintage`) as an array"""
@@ -557,7 +559,7 @@ def _region_vintage(
     return values
 
 
-def _region_vintage_period(
+def region_vintage_period(
     df: pd.DataFrame, column: str, regions: list[CANOEProvince], vintages: list[int]
 ) -> RegionVintagePeriodArray:
     """`column` of `df` (columns `region`, `vintage`, `period`) as an array"""
@@ -629,7 +631,7 @@ def _daily_values(
     return values
 
 
-def _capacity_to_activity() -> float:
+def capacity_to_activity() -> float:
     """PJ produced by 1 GW over a year"""
     return 31.536
 

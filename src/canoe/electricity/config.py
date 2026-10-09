@@ -152,13 +152,26 @@ class StorageConfig(BaseModel):
     """Leave out the existing storage (`-EXS`), from CODERS."""
 
     new_technologies: list[StorageTechnology]
-    """Storage the model can build (`-NEW`); empty for none."""
+    """Storage the model can build (`-NEW`); empty for none. Only those with NREL
+    ATB costs (see `StorageTechnology.can_be_new`)."""
+
+    battery_round_trip_efficiency: float = Field(default=0.85, gt=0, le=1)
+    """Electricity out per unit stored, batteries. The default follows NREL ATB."""
+
+    pumped_hydro_round_trip_efficiency: float = Field(default=0.80, gt=0, le=1)
+    """Electricity out per unit stored, pumped hydro. The default follows NREL ATB."""
 
     @field_validator("new_technologies")
     @classmethod
     def _check_technologies(
         cls, value: list[StorageTechnology]
     ) -> list[StorageTechnology]:
+        without_data = [t.value for t in value if not t.can_be_new()]
+        if without_data:
+            raise ValueError(
+                f"no data to build new {without_data}: new storage needs NREL ATB "
+                + "costs"
+            )
         return _check_unique(value)
 
 

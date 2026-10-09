@@ -25,8 +25,13 @@ from canoe.common.periods import (
 )
 from canoe.common.validation import check_missing_existing_periods
 
-from .catalogue import GenerationTechnology
-from .fleet import existing_generators, existing_units
+from .catalogue import GenerationTechnology, StorageTechnology
+from .fleet import (
+    existing_generators,
+    existing_storage,
+    existing_storage_units,
+    existing_units,
+)
 from .generation.capacity_factors import existing_capacity_factors
 from .generation.entities import (
     GenerationEntities,
@@ -52,6 +57,7 @@ from .loaders import (
     get_atb_generation,
     get_coders_generation_generic,
     get_coders_generators,
+    get_coders_storage,
     get_coders_system_line_losses,
     get_ieso_generator_output,
     get_ieso_hydro_types,
@@ -63,6 +69,8 @@ from .loaders import (
     get_vre_bin_fixed_costs,
     get_vre_bin_investment_costs,
 )
+from .storage.entities import build_existing_storage, build_new_storage
+from .storage.parameters import storage_efficiencies, storage_lifetimes
 from .supply.entities import build_grid
 from .supply.parameters import grid_variable_costs, transmission_efficiencies
 from .validation import validate_db_against_config
@@ -128,7 +136,7 @@ def build_electricity(
             sorted(
                 {
                     name
-                    for t in GenerationTechnology
+                    for t in [*GenerationTechnology, *StorageTechnology]
                     if (name := t.get_atb_display_name()) is not None
                 }
             ),
@@ -138,6 +146,8 @@ def build_electricity(
             f"Loaded {len(units)} CODERS generating units, {len(generic)} generic "
             + f"types and {len(atb)} ATB values"
         )
+        # Storage: CODERS storage facilities (MW, hours)
+        storage_units = get_coders_storage(cfg.data_cache_config)
         # Weather of the existing wind, solar and hydro: IESO hourly output (MWh, MW),
         # StatCan monthly hydro (MWh), renewables.ninja profiles (capacity factors)
         years = cfg.source_years
@@ -329,7 +339,70 @@ def build_electricity(
                 notes,
                 electricity_data_id,
             )
-        # TODO: storage, CCS, reliability, trade
+        # - Storage: existing CODERS facilities grouped as the generators, new storage
+        #   in every province; round-trip efficiencies from the config, costs as the
+        #   generators'
+        storage_lives = storage_lifetimes(generic)
+        storage: list[TechnologyEntity] = []
+        if not cfg.storage.skip_existing:
+            storage_fleet = existing_storage(
+                existing_storage_units(
+                    storage_units, cfg.provinces, cfg.future_periods[0], cfg.period_step
+                ),
+                storage_lives,
+                cfg.future_periods[0],
+                cfg.generation.existing_capacity_threshold,
+            )
+            check_missing_existing_periods(
+                db_conn,
+                sorted({int(v) for v in storage_fleet["vintage"]}),
+                cfg.validation_behavior,
+            )
+            existing_stores = existing_processes(storage_fleet)
+            storage += build_existing_storage(
+                storage_fleet,
+                storage_efficiencies(
+                    existing_stores,
+                    cfg.storage.battery_round_trip_efficiency,
+                    cfg.storage.pumped_hydro_round_trip_efficiency,
+                ),
+                process_om_costs(
+                    existing_stores,
+                    generic,
+                    atb,
+                    storage_lives,
+                    cfg.future_periods,
+                    atb_conversion,
+                    coders_conversion,
+                ),
+                storage_lives,
+                notes,
+                electricity_data_id,
+            )
+        new_stores = new_processes(
+            list(cfg.storage.new_technologies), cfg.provinces, projection_years
+        )
+        storage += build_new_storage(
+            storage_efficiencies(
+                new_stores,
+                cfg.storage.battery_round_trip_efficiency,
+                cfg.storage.pumped_hydro_round_trip_efficiency,
+            ),
+            process_investment_costs(new_stores, atb, atb_conversion),
+            process_om_costs(
+                new_stores,
+                generic,
+                atb,
+                storage_lives,
+                cfg.future_periods,
+                atb_conversion,
+                coders_conversion,
+            ),
+            storage_lives,
+            notes,
+            electricity_data_id,
+        )
+        # TODO: CCS, reliability, trade
 
         # Build TEMOA Objects
         # -------------------
@@ -375,7 +448,12 @@ def build_electricity(
             )
             entities.build(db_conn)
             generators += entities.technologies
-        # TODO: storage, CCS retrofits, interties
+
+        # Storage
+        logger.info(f"Building {len(storage)} storage technologies")
+        for technology in storage:
+            technology.build(db_conn)
+        # TODO: CCS retrofits, interties
 
     # The fuels the generators burn, for the fuel module
     return CANOEModuleOutput(

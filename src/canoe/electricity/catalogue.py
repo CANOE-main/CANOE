@@ -528,6 +528,116 @@ class StorageTechnology(StrEnum):
         }
         return DURATIONS[self]
 
+    def is_pumped_hydro(self) -> bool:
+        """
+        Whether the storage is pumped hydro (otherwise a battery).
+
+        Examples
+        --------
+        >>> StorageTechnology.PumpedHydro10h.is_pumped_hydro()
+        True
+        """
+        return self in (
+            StorageTechnology.PumpedHydro4h,
+            StorageTechnology.PumpedHydro10h,
+        )
+
+    def never_retires(self) -> bool:
+        """
+        Whether existing units are kept for the whole horizon (pumped hydro), as
+        `GenerationTechnology.never_retires`.
+
+        Examples
+        --------
+        >>> StorageTechnology.Battery2h.never_retires()
+        False
+        """
+        return self.is_pumped_hydro()
+
+    def can_be_new(self) -> bool:
+        """
+        Whether the model can build new capacity of the technology: it needs NREL ATB
+        costs (CODERS investment costs never worked in the previous module).
+
+        Examples
+        --------
+        >>> StorageTechnology.PumpedHydro4h.can_be_new()
+        False
+        """
+        return self.get_atb_display_name() is not None
+
+    def get_description(self) -> str:
+        """
+        Description in the `technology` table, before the `existing`/`new` suffix.
+
+        Examples
+        --------
+        >>> StorageTechnology.PumpedHydro4h.get_description()
+        'hydroelectric pumped storage with 4-hour capacity'
+        """
+        if self.is_pumped_hydro():
+            return (
+                f"hydroelectric pumped storage with {self.get_duration_hours()}-hour "
+                + "capacity"
+            )
+        return (
+            "utility-scale lithium-ion battery storage with "
+            + f"{self.get_duration_hours()}-hour capacity"
+        )
+
+    def get_coders_fleet_types(self) -> tuple[str, ...]:
+        """
+        CODERS `storage` types (`storage_type`, lowercase) whose units of this
+        duration (rounded to whole hours) are this technology's existing capacity.
+
+        Examples
+        --------
+        >>> StorageTechnology.Battery4h.get_coders_fleet_types()
+        ('storage_lithium', 'storage_solid', 'storage')
+        """
+        if self.is_pumped_hydro():
+            return ("storage_pump",)
+        return ("storage_lithium", "storage_solid", "storage")
+
+    def get_coders_generic_type(self) -> str:
+        """
+        CODERS `generation_generic` type the technology takes its lifetime from, and
+        its costs when it has no NREL ATB equivalent.
+
+        Examples
+        --------
+        >>> StorageTechnology.Battery2h.get_coders_generic_type()
+        'storage_lithium'
+        """
+        return "storage_pump" if self.is_pumped_hydro() else "storage_lithium"
+
+    def get_atb_display_name(self) -> str | None:
+        """
+        NREL ATB technology (`display_name`) the technology takes its costs from, or
+        `None` to take them from CODERS.
+
+        Examples
+        --------
+        >>> StorageTechnology.Battery3h.get_atb_display_name()
+        'Utility-Scale Battery Storage - 4Hr'
+        """
+        DISPLAY_NAMES: dict[StorageTechnology, str | None] = {
+            StorageTechnology.Battery1h: "Utility-Scale Battery Storage - 2Hr",
+            StorageTechnology.Battery2h: "Utility-Scale Battery Storage - 2Hr",
+            StorageTechnology.Battery3h: "Utility-Scale Battery Storage - 4Hr",
+            StorageTechnology.Battery4h: "Utility-Scale Battery Storage - 4Hr",
+            StorageTechnology.Battery5h: "Utility-Scale Battery Storage - 6Hr",
+            StorageTechnology.PumpedHydro4h: None,
+            StorageTechnology.PumpedHydro10h: "Pumped Storage Hydropower - National "
+            + "Class 3",
+        }
+        return DISPLAY_NAMES[self]
+
+    def get_atb_first_year(self) -> int | None:
+        """Earliest year the ATB values are read at, if later than the first ATB
+        year: none for storage (see `GenerationTechnology.get_atb_first_year`)"""
+        return None
+
 
 class CCSRetrofit(StrEnum):
     """Carbon capture retrofits of fossil generators. Configs take the value."""

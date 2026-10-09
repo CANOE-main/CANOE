@@ -16,7 +16,10 @@ import pandas as pd
 
 from canoe.common import CANOEProvince
 
-from ..catalogue import GenerationTechnology
+from ..catalogue import GenerationTechnology, StorageTechnology
+
+type Technology = GenerationTechnology | StorageTechnology
+"""Generators and storage share the ATB and CODERS cost parameters."""
 
 
 def generation_lifetimes(generic: pd.DataFrame) -> dict[GenerationTechnology, int]:
@@ -75,7 +78,7 @@ def existing_processes(fleet: pd.DataFrame) -> pd.DataFrame:
 
 
 def new_processes(
-    technologies: list[GenerationTechnology],
+    technologies: list[Technology],
     provinces: list[CANOEProvince],
     projection_years: dict[int, int],
 ) -> pd.DataFrame:
@@ -85,8 +88,9 @@ def new_processes(
 
     Parameters
     ----------
-    technologies : list[GenerationTechnology]
-        New technologies, not binned (see `GenerationTechnology.is_resource_binned`).
+    technologies : list[Technology]
+        New technologies: generators (not binned, see
+        `GenerationTechnology.is_resource_binned`) or storage.
     provinces : list[CANOEProvince]
         Regions modelled.
     projection_years : dict[int, int]
@@ -264,11 +268,11 @@ def process_investment_costs(
     return costs
 
 
-def process_om_costs(
+def process_om_costs[T: (GenerationTechnology, StorageTechnology)](
     processes: pd.DataFrame,
     generic: pd.DataFrame,
     atb: pd.DataFrame,
-    lifetimes: dict[GenerationTechnology, int],
+    lifetimes: dict[T, int],
     periods: list[int],
     atb_conversion: float,
     coders_conversion: float,
@@ -288,8 +292,8 @@ def process_om_costs(
         See `existing_processes` and `new_processes`.
     generic, atb : pd.DataFrame
         See `loaders.get_coders_generation_generic` and `loaders.get_atb_generation`.
-    lifetimes : dict[GenerationTechnology, int]
-        See `generation_lifetimes`.
+    lifetimes : dict[Technology, int]
+        See `generation_lifetimes` and `storage_lifetimes`.
     periods : list[int]
         Model periods.
     atb_conversion, coders_conversion : float
@@ -332,7 +336,7 @@ def process_om_costs(
     PER_MW_TO_PER_GW = 1e-3  # $/MW -> M$/GW
     PER_MWH_TO_PER_PJ = 1 / 3.6  # $/MWh -> M$/PJ
 
-    def costs(technology: GenerationTechnology, year: int) -> tuple[float, float]:
+    def costs(technology: T, year: int) -> tuple[float, float]:
         if technology.get_atb_display_name() is not None:
             # $/kW-year is M$/GW-year
             fixed = _atb_value(atb, technology, "Fixed O&M", year)
@@ -618,7 +622,7 @@ def vre_bin_capacity_factors(
 
 
 def _atb_value(
-    atb: pd.DataFrame, technology: GenerationTechnology, parameter: str, year: int
+    atb: pd.DataFrame, technology: Technology, parameter: str, year: int
 ) -> float:
     """ATB value of `technology` at `year`, not before the first year the ATB has
     nor the technology's first year (NaN if the ATB has no value for the

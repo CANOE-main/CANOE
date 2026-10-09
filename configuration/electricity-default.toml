@@ -93,9 +93,14 @@ ccs_retrofits = [
 # Leave out the existing storage (-EXS), from CODERS
 skip_existing = false
 
-# Storage the model can build (-NEW); [] for none. Options: "battery_1h",
-# "battery_2h", "battery_3h", "battery_4h", "battery_5h", "pump_4h", "pump_10h"
+# Storage the model can build (-NEW); [] for none. Options (those with NREL ATB
+# costs): "battery_1h", "battery_2h", "battery_3h", "battery_4h", "battery_5h",
+# "pump_10h"
 new_technologies = ["battery_2h", "battery_4h"]
+
+# Electricity out per unit stored; defaults from NREL ATB
+battery_round_trip_efficiency = 0.85
+pumped_hydro_round_trip_efficiency = 0.80
 
 # ----------------------------------------------------------
 #                          TRADE
