@@ -16,6 +16,8 @@ the previous module (see `DATA_LAKE_REQUESTS.md`):
 - `data/ieso_reliability_outlook_2025_table_4_1.csv`: IESO Reliability Outlook,
   June 2025, Table 4.1 (capability at summer peak by fuel).
 - `data/dolter_rivers_ramp_rates.csv`: hourly ramp rates of Dolter & Rivers (2018).
+- `data/coders_{transfers,provincial_demand}_2018.csv.gz`: CODERS hourly transfers on
+  each intertie and provincial demand, 2018 (the cache indexes them only).
 
 Weather data, 2018 only (the reference weather year; the cache has other years or
 lacks them). Gzipped, read in memory. To move to the cache, then update
@@ -166,6 +168,140 @@ def get_ramp_rates() -> pd.DataFrame:
         {
             "technology": df["code"].map(GenerationTechnology),
             "rate": df["hourly_rate"].astype(float),
+        }
+    )
+
+
+def get_coders_transmission_losses(cache_config: GoldConnectorConfig) -> pd.DataFrame:
+    """
+    Losses of the provincial transmission networks only, as a fraction of the
+    electricity sent out (CODERS `transmission_losses`).
+
+    Returns columns `region` (`CANOEProvince`) and `losses`.
+    """
+    df = pd.read_parquet(_cache_file(cache_config, "coders_transmission_losses"))
+    return pd.DataFrame(
+        {
+            "region": [_coders_province(name) for name in df["province"]],
+            "losses": df["transmission_network_losses"].astype(float),
+        }
+    )
+
+
+def get_coders_interface_capacities(cache_config: GoldConnectorConfig) -> pd.DataFrame:
+    """
+    Total transfer capability of each group of interties between two regions, in
+    each direction (CODERS `interface_capacities`), MW.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns `from_region` and `to_region` (province short codes, or `USA`),
+        `ttc_summer`, `ttc_winter` (MW) and `interties` (their names).
+    """
+    df = pd.read_parquet(_cache_file(cache_config, "coders_interface_capacities"))
+    return pd.DataFrame(
+        {
+            "from_region": df["from_province_state"].map(_coders_region),
+            "to_region": df["to_province_state"].map(_coders_region),
+            "ttc_summer": df["ttc_summer"].astype(float),
+            "ttc_winter": df["ttc_winter"].astype(float),
+            "interties": df["network_node_names"].astype(str),
+        }
+    )
+
+
+def get_coders_transfers(year: int) -> pd.DataFrame:
+    """
+    Hourly electricity transferred on each intertie (CODERS
+    `interprovincial_transfers` and `international_transfers`), MWh, in each
+    province's local time. Negative transfers go from `region_1` to `region_2`
+    (2018: Quebec and Ontario send 24.5 and 15.5 TWh to the US this way). Missing
+    hours take the previous hour's value.
+
+    Only 2018 is available (copied into `data/`), so `year`
+    (`source_years.coders_hourly`) must be 2018.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns `region_1` (the CODERS province, or `province_1`), `region_2`
+        (province short codes, or `USA`), `intertie` (the CODERS pair, e.g.
+        `ON|NYISO(WEST)`), `hour` (0-8759) and `transfer`.
+    """
+    _check_stand_in_year("CODERS hourly transfers", year, 2018)
+    resource = files("canoe.electricity").joinpath(
+        f"data/coders_transfers_{year}.csv.gz"
+    )
+    with resource.open("rb") as f:
+        wide = pd.read_csv(f, compression="gzip", index_col="hour")
+    _check_hours("CODERS hourly transfers", wide)
+    long = wide.ffill().melt(
+        ignore_index=False, var_name="intertie", value_name="transfer"
+    )
+    pairs = long["intertie"].str.split("|", expand=True)
+    return pd.DataFrame(
+        {
+            "region_1": pairs[0].map(_coders_region),
+            "region_2": pairs[1].map(_coders_region),
+            "intertie": long["intertie"],
+            "hour": long.index.astype(int),
+            "transfer": long["transfer"].astype(float),
+        }
+    ).reset_index(drop=True)
+
+
+def get_coders_provincial_demand(year: int) -> pd.DataFrame:
+    """
+    Hourly electricity demand of each province (CODERS `provincial_demand`), MWh,
+    in local time. Missing hours take the previous hour's value.
+
+    Only 2018 is available (copied into `data/`), so `year`
+    (`source_years.coders_hourly`) must be 2018.
+
+    Returns columns `region` (`CANOEProvince`), `hour` (0-8759) and `demand`.
+    """
+    _check_stand_in_year("CODERS hourly provincial demand", year, 2018)
+    resource = files("canoe.electricity").joinpath(
+        f"data/coders_provincial_demand_{year}.csv.gz"
+    )
+    with resource.open("rb") as f:
+        wide = pd.read_csv(f, compression="gzip", index_col="hour")
+    _check_hours("CODERS hourly provincial demand", wide)
+    long = wide.ffill().melt(
+        ignore_index=False, var_name="province", value_name="demand"
+    )
+    return pd.DataFrame(
+        {
+            "region": [_coders_province(name) for name in long["province"]],
+            "hour": long.index.astype(int),
+            "demand": long["demand"].astype(float),
+        }
+    ).reset_index(drop=True)
+
+
+def get_coders_annual_demand(cache_config: GoldConnectorConfig) -> pd.DataFrame:
+    """
+    Historic and forecast annual electricity demand of each province (CODERS
+    `historic_and_forecasted_annual_energy_demand`), GWh.
+
+    Returns columns `region` (`CANOEProvince`), `year` and `demand`.
+    """
+    table = "coders_historic_and_forecasted_annual_energy_demand"
+    df = pd.read_parquet(_cache_file(cache_config, table))
+    if set(df["unit"]) != {"GWh/y"}:
+        raise ValueError(
+            f"CODERS annual demand: units {set(df['unit'])}, expected GWh/y"
+        )
+    years = [c for c in df.columns if c.startswith("year_")]
+    long = df.assign(region=_coders_provinces(df, "province", "annual demand")).melt(
+        id_vars="region", value_vars=years, var_name="year", value_name="demand"
+    )
+    return pd.DataFrame(
+        {
+            "region": long["region"],
+            "year": long["year"].str.removeprefix("year_").astype(int),
+            "demand": long["demand"].astype(float),
         }
     )
 
@@ -831,6 +967,68 @@ def _cache_file(cache_config: GoldConnectorConfig, dataset: str) -> Path:
         / dataset
         / f"{dataset}_{cache_config.cache_date}.parquet"
     )
+
+
+def _coders_outside_region() -> str:
+    """Code of the regions of the US, outside the model"""
+    return "USA"
+
+
+def _coders_region(name: str) -> str:
+    """
+    Short code of the province a CODERS region name (full name, short or NRCan
+    code) is in, or `USA` for the US states and markets of the trade tables.
+    """
+    ALIASES = {"Québec": "Quebec", "PEI": "Prince Edward Island"}
+    US = {
+        "Maine",
+        "Michigan",
+        "Minnesota",
+        "Minnesota / North Dakota",
+        "Montana",
+        "New England",
+        "New York",
+        "North Dakota",
+        "Washington",
+        "US(Montana)",
+        "US(Northwest)",
+        "MISO(Minnesota)",
+        "MISO(Michigan)",
+        "MISO(Dakota)",
+        "ISONE(Maine)",
+        "ISONE(NMISA)",
+        "ISONE(Highgate)",
+        "ISONE(HVDC)",
+        "NYISO(WEST)",
+        "NYISO(HQ)",
+    }
+    if name in US:
+        return _coders_outside_region()
+    name = ALIASES.get(name, name)
+    for province in CANOEProvince:
+        if name in (
+            province.value,
+            province.short(),
+            province.get_nrcan_province_code(),
+        ):
+            return province.short()
+    raise ValueError(f"CODERS: unknown region {name!r}")
+
+
+def _coders_province(name: str) -> CANOEProvince:
+    """The province of a CODERS region name; raises outside Canada"""
+    code = _coders_region(name)
+    for province in CANOEProvince:
+        if province.short() == code:
+            return province
+    raise ValueError(f"CODERS: {name!r} is not a province")
+
+
+def _check_hours(source: str, wide: pd.DataFrame):
+    """Raise if `wide` does not have the 8760 hours of a year"""
+    HOURS = 8760
+    if list(wide.index) != list(range(HOURS)):
+        raise ValueError(f"{source}: not the {HOURS} hours of a year")
 
 
 def _coders_provinces(df: pd.DataFrame, column: str, table: str) -> pd.Series:

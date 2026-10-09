@@ -25,6 +25,7 @@ from canoe.common import (
     GoldConnectorConfig,
     naming,
 )
+from canoe.common.gdp import GDPProjectionPoint
 from canoe.common.periods import ProjectionPoint
 from canoe.common.validation import ValidationBehavior
 from canoe.electricity.build import build_electricity
@@ -216,6 +217,13 @@ class TradeConfig(BaseModel):
     """Leave out the interties with the US, fixed to historical flows: imports as a
     generator (`E_INT_IN-USA`), exports as a demand (`E_INT_OUT-USA`)."""
 
+    reproduce_previous_intertie_losses: bool = False
+    """Take the system (transmission and distribution) losses of the sending province
+    on the interties and exports, as the previous module did. The electricity then
+    pays distribution losses it does not go through, twice on the interties (again
+    in the receiving province's grid; see `ELECTRICITY_MODULE_BUGS.md`). Off: their
+    transmission losses only."""
+
 
 class ReliabilityConfig(BaseModel):
     """Reserve margin, `[reliability]` in TOML."""
@@ -258,6 +266,7 @@ class CANOEElectricityConfig(InheritsFromBase):
     ...         "period_step": 5,
     ...         "provinces": ["ON", "QC"],
     ...         "price_projection_point": "period_end",
+    ...         "gdp_projection_point": "period_end",
     ...         "model_currency_year": 2020,
     ...         "source_years": {
     ...             "coders_hourly": 2018,
@@ -326,11 +335,20 @@ class CANOEElectricityConfig(InheritsFromBase):
 
     # Demand
     exogenous_demand: bool = False
-    """Add the CODERS annual provincial demand forecast (read at the end of each
-    period, with the hourly profile of `source_years.coders_hourly`) as an
-    electricity demand. Off by default: the sectors' electricity imports are the
-    demand, and alongside them it counts their electricity use twice. Meant for runs
-    of the electricity module on its own."""
+    """Add the CODERS annual provincial demand forecast (read at
+    `gdp_projection_point` of each period, with the hourly profile of
+    `source_years.coders_hourly`) as an electricity demand (`E_D_elc`). Off by
+    default: the sectors' electricity imports are the demand, and alongside them it
+    counts their electricity use twice. Meant for runs of the electricity module on
+    its own."""
+
+    exogenous_demand_profile_tolerance: float = Field(default=0.02, ge=0, lt=1)
+    """Hours of the exogenous demand profile below this share of the average hour are
+    set to 0 (gaps and noise in the data)."""
+
+    gdp_projection_point: GDPProjectionPoint = inherit()
+    """Year of each period at which the exogenous demand forecast is read, as the
+    sectors' demand projections. Inherited."""
 
     # Components
     generation: GenerationConfig

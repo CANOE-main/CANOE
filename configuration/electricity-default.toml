@@ -14,8 +14,11 @@
 # true -> add the CODERS annual forecast by province as an electricity demand, with
 # the hourly profile of source_years.coders_hourly. Off by default: the end-use
 # sectors' electricity imports are the demand, and alongside them it counts their
-# electricity use twice. Meant for runs of the electricity module on its own.
+# electricity use twice. Meant for runs of the electricity module on its own. The
+# forecast is read at gdp_projection_point of each period (inherited).
 exogenous_demand = false
+# Hours of its profile below this share of the average hour are set to 0
+exogenous_demand_profile_tolerance = 0.02
 
 # ----------------------------------------------------------
 #                       COST SOURCES
@@ -119,6 +122,10 @@ skip_endogenous = false
 # Leave out the interties with the US, fixed to the historical flows of
 # source_years.coders_hourly
 skip_boundary = false
+# true -> interties and exports lose the sending province's system (transmission and
+# distribution) losses, as the previous module did; false: transmission losses only
+# (see ELECTRICITY_MODULE_BUGS.md)
+reproduce_previous_intertie_losses = false
 
 # ----------------------------------------------------------
 #                       RELIABILITY

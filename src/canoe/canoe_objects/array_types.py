@@ -164,6 +164,40 @@ class RegionSeasonTodArray(LabeledArray):
         super().__init__(coords, fill)
 
 
+type RegionPair = tuple[CANOEProvince, CANOEProvince]
+"""A direction between two regions (from, to), e.g. an intertie's flow."""
+
+
+class PairValuesArray(LabeledArray):
+    """Values by directed region pair."""
+
+    def __init__(self, pair: list[RegionPair], fill: float = np.nan):
+        coords = {"pair": pair}
+        super().__init__(coords, fill)
+
+
+class PairPeriodArray(LabeledArray):
+    """Values by directed region pair and period."""
+
+    def __init__(self, pair: list[RegionPair], period: list[int], fill: float = np.nan):
+        coords = {"pair": pair, "period": period}
+        super().__init__(coords, fill)
+
+
+class PairSeasonTodArray(LabeledArray):
+    """Values by directed region pair and time slice (season and time of day)."""
+
+    def __init__(
+        self,
+        pair: list[RegionPair],
+        season: list[str],
+        tod: list[str],
+        fill: float = np.nan,
+    ):
+        coords = {"pair": pair, "season": season, "tod": tod}
+        super().__init__(coords, fill)
+
+
 class RegionVintageSeasonTodArray(LabeledArray):
     """Values by region, vintage and time slice (season and time of day)."""
 

@@ -306,7 +306,8 @@ class GenerationTechnology(StrEnum):
         """
         Whether existing units are kept for the whole horizon, whatever their age
         (hydro): they are grouped in a single vintage, the year before the first
-        period, with a lifetime of 100 years.
+        period, with a lifetime to the end of the horizon (see
+        `common.periods.never_retiring_lifetime`).
 
         Examples
         --------

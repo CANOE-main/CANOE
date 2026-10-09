@@ -10,15 +10,19 @@ import pandas as pd
 from ..catalogue import StorageTechnology
 
 
-def storage_lifetimes(generic: pd.DataFrame) -> dict[StorageTechnology, int]:
+def storage_lifetimes(
+    generic: pd.DataFrame, never_retiring_lifetime: int
+) -> dict[StorageTechnology, int]:
     """
-    Lifetime (years) of each storage technology: CODERS `service_life`, or 100 for
-    pumped hydro, which never retires.
+    Lifetime (years) of each storage technology: CODERS `service_life`, or, for
+    pumped hydro, which never retires, one that reaches the end of the horizon.
 
     Parameters
     ----------
     generic : pd.DataFrame
         CODERS generic parameters, see `loaders.get_coders_generation_generic`.
+    never_retiring_lifetime : int
+        See `common.periods.never_retiring_lifetime`.
 
     Examples
     --------
@@ -26,13 +30,12 @@ def storage_lifetimes(generic: pd.DataFrame) -> dict[StorageTechnology, int]:
     ...     {"service_life": [15, 100]},
     ...     index=pd.Index(["storage_lithium", "storage_pump"], name="coders_type"),
     ... )
-    >>> lifetimes = storage_lifetimes(generic)
+    >>> lifetimes = storage_lifetimes(generic, 26)
     >>> lifetimes[StorageTechnology.Battery2h], lifetimes[StorageTechnology.PumpedHydro4h]
-    (15, 100)
+    (15, 26)
     """
-    NEVER_RETIRES_LIFETIME = 100
     return {
-        technology: NEVER_RETIRES_LIFETIME
+        technology: never_retiring_lifetime
         if technology.never_retires()
         else int(generic.loc[technology.get_coders_generic_type(), "service_life"])
         for technology in StorageTechnology

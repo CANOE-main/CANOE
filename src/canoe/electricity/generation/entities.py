@@ -850,7 +850,7 @@ def with_reliability(
         reliability.derates["technology"] == technology
     ]
     if not of_derates.empty:
-        seasons, _ = _time_slices()
+        seasons, _ = time_slices()
         derates = RegionVintageSeasonArray(regions, vintages, seasons)
         for region, vintage, factor in zip(
             of_derates["region"], of_derates["vintage"], of_derates["factor"]
@@ -895,7 +895,7 @@ def region_vintage_period(
     return values
 
 
-def _time_slices() -> tuple[list[str], list[str]]:
+def time_slices() -> tuple[list[str], list[str]]:
     """The seasons (days D001-D365) and times of day (H01-H24) of the model year"""
     hours_per_day, days = 24, 365
     seasons = [hour_to_day(day * hours_per_day) for day in range(days)]
@@ -907,7 +907,7 @@ def _hourly_values(
     factors: pd.DataFrame, regions: list[CANOEProvince]
 ) -> RegionSeasonTodArray:
     """Hourly `factor` of each region (columns `region`, `hour`) by time slice"""
-    seasons, tods = _time_slices()
+    seasons, tods = time_slices()
     values = RegionSeasonTodArray(regions, seasons, tods)
     for region, of_region in factors.groupby("region", sort=False):
         hourly = of_region.sort_values("hour")["factor"].to_numpy(dtype=float)
@@ -924,7 +924,7 @@ def _hourly_vintage_values(
 ) -> RegionVintageSeasonTodArray:
     """Hourly `factor` of each region and vintage (columns `region`, `vintage`,
     `hour`) by time slice"""
-    seasons, tods = _time_slices()
+    seasons, tods = time_slices()
     values = RegionVintageSeasonTodArray(regions, vintages, seasons, tods)
     for keys, of_process in factors.groupby(["region", "vintage"], sort=False):
         region, vintage = cast(tuple[CANOEProvince, int], keys)
@@ -944,7 +944,7 @@ def _daily_values(
     factors: pd.DataFrame, regions: list[CANOEProvince]
 ) -> RegionSeasonArray:
     """Daily `factor` of each region (columns `region`, `day`) by season (day)"""
-    seasons, _ = _time_slices()
+    seasons, _ = time_slices()
     values = RegionSeasonArray(regions, seasons)
     for region, of_region in factors.groupby("region", sort=False):
         daily = of_region.sort_values("day")["factor"].to_numpy(dtype=float)

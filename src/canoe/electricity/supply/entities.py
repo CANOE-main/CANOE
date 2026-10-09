@@ -6,7 +6,9 @@ Temoa objects of the grid and of the delivery to the sectors:
 All are pass-throughs with unlimited capacity and a single vintage, the first model
 period, whose lifetime reaches the end of the horizon (see
 `canoe.common.periods.horizon_length`). The grid also carries the planning reserve
-margin of each province.
+margin of each province and, optionally, an exogenous demand:
+
+    E_elc_dem --E_ELC_DEM--> E_D_elc
 """
 
 from dataclasses import dataclass, field
@@ -21,11 +23,17 @@ from canoe.canoe_objects.array_types import (
     RegionVintagePeriodArray,
 )
 from canoe.canoe_objects.commodity import PhysicalCommodityEntity
+from canoe.canoe_objects.demand import (
+    DemandEntity,
+    DemandSeriesArray,
+    DemandSpecificDistributionArray,
+)
 from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.common import CANOEFuel, CANOEFuelImport, CANOEProvince, CANOESector
 from canoe.common.naming import DatasetIdentifier, get_fuel_commodity_in_sector
 
 from ..catalogue import GridLevel
+from ..generation.entities import time_slices
 
 
 def delivery_technology_name(sector: CANOESector) -> str:
@@ -191,6 +199,81 @@ def build_grid(
             )
         ]
     return entities
+
+
+def build_exogenous_demand(
+    demands: pd.DataFrame,
+    profiles: pd.DataFrame,
+    first_period: int,
+    lifetime: int,
+    notes: str,
+    data_id: DatasetIdentifier,
+) -> tuple[DemandEntity, TechnologyEntity]:
+    """
+    The exogenous electricity demand `E_D_elc` of each province, and the technology
+    that serves it from the grid:
+
+        E_elc_dem --E_ELC_DEM--> E_D_elc
+
+    Parameters
+    ----------
+    demands : pd.DataFrame
+        See `parameters.exogenous_demands`.
+    profiles : pd.DataFrame
+        See `parameters.exogenous_demand_profiles`.
+    first_period, lifetime : int
+        The single vintage of the technology and its lifetime.
+    notes : str
+        Source of the demand and its profile.
+    data_id : DatasetIdentifier
+        Data set of the electricity module.
+
+    Returns
+    -------
+    tuple[DemandEntity, TechnologyEntity]
+        The demand (to build first) and the technology.
+    """
+    commodity = "E_D_elc"
+    regions: list[CANOEProvince] = list(dict.fromkeys(demands["region"]))
+    periods = sorted({int(p) for p in demands["period"]})
+    series = DemandSeriesArray(regions, periods)
+    for region, period, value in zip(
+        demands["region"], demands["period"], demands["demand"]
+    ):
+        series.set(float(value), region=region, period=int(period))
+    seasons, tods = time_slices()
+    distribution = DemandSpecificDistributionArray(regions, periods, seasons, tods)
+    for region, of_region in profiles.groupby("region", sort=False):
+        hourly = of_region.sort_values("hour")["share"].to_numpy(dtype=float)
+        for period in periods:
+            distribution.set_block(
+                hourly.reshape(len(seasons), len(tods)),
+                dims=("season", "tod"),
+                region=region,
+                period=period,
+            )
+    demand = (
+        DemandEntity(
+            name=commodity,
+            commodity_description="provincial electricity demand",
+            unit="PJ",
+            data_id=data_id,
+        )
+        .with_demand_series(series, notes=f"Annual demand: {notes}")
+        .with_dsd(distribution, notes=f"Hourly share of the demand: {notes}")
+    )
+    technology = _pass_through(
+        name="E_ELC_DEM",
+        input_commodity="E_elc_dem",
+        output_commodity=commodity,
+        description="provincial electricity demand",
+        sector=CANOESector.Electricity,
+        efficiencies=RegionVintageArray(regions, [first_period], fill=1.0),
+        efficiency_notes="Delivery to the demand, efficiency 1",
+        lifetime=lifetime,
+        data_id=data_id,
+    ).set_annual()
+    return demand, technology
 
 
 def _pass_through(

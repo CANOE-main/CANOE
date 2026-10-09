@@ -134,3 +134,106 @@ def grid_variable_costs(
                 }
             )
     return pd.DataFrame(rows)
+
+
+def exogenous_demands(
+    annual: pd.DataFrame,
+    provinces: list[CANOEProvince],
+    projection_years: dict[int, int],
+) -> pd.DataFrame:
+    """
+    Electricity demand of each province in each period (PJ): the forecast at the
+    projection year of the period.
+
+    Parameters
+    ----------
+    annual : pd.DataFrame
+        Columns `region`, `year` and `demand` (GWh), see
+        `loaders.get_coders_annual_demand`.
+    provinces : list[CANOEProvince]
+        Provinces modelled.
+    projection_years : dict[int, int]
+        Model period -> year read, see `canoe.common.periods.projection_year_by_period`.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns `region`, `period` and `demand`.
+
+    Raises
+    ------
+    ValueError
+        If a province has no forecast for a projection year.
+
+    Examples
+    --------
+    >>> ON = CANOEProvince.ONTARIO
+    >>> annual = pd.DataFrame({"region": [ON, ON], "year": [2030, 2035], "demand": [1e5, 2e5]})
+    >>> exogenous_demands(annual, [ON], {2025: 2030, 2030: 2035})["demand"].tolist()
+    [360.0, 720.0]
+    """
+    GWH_TO_PJ = 0.0036
+    by_key: dict[tuple[CANOEProvince, int], float] = {
+        (r, int(y)): float(d)
+        for r, y, d in zip(annual["region"], annual["year"], annual["demand"])
+    }
+    rows: list[dict[str, object]] = []
+    for region in provinces:
+        for period, year in projection_years.items():
+            if (region, year) not in by_key:
+                raise ValueError(
+                    f"No CODERS demand forecast for {region.short()} {year}"
+                )
+            rows.append(
+                {
+                    "region": region,
+                    "period": period,
+                    "demand": by_key[(region, year)] * GWH_TO_PJ,
+                }
+            )
+    return pd.DataFrame(rows, columns=["region", "period", "demand"])
+
+
+def exogenous_demand_profiles(
+    hourly: pd.DataFrame, provinces: list[CANOEProvince], tolerance: float
+) -> pd.DataFrame:
+    """
+    Share of each province's yearly demand in each hour; hours below `tolerance` times
+    the average hour are set to 0 (gaps and noise in the data).
+
+    Parameters
+    ----------
+    hourly : pd.DataFrame
+        Columns `region`, `hour` and `demand` (MWh), see
+        `loaders.get_coders_provincial_demand`.
+    provinces : list[CANOEProvince]
+        Provinces modelled; every one needs its hours.
+    tolerance : float
+        Share of the average hour below which an hour is set to 0.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns `region`, `hour` and `share`.
+
+    Examples
+    --------
+    >>> ON = CANOEProvince.ONTARIO
+    >>> hourly = pd.DataFrame({"region": ON, "hour": [0, 1, 2], "demand": [1.0, 3.0, 0.01]})
+    >>> exogenous_demand_profiles(hourly, [ON], 0.02)["share"].tolist()
+    [0.25, 0.75, 0.0]
+    """
+    missing = sorted(p.short() for p in provinces if p not in set(hourly["region"]))
+    if missing:
+        raise ValueError(f"No hourly demand for {missing}")
+    selected = hourly.loc[hourly["region"].isin(provinces)]
+    average = selected.groupby("region")["demand"].transform("mean")
+    demand = selected["demand"].mask(selected["demand"] < average * tolerance, 0.0)
+    total = demand.groupby(selected["region"]).transform("sum")
+    return pd.DataFrame(
+        {
+            "region": selected["region"],
+            "hour": selected["hour"],
+            "share": demand / total,
+        }
+    ).reset_index(drop=True)

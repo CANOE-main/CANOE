@@ -22,15 +22,19 @@ type Technology = GenerationTechnology | StorageTechnology | CCSRetrofit
 """Generators, storage and CCS retrofits share the ATB (and CODERS) parameters."""
 
 
-def generation_lifetimes(generic: pd.DataFrame) -> dict[GenerationTechnology, int]:
+def generation_lifetimes(
+    generic: pd.DataFrame, never_retiring_lifetime: int
+) -> dict[GenerationTechnology, int]:
     """
-    Lifetime (years) of each technology: CODERS `service_life`, or 100 for the
-    technologies that never retire (hydro), which outlives any horizon.
+    Lifetime (years) of each technology: CODERS `service_life`, or, for the
+    technologies that never retire (hydro), one that reaches the end of the horizon.
 
     Parameters
     ----------
     generic : pd.DataFrame
         CODERS generic parameters, see `loaders.get_coders_generation_generic`.
+    never_retiring_lifetime : int
+        See `common.periods.never_retiring_lifetime`.
 
     Examples
     --------
@@ -38,13 +42,12 @@ def generation_lifetimes(generic: pd.DataFrame) -> dict[GenerationTechnology, in
     ...     {"service_life": [45, 80]},
     ...     index=pd.Index(["ng_sc", "hydro_daily"], name="coders_type"),
     ... )
-    >>> lifetimes = generation_lifetimes(generic)
+    >>> lifetimes = generation_lifetimes(generic, 26)
     >>> lifetimes[GenerationTechnology.NaturalGasCT], lifetimes[GenerationTechnology.HydroDaily]
-    (45, 100)
+    (45, 26)
     """
-    NEVER_RETIRES_LIFETIME = 100
     return {
-        technology: NEVER_RETIRES_LIFETIME
+        technology: never_retiring_lifetime
         if technology.never_retires()
         else int(generic.loc[technology.get_coders_generic_type(), "service_life"])
         for technology in GenerationTechnology

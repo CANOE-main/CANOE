@@ -6,6 +6,8 @@ import pandas as pd
 from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
+from canoe.canoe_objects.demand import DemandEntity
+from canoe.canoe_objects.exchange import ExchangeTechnologyEntity
 from canoe.canoe_objects.fuel_imports import declare_fuel_imports
 from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.common import (
@@ -27,6 +29,7 @@ from canoe.common.naming import DatasetIdentifier
 from canoe.common.periods import (
     ProjectionPoint,
     horizon_length,
+    never_retiring_lifetime,
     projection_year_by_period,
 )
 from canoe.common.validation import check_missing_existing_periods
@@ -73,11 +76,16 @@ from .generation.parameters import (
 from .loaders import (
     get_aeo_transmission_distribution_costs,
     get_atb_generation,
+    get_coders_annual_demand,
     get_coders_generation_generic,
     get_coders_generators,
+    get_coders_interface_capacities,
+    get_coders_provincial_demand,
     get_coders_reserve_margins,
     get_coders_storage,
     get_coders_system_line_losses,
+    get_coders_transfers,
+    get_coders_transmission_losses,
     get_ieso_generator_output,
     get_ieso_hydro_types,
     get_ieso_output_by_fuel,
@@ -100,8 +108,30 @@ from .reliability import (
 )
 from .storage.entities import build_existing_storage, build_new_storage
 from .storage.parameters import storage_efficiencies, storage_lifetimes
-from .supply.entities import build_grid
-from .supply.parameters import grid_variable_costs, transmission_efficiencies
+from .supply.entities import build_exogenous_demand, build_grid
+from .supply.parameters import (
+    exogenous_demand_profiles,
+    exogenous_demands,
+    grid_variable_costs,
+    transmission_efficiencies,
+)
+from .trade.entities import (
+    BoundaryEntities,
+    TradeNotes,
+    build_boundary,
+    build_interties,
+)
+from .trade.parameters import (
+    boundary_flows,
+    endogenous_interties,
+    export_demands,
+    export_profiles,
+    import_capacities,
+    import_capacity_factors,
+    intertie_capacities,
+    intertie_capacity_factors,
+    intertie_losses,
+)
 from .validation import validate_db_against_config
 
 if TYPE_CHECKING:
@@ -209,7 +239,21 @@ def build_electricity(
             if binned:
                 bin_credits = get_vre_bin_capacity_credits(cfg.data_cache_config)
         ramp_rates = get_ramp_rates()
-        # TODO: CODERS (interties, demand)
+        # Trade: CODERS interface capacities (MW), hourly transfers on each intertie
+        # (MWh) and transmission losses (fraction); only what is modelled
+        trade = cfg.trade
+        interfaces = transfers = transmission_losses = None
+        if not trade.skip_endogenous:
+            interfaces = get_coders_interface_capacities(cfg.data_cache_config)
+        if not trade.skip_boundary:
+            transfers = get_coders_transfers(years.coders_hourly)
+        if not (trade.skip_endogenous and trade.skip_boundary):
+            transmission_losses = get_coders_transmission_losses(cfg.data_cache_config)
+        # Exogenous demand: CODERS annual forecast (GWh), hourly demand (MWh)
+        annual_demand = hourly_demand = None
+        if cfg.exogenous_demand:
+            annual_demand = get_coders_annual_demand(cfg.data_cache_config)
+            hourly_demand = get_coders_provincial_demand(years.coders_hourly)
 
         # Compute parameters
         # ------------------
@@ -233,9 +277,12 @@ def build_electricity(
         )
         # Single vintage (the first period) serving every period
         lifetime = horizon_length(cfg.future_periods, cfg.period_step)
+        # What never retires (hydro, pumped hydro, interties) lives from the last
+        # existing vintage to the end of the horizon
+        forever = never_retiring_lifetime(cfg.future_periods, cfg.period_step)
 
         # - Generation: lifetimes and currency factors to M$ of model_currency_year
-        lifetimes = generation_lifetimes(generic)
+        lifetimes = generation_lifetimes(generic, forever)
         atb_conversion = currency_conversion_factor(
             "USD",
             cfg.source_years.atb_currency,
@@ -434,7 +481,7 @@ def build_electricity(
         # - Storage: existing CODERS facilities grouped as the generators, new storage
         #   in every province; round-trip efficiencies from the config, costs as the
         #   generators'
-        storage_lives = storage_lifetimes(generic)
+        storage_lives = storage_lifetimes(generic, forever)
         storage: list[TechnologyEntity] = []
         if not cfg.storage.skip_existing:
             storage_fleet = existing_storage(
@@ -522,7 +569,91 @@ def build_electricity(
                 notes,
                 electricity_data_id,
             )
-        # TODO: trade
+
+        # - Trade: interties between modelled provinces (capacities, seasonal
+        #   capability) and the historical flows over the boundary, all of the last
+        #   existing vintage; losses of the sending province
+        trade_vintage = cfg.future_periods[0] - 1
+        trade_notes = _trade_notes(cfg, grid_costs.reference)
+        losses = (
+            {}
+            if transmission_losses is None
+            else intertie_losses(
+                line_losses,
+                transmission_losses,
+                cfg.provinces,
+                trade.reproduce_previous_intertie_losses,
+            )
+        )
+        interties: ExchangeTechnologyEntity | None = None
+        if interfaces is not None:
+            endogenous = endogenous_interties(interfaces, cfg.provinces)
+            if not endogenous.empty:
+                capacities = intertie_capacities(endogenous)
+                interties = build_interties(
+                    endogenous,
+                    capacities,
+                    intertie_capacity_factors(
+                        endogenous,
+                        capacities,
+                        cfg.generation.capacity_factor_tolerance,
+                    ),
+                    losses,
+                    costs,
+                    trade_vintage,
+                    forever,
+                    trade_notes,
+                    electricity_data_id,
+                )
+        boundary: BoundaryEntities | None = None
+        if transfers is not None:
+            flows = boundary_flows(transfers, cfg.provinces)
+            boundary = build_boundary(
+                export_demands(flows, cfg.future_periods),
+                export_profiles(flows),
+                import_capacities(flows),
+                import_capacity_factors(
+                    flows, cfg.generation.capacity_factor_tolerance
+                ),
+                losses,
+                costs,
+                trade_vintage,
+                forever,
+                trade_notes,
+                electricity_data_id,
+            )
+        if interties is not None or boundary is not None:
+            check_missing_existing_periods(
+                db_conn, [trade_vintage], cfg.validation_behavior
+            )
+
+        # - Exogenous demand: the CODERS forecast at gdp_projection_point, with the
+        #   hourly profile of source_years.coders_hourly
+        exogenous: tuple[DemandEntity, TechnologyEntity] | None = None
+        if annual_demand is not None and hourly_demand is not None:
+            exogenous = build_exogenous_demand(
+                exogenous_demands(
+                    annual_demand,
+                    cfg.provinces,
+                    projection_year_by_period(
+                        cfg.future_periods,
+                        cfg.period_step,
+                        ProjectionPoint(cfg.gdp_projection_point.value),
+                    ),
+                ),
+                exogenous_demand_profiles(
+                    hourly_demand,
+                    cfg.provinces,
+                    cfg.exogenous_demand_profile_tolerance,
+                ),
+                cfg.future_periods[0],
+                lifetime,
+                "CODERS historic and forecasted annual energy demand (cache "
+                + f"{cfg.data_cache_config.cache_date}), read at "
+                + f"{cfg.gdp_projection_point.value}; profile: CODERS "
+                + f"{years.coders_hourly} hourly provincial demand (local time)",
+                electricity_data_id,
+            )
 
         # Build TEMOA Objects
         # -------------------
@@ -578,7 +709,24 @@ def build_electricity(
         logger.info(f"Building {len(storage)} storage technologies")
         for technology in storage:
             technology.build(db_conn)
-        # TODO: interties
+
+        # Trade
+        if interties is not None:
+            logger.info("Building the interties between modelled provinces")
+            interties.build(db_conn)
+        if boundary is not None:
+            logger.info(
+                f"Building {len(boundary.demands)} export demands and "
+                + f"{len(boundary.technologies)} boundary intertie technologies"
+            )
+            boundary.build(db_conn)
+
+        # Exogenous demand
+        if exogenous is not None:
+            demand, technology = exogenous
+            logger.info("Building the exogenous electricity demand")
+            demand.build(db_conn)
+            technology.build(db_conn)
 
     # The fuels the generators burn, for the fuel module, and the CO2 captured
     captures = any(t.input_emission_factors for t in generators)
@@ -598,6 +746,24 @@ def _cost_notes(cfg: "CANOEElectricityConfig", reference: str) -> str:
     return (
         f"{reference}, read at {point}, in M$/PJ of {cfg.model_currency_year} CAD "
         + "(GDP deflator)"
+    )
+
+
+def _trade_notes(cfg: "CANOEElectricityConfig", cost_reference: str) -> TradeNotes:
+    losses = (
+        "CODERS CA_system_parameters system_line_losses_percent (transmission and "
+        + "distribution, as the previous module)"
+        if cfg.trade.reproduce_previous_intertie_losses
+        else "CODERS transmission_losses (transmission network only)"
+    )
+    return TradeNotes(
+        losses=losses,
+        capacities="CODERS interface_capacities, total transfer capability (MW) of "
+        + f"the interties between the two regions (cache {cfg.data_cache_config.cache_date})",
+        flows=f"CODERS {cfg.source_years.coders_hourly} hourly interprovincial and "
+        + "international transfers (local time), all interties to the outside region "
+        + "summed",
+        costs=_cost_notes(cfg, cost_reference),
     )
 
 
