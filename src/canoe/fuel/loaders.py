@@ -15,7 +15,8 @@ from pathlib import Path
 import pandas as pd
 from loguru import logger
 
-from canoe.common import CANOEEmission, CANOEFuel, CANOESector, GoldConnectorConfig
+from canoe.common import CANOEFuel, GoldConnectorConfig
+from canoe.common.loaders import parse_previous_emission_factors, previous_fuel
 
 
 @dataclass(frozen=True)
@@ -243,114 +244,6 @@ def get_fixed_fuel_prices() -> SourcePrices:
     )
 
 
-# Fuel codes of the previous fuel module's commodity names (`<S>_<fuel>`, `F_<fuel>`)
-_PREVIOUS_FUEL_CODES: dict[str, CANOEFuel] = {
-    "bio": CANOEFuel.BioEnergy,
-    "bio_g": CANOEFuel.GaseousBioenergy,
-    "bio_m": CANOEFuel.SolidBioenergy,
-    "cng": CANOEFuel.CompressedNaturalGas,
-    "coal": CANOEFuel.Coal,
-    "coke": CANOEFuel.Coke,
-    "dsl": CANOEFuel.Diesel,
-    "eth": CANOEFuel.Ethanol,
-    "gsl": CANOEFuel.Gasoline,
-    "hfo": CANOEFuel.HeavyFuelOil,
-    "jtf": CANOEFuel.JetFuel,
-    "lng": CANOEFuel.LiquifiedNaturalGas,
-    "lpg": CANOEFuel.LiquifiedPretroleumGas,
-    "mdo": CANOEFuel.MarineDieselOil,
-    "ng": CANOEFuel.NaturalGas,
-    "ngl": CANOEFuel.NaturalGasLiquids,
-    "oil": CANOEFuel.Oil,
-    "pcoke": CANOEFuel.PetroleumCoke,
-    "prop": CANOEFuel.Propane,
-    "rdsl": CANOEFuel.RenewableDiesel,
-    "spk": CANOEFuel.SyntheticJetFuel,
-    "wood": CANOEFuel.Wood,
-}
-_EMISSIONS: dict[str, CANOEEmission] = {
-    "co2": CANOEEmission.CO2,
-    "ch4": CANOEEmission.CH4,
-    "n2o": CANOEEmission.N2O,
-}
-# Units of the files and the factor to kt/PJ. CO2e rows are dropped: the central
-# emissions step derives CO2-equivalents
-_TO_KT_PER_PJ: dict[str, float] = {"kTonne/PJ": 1.0, "Tonne/PJ": 1e-3}
-# Source codes of the files
-_REFERENCES: dict[str, str] = {
-    "F4": "Government of Canada, Emission factors and reference values",
-    "F6": "Nova Scotia Department of Environment and Climate Change, QRV standards",
-    "F7": "Environment and Climate Change Canada (2024), Fuel life cycle assessment model",
-    "F8": "Argonne National Laboratory, GREET model",
-}
-
-
-def _read_previous_emission_factors(file_name: str) -> pd.DataFrame:
-    """
-    Emission factors in the layout of the previous fuel module: `commodity`,
-    `emission`, `value`, `units`, `notes`, `source`. Returns `commodity`, `emission`
-    (`CANOEEmission`), `factor` (kt/PJ), `notes`, `reference`, without CO2e rows.
-    """
-    resource = files("canoe.fuel").joinpath(f"data/{file_name}")
-    with resource.open("rb") as f:
-        raw = pd.read_csv(f, encoding="utf-8-sig")
-
-    raw = raw.loc[raw["emission"] != "co2e"]
-    unknown_units = set(raw["units"]) - set(_TO_KT_PER_PJ)
-    unknown_emissions = set(raw["emission"]) - set(_EMISSIONS)
-    if unknown_units or unknown_emissions:
-        raise ValueError(
-            f"{file_name}: unknown units {sorted(unknown_units)} or emissions "
-            + f"{sorted(unknown_emissions)}"
-        )
-    # Some rows have no source code; their reference is left empty
-    return pd.DataFrame(
-        {
-            "commodity": raw["commodity"],
-            "emission": raw["emission"].map(_EMISSIONS),
-            "factor": raw["value"].astype(float) * raw["units"].map(_TO_KT_PER_PJ),
-            "notes": raw["notes"].fillna("").str.strip(),
-            "reference": raw["source"].map(_REFERENCES).fillna(""),
-        }
-    ).reset_index(drop=True)
-
-
-def _previous_fuel(code: str, file_name: str) -> CANOEFuel:
-    if code not in _PREVIOUS_FUEL_CODES:
-        raise ValueError(f"{file_name}: unknown fuel code {code!r}")
-    return _PREVIOUS_FUEL_CODES[code]
-
-
-def get_combustion_emission_factors() -> pd.DataFrame:
-    """
-    Emissions of burning each fuel in each sector (ECCC emission factors, Nova Scotia
-    QRV standards, GREET), as in the previous fuel module.
-
-    TODO: read from the previous module's `direct_comb_emission.csv` (copied to
-    `canoe/fuel/data`) until the data lake has the factors (see
-    `DATA_LAKE_REQUESTS.md`).
-
-    Returns
-    -------
-    pd.DataFrame
-        Columns `sector` (`CANOESector`), `fuel` (`CANOEFuel`), `emission`
-        (`CANOEEmission`), `factor` (kt per PJ of fuel), `notes`, `reference`.
-    """
-    file_name = "combustion_emission_factors.csv"
-    factors = _read_previous_emission_factors(file_name)
-    tags_and_codes = factors["commodity"].str.split("_", n=1, expand=True)
-    sectors = tags_and_codes[0].map(CANOESector)
-    if sectors.isna().any():
-        raise ValueError(
-            f"{file_name}: unknown sector tags "
-            + f"{sorted(set(tags_and_codes.loc[sectors.isna(), 0]))}"
-        )
-    return factors.assign(
-        sector=sectors,
-        fuel=[_previous_fuel(code, file_name) for code in tags_and_codes[1]],
-    ).loc[:, ["sector", "fuel", "emission", "factor", "notes", "reference"]]
-
-
 def get_upstream_emission_factors() -> pd.DataFrame:
     """
     Emissions of producing and delivering each fuel, before it is burned (ECCC Fuel
@@ -367,12 +260,16 @@ def get_upstream_emission_factors() -> pd.DataFrame:
         PJ of fuel), `notes`, `reference`.
     """
     file_name = "upstream_emission_factors.csv"
-    factors = _read_previous_emission_factors(file_name)
+    resource = files("canoe.fuel").joinpath(f"data/{file_name}")
+    with resource.open("rb") as f:
+        factors = parse_previous_emission_factors(
+            pd.read_csv(f, encoding="utf-8-sig"), file_name
+        )
     if not factors["commodity"].str.startswith("F_").all():
         raise ValueError(f"{file_name}: expected F_<fuel> commodities")
     return factors.assign(
         fuel=[
-            _previous_fuel(code, file_name)
+            previous_fuel(code, file_name)
             for code in factors["commodity"].str.removeprefix("F_")
         ]
     ).loc[:, ["fuel", "emission", "factor", "notes", "reference"]]

@@ -1,4 +1,12 @@
 # ####################################################################################
+# ELECTRICITY CONFIG
+# ####################################################################################
+# Electricity supply of the sectors (E_<S>_ELC) and the grid behind it; runs after the
+# sectors, and its generators' fuels are supplied by the fuel module
+[compiler]
+electricity = "configuration/electricity-default.toml"
+
+# ####################################################################################
 # COMPILER CONFIG
 # ####################################################################################
 [compiler.base]
@@ -6,7 +14,21 @@ schema_version = "4.0"
 db_output_dir = "canoe-pwd/canoe.sqlite"
 # Version in the data set codes (e.g. COMHR003), inherited by the sectors
 data_version = "003"
-existing_periods = [2000, 2005, 2010, 2015, 2020, 2022, 2024]
+existing_periods = [
+  1970,
+  1975,
+  1980,
+  1985,
+  1990,
+  1995,
+  2000,
+  2005,
+  2010,
+  2015,
+  2020,
+  2022,
+  2024,
+]
 # Model periods, the ones the modules write data for. The end of the horizon
 # (last period + period_step, here 2050) is added to time_period with no data
 future_periods = [2025, 2030, 2035, 2040, 2045]
@@ -42,7 +64,6 @@ cache_dir = ".cache"
 cache_date = "2026-08-10"
 force_sync = false
 
-
 # ####################################################################################
 # END-USE SECTORS CONFIG
 # ####################################################################################
@@ -69,7 +90,7 @@ reproduce_previous_price_errors = true
 # gasoline without combustion factors). See FUEL_MODULE_BUGS.md.
 reproduce_previous_emission_errors = false
 # "error" or "warning"
-validation_behavior = "error"      # database lacks periods, regions or commodities
+validation_behavior = "error"  # database lacks periods, regions or commodities
 missing_data_behavior = "warning"  # a fuel imported by a sector has no price or emission factors
 
 # ####################################################################################

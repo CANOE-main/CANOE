@@ -1,0 +1,83 @@
+# ####################################################################################
+# REPRODUCTION OF canoe-pwd/canoe-v4-all-high.sqlite
+# ####################################################################################
+# The settings the previous modules used for the reference database, as close as the
+# new modules allow. Run from the repository root:
+#   uv run canoe-compiler -c configuration/reproduce-all-high/pipeline.toml
+#
+# Not reproduced, by design:
+# - Transportation (TRPHR*): not migrated yet, so no T_* rows and no EV electricity.
+# - Bugs of the previous modules (see BUGS_LIST.md and the <MODULE>_MODULE_BUGS.md
+#   files): every reproduce_previous_* toggle is off and the fixes apply.
+# - Small numerical differences (rounded cached tables, exact unit factors).
+#
+# Deviations from the default configuration (configuration/*-default.toml):
+# - fuel: reproduce_previous_price_errors = false (it is true in full-pipeline.toml).
+# - agriculture: gdp_projection_point = "legacy".
+# - industry: other_fuels = "free".
+# The other module files are copies of the defaults.
+
+# ####################################################################################
+# ELECTRICITY
+# ####################################################################################
+[compiler]
+electricity = "configuration/reproduce-all-high/electricity.toml"
+
+# ####################################################################################
+# COMPILER CONFIG
+# ####################################################################################
+[compiler.base]
+schema_version = "4.0"
+db_output_dir = "canoe-pwd/canoe-reproduce-all-high.sqlite"
+# Data sets *003 of the reference
+data_version = "003"
+# The reference's time_period
+existing_periods = [
+  1970,
+  1975,
+  1980,
+  1985,
+  1990,
+  1995,
+  2000,
+  2005,
+  2010,
+  2015,
+  2020,
+  2022,
+  2024,
+]
+future_periods = [2025, 2030, 2035, 2040, 2045]
+period_step = 5
+provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
+global_discount_rate = 0.03
+gdp_scenario = "Global Net-zero"
+# Commercial, industry and residential demands match the reference at period_end;
+# agriculture overrides it (see agriculture.toml)
+gdp_projection_point = "period_end"
+price_projection_point = "period_end"
+model_currency_year = 2020
+
+[compiler.base.data_cache_config]
+cache_dir = ".cache"
+cache_date = "2026-08-10"
+force_sync = false
+
+# ####################################################################################
+# END-USE SECTORS
+# ####################################################################################
+[compiler.sectors]
+commercial = "configuration/reproduce-all-high/commercial.toml"
+agriculture = "configuration/reproduce-all-high/agriculture.toml"
+industry = "configuration/reproduce-all-high/industry.toml"
+residential = "configuration/reproduce-all-high/residential.toml"
+
+# ####################################################################################
+# FUELS
+# ####################################################################################
+[compiler.fuel]
+# Previous module's price and emission errors not reproduced (FUEL_MODULE_BUGS.md)
+reproduce_previous_price_errors = false
+reproduce_previous_emission_errors = false
+validation_behavior = "error"
+missing_data_behavior = "warning"

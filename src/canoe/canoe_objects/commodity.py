@@ -1,5 +1,5 @@
 """
-Fuel and source commodities.
+Fuel, source and other physical commodities.
 
 Examples in this module run against `db`, an in-memory CANOE database prepared in
 `canoe_objects/conftest.py` (data sets `COMDOC*`).
@@ -153,6 +153,73 @@ class SourceCommodityEntity:
         commodity = Commodity(
             name=self.name,
             flag=CommodityTypeCode.S,
+            description=self.description,
+            units=self.units,
+            data_id=self.data_id.get_dataset_code(),
+        )
+        sql, params = Commodity.to_insert_or_ignore_sql(commodity)
+        write_label(db_conn, commodity)
+        db_conn.execute(sql, params)
+
+
+class PhysicalCommodityEntity:
+    """
+    A named physical commodity (flag `p`) that is not a sector's fuel: an
+    intermediate step of a supply chain, e.g. the levels of the electricity grid
+    (`E_elc_tx`, `E_elc_dx`, `E_elc_dem`). Its flows balance in every time slice.
+
+    Technologies take it as input or output, so it must be built before them.
+    Building it twice is harmless (insert or ignore).
+
+    Parameters
+    ----------
+    name : str
+        Commodity name.
+    description : str
+        Description in the `commodity` table.
+    data_id : DatasetIdentifier
+        Data set of the `commodity` row (sector-wide, no region).
+    units : str
+        Units of the commodity, PJ by default (energy flows).
+
+    Examples
+    --------
+    >>> from canoe.common.naming import DatasetIdentifier
+    >>> PhysicalCommodityEntity(
+    ...     name="C_hot_water",
+    ...     description="hot water of a district heating loop",
+    ...     data_id=DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+    ... ).build(db)
+    >>> db.execute(
+    ...     "SELECT name, flag, description, units, data_id FROM commodity"
+    ... ).fetchall()
+    [('C_hot_water', 'p', 'hot water of a district heating loop', 'PJ', 'COMDOC001')]
+    """
+
+    def __init__(
+        self,
+        name: str,
+        description: str,
+        data_id: DatasetIdentifier,
+        units: str = "PJ",
+    ) -> None:
+        self.name: str = name
+        self.description: str = description
+        self.data_id: DatasetIdentifier = data_id
+        self.units: str = units
+
+    def build(self, db_conn: Connection):
+        """
+        Write the `commodity` row and its `commodity_label`.
+
+        Parameters
+        ----------
+        db_conn : Connection
+            Open connection; the caller manages the transaction.
+        """
+        commodity = Commodity(
+            name=self.name,
+            flag=CommodityTypeCode.P,
             description=self.description,
             units=self.units,
             data_id=self.data_id.get_dataset_code(),

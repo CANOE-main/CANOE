@@ -2,11 +2,11 @@ import pandas as pd
 import pytest
 
 from canoe.common import CANOEFuel, CANOESector
+from canoe.common.loaders import get_combustion_emission_factors
 from canoe.fuel.emission_factors import (
     COMBUSTION_FACTOR_PROXIES,
     add_combustion_factor_proxies,
 )
-from canoe.fuel.loaders import get_combustion_emission_factors
 
 
 def _rows(factors: pd.DataFrame, sector: CANOESector, fuel: CANOEFuel) -> pd.DataFrame:
