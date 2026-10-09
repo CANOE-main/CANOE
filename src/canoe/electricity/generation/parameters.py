@@ -16,10 +16,10 @@ import pandas as pd
 
 from canoe.common import CANOEProvince
 
-from ..catalogue import GenerationTechnology, StorageTechnology
+from ..catalogue import CCSRetrofit, GenerationTechnology, StorageTechnology
 
-type Technology = GenerationTechnology | StorageTechnology
-"""Generators and storage share the ATB and CODERS cost parameters."""
+type Technology = GenerationTechnology | StorageTechnology | CCSRetrofit
+"""Generators, storage and CCS retrofits share the ATB (and CODERS) parameters."""
 
 
 def generation_lifetimes(generic: pd.DataFrame) -> dict[GenerationTechnology, int]:
@@ -188,7 +188,7 @@ def process_efficiencies(
         if technology.get_input_fuel() is None:
             return 1.0
         if technology.get_atb_display_name() is not None:
-            heat_rate = _atb_value(atb, technology, "Heat Rate", year)
+            heat_rate = atb_value(atb, technology, "Heat Rate", year)
             return 1 / (heat_rate * MWH_PER_MMBTU)
         return float(generic.loc[technology.get_coders_generic_type(), "efficiency"])
 
@@ -210,11 +210,15 @@ def process_efficiencies(
 
 
 def process_investment_costs(
-    processes: pd.DataFrame, atb: pd.DataFrame, atb_conversion: float
+    processes: pd.DataFrame,
+    atb: pd.DataFrame,
+    atb_conversion: float,
+    metric: str = "OCC",
 ) -> pd.DataFrame:
     """
-    Investment cost of each new process: the ATB overnight capital cost at the
-    process's `atb_year`, in M$/GW of the model currency ($/kW is M$/GW).
+    Investment cost of each new process: the ATB overnight capital cost (`metric`;
+    `Additional OCC` for CCS retrofits) at the process's `atb_year`, in M$/GW of the
+    model currency ($/kW is M$/GW).
 
     Parameters
     ----------
@@ -224,6 +228,8 @@ def process_investment_costs(
         See `loaders.get_atb_generation`.
     atb_conversion : float
         Factor from the ATB currency to the model currency.
+    metric : str
+        ATB investment parameter, `OCC` by default.
 
     Returns
     -------
@@ -257,7 +263,7 @@ def process_investment_costs(
             "technology": processes["technology"],
             "vintage": processes["vintage"],
             "cost": [
-                _atb_value(atb, t, "OCC", y) * atb_conversion
+                atb_value(atb, t, metric, y) * atb_conversion
                 for t, y in zip(processes["technology"], processes["atb_year"])
             ],
         }
@@ -339,8 +345,8 @@ def process_om_costs[T: (GenerationTechnology, StorageTechnology)](
     def costs(technology: T, year: int) -> tuple[float, float]:
         if technology.get_atb_display_name() is not None:
             # $/kW-year is M$/GW-year
-            fixed = _atb_value(atb, technology, "Fixed O&M", year)
-            variable = _atb_value(atb, technology, "Variable O&M", year)
+            fixed = atb_value(atb, technology, "Fixed O&M", year)
+            variable = atb_value(atb, technology, "Variable O&M", year)
             return fixed * atb_conversion, variable * PER_MWH_TO_PER_PJ * atb_conversion
         row = generic.loc[technology.get_coders_generic_type()]
         return (
@@ -621,7 +627,7 @@ def vre_bin_capacity_factors(
     ).reset_index(drop=True)
 
 
-def _atb_value(
+def atb_value(
     atb: pd.DataFrame, technology: Technology, parameter: str, year: int
 ) -> float:
     """ATB value of `technology` at `year`, not before the first year the ATB has

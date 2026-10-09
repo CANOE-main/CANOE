@@ -34,7 +34,7 @@ def add_combustion_factor_proxies(
     ----------
     combustion_factors : pd.DataFrame
         Columns `sector`, `fuel`, `emission`, `factor`, `notes`, `reference`, see
-        `canoe.fuel.loaders.get_combustion_emission_factors`.
+        `canoe.common.loaders.get_combustion_emission_factors`.
     reproduce_previous_emission_errors : bool
         Leave the proxied (sector, fuel) without factors, as the previous module.
 

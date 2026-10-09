@@ -272,6 +272,20 @@ class GenerationTechnology(StrEnum):
             return 2030
         return None
 
+    def get_capture_rate(self) -> float:
+        """
+        Share of the CO2 of the fuel burned that the technology captures: 0.95 for
+        the generators built with carbon capture, 0 otherwise.
+
+        Examples
+        --------
+        >>> GenerationTechnology.CoalCCS.get_capture_rate()
+        0.95
+        """
+        if self in (GenerationTechnology.CoalCCS, GenerationTechnology.NaturalGasCCS):
+            return 0.95
+        return 0.0
+
     def is_cogeneration(self) -> bool:
         """
         Whether the technology also produces heat for a host site: its existing
@@ -682,3 +696,71 @@ class CCSRetrofit(StrEnum):
             CCSRetrofit.NaturalGasCC95: GenerationTechnology.NaturalGasCC,
         }
         return GENERATORS[self]
+
+    def get_capture_rate(self) -> float:
+        """
+        Share of the generator's CO2 the retrofit captures.
+
+        Examples
+        --------
+        >>> CCSRetrofit.NaturalGasCC90.get_capture_rate()
+        0.9
+        """
+        RATES = {
+            CCSRetrofit.Coal90: 0.9,
+            CCSRetrofit.Coal95: 0.95,
+            CCSRetrofit.NaturalGasCC90: 0.9,
+            CCSRetrofit.NaturalGasCC95: 0.95,
+        }
+        return RATES[self]
+
+    def get_description(self) -> str:
+        """
+        Description in the `technology` table.
+
+        Examples
+        --------
+        >>> CCSRetrofit.NaturalGasCC95.get_description()
+        '95% ccs retrofit for natural gas combined cycle generation'
+        """
+        return (
+            f"{round(self.get_capture_rate() * 100)}% ccs retrofit for "
+            + self.get_generator().get_description()
+        )
+
+    def get_atb_display_name(self) -> str:
+        """
+        NREL ATB technology (`display_name`) of the retrofit's efficiency penalty and
+        costs.
+
+        Examples
+        --------
+        >>> CCSRetrofit.Coal90.get_atb_display_name()
+        'Coal integrated retrofit 90%-CCS'
+        """
+        DISPLAY_NAMES = {
+            CCSRetrofit.Coal90: "Coal integrated retrofit 90%-CCS",
+            CCSRetrofit.Coal95: "Coal integrated retrofit 95%-CCS",
+            CCSRetrofit.NaturalGasCC90: "NG Combined Cycle H-Class integrated "
+            + "retrofit 90%-CCS",
+            CCSRetrofit.NaturalGasCC95: "NG Combined Cycle H-Class integrated "
+            + "retrofit 95%-CCS",
+        }
+        return DISPLAY_NAMES[self]
+
+    def get_atb_first_year(self) -> int | None:
+        """Earliest year the ATB values are read at, if later than the first ATB
+        year: none (see `GenerationTechnology.get_atb_first_year`)"""
+        return None
+
+    def get_coders_generic_type(self) -> str:
+        """
+        CODERS `generation_generic` type of the retrofitted generator, whose service
+        life the retrofit takes.
+
+        Examples
+        --------
+        >>> CCSRetrofit.NaturalGasCC90.get_coders_generic_type()
+        'ng_cc'
+        """
+        return self.get_generator().get_coders_generic_type()

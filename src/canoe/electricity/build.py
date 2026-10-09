@@ -2,12 +2,15 @@
 
 from typing import TYPE_CHECKING
 
+import pandas as pd
 from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
 from canoe.canoe_objects.fuel_imports import declare_fuel_imports
 from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.common import (
+    CANOEEmission,
+    CANOEEmissionDeclaration,
     CANOEFuel,
     CANOEFuelImport,
     CANOEModuleOutput,
@@ -16,7 +19,10 @@ from canoe.common import (
     atomic_transaction,
 )
 from canoe.common.currency import currency_conversion_factor
-from canoe.common.loaders import get_exchange_and_inflation_tables
+from canoe.common.loaders import (
+    get_combustion_emission_factors,
+    get_exchange_and_inflation_tables,
+)
 from canoe.common.naming import DatasetIdentifier
 from canoe.common.periods import (
     ProjectionPoint,
@@ -25,7 +31,7 @@ from canoe.common.periods import (
 )
 from canoe.common.validation import check_missing_existing_periods
 
-from .catalogue import GenerationTechnology, StorageTechnology
+from .catalogue import CCSRetrofit, GenerationTechnology, StorageTechnology
 from .fleet import (
     existing_generators,
     existing_storage,
@@ -33,12 +39,23 @@ from .fleet import (
     existing_units,
 )
 from .generation.capacity_factors import existing_capacity_factors
+from .generation.ccs import (
+    electricity_co2_factors,
+    generator_capture_factors,
+    retrofit_capture_factors,
+    retrofit_efficiencies,
+    retrofit_om_costs,
+    retrofit_processes,
+)
 from .generation.entities import (
+    CarbonCapture,
     GenerationEntities,
     GenerationNotes,
+    build_ccs_retrofits,
     build_existing_generation,
     build_new_generation,
     build_vre_bins,
+    retrofit_intermediate_commodity,
 )
 from .generation.parameters import (
     cogeneration_activity,
@@ -136,7 +153,7 @@ def build_electricity(
             sorted(
                 {
                     name
-                    for t in [*GenerationTechnology, *StorageTechnology]
+                    for t in [*GenerationTechnology, *StorageTechnology, *CCSRetrofit]
                     if (name := t.get_atb_display_name()) is not None
                 }
             ),
@@ -167,7 +184,9 @@ def build_electricity(
             bin_fixed = get_vre_bin_fixed_costs(cfg.data_cache_config)
             bin_limits = get_vre_bin_capacity_limits(cfg.data_cache_config)
             bin_factors = get_vre_bin_capacity_factors(cfg.data_cache_config)
-        # TODO: CODERS (storage, reserve, interties, demand), ramp rates
+        # Carbon capture: CO2 of burning each fuel (kt/PJ), shared with the fuel module
+        combustion_factors = get_combustion_emission_factors()
+        # TODO: CODERS (reserve, interties, demand), ramp rates
 
         # Compute parameters
         # ------------------
@@ -210,11 +229,25 @@ def build_electricity(
         )
         notes = _generation_notes(cfg)
 
+        # - Carbon capture: the retrofitted generators output to the intermediate
+        #   commodity of their retrofits; those built with capture capture part of
+        #   the CO2 of their fuel
+        retrofits = list(cfg.generation.ccs_retrofits)
+        co2_factors = electricity_co2_factors(combustion_factors)
+        capture = CarbonCapture(
+            outputs={
+                generator: retrofit_intermediate_commodity(generator)
+                for generator in dict.fromkeys(r.get_generator() for r in retrofits)
+            },
+            factors=generator_capture_factors(list(GenerationTechnology), co2_factors),
+        )
+
         # - Existing generation: CODERS units grouped by (region, technology,
         #   vintage), efficiencies, O&M costs, the activity bounds of cogeneration
         #   (the ATB is read at the vintage year), and the capacity factors of the
         #   weather-driven ones
         existing_generation: GenerationEntities | None = None
+        fleet = pd.DataFrame(columns=["region", "technology", "vintage"])
         if not cfg.generation.skip_existing:
             fleet_units = existing_units(
                 units, cfg.provinces, cfg.future_periods[0], cfg.period_step
@@ -268,6 +301,7 @@ def build_electricity(
                 ),
                 hourly_factors,
                 daily_limits,
+                capture,
                 notes,
                 electricity_data_id,
             )
@@ -296,6 +330,7 @@ def build_electricity(
                 coders_conversion,
             ),
             lifetimes,
+            capture,
             notes,
             electricity_data_id,
         )
@@ -402,7 +437,35 @@ def build_electricity(
             notes,
             electricity_data_id,
         )
-        # TODO: CCS, reliability, trade
+
+        # - CCS retrofits: where a generator can be retrofitted, their efficiency
+        #   penalty and costs (ATB at the projection year of the vintage), and the CO2
+        #   they capture with the configured heat rates of the generators
+        ccs_retrofits: GenerationEntities | None = None
+        if retrofits:
+            retrofitted, bypasses = retrofit_processes(
+                fleet,
+                retrofits,
+                list(cfg.generation.new_technologies),
+                cfg.provinces,
+                projection_years,
+                lifetimes,
+            )
+            ccs_retrofits = build_ccs_retrofits(
+                retrofitted,
+                bypasses,
+                retrofit_efficiencies(retrofitted, atb),
+                process_investment_costs(
+                    retrofitted, atb, atb_conversion, metric="Additional OCC"
+                ),
+                retrofit_om_costs(retrofitted, atb, cfg.future_periods, atb_conversion),
+                retrofit_capture_factors(
+                    retrofits, co2_factors, cfg.generation.ccs_retrofit_heat_rates
+                ),
+                notes,
+                electricity_data_id,
+            )
+        # TODO: reliability, trade
 
         # Build TEMOA Objects
         # -------------------
@@ -432,8 +495,10 @@ def build_electricity(
         )
         grid.build(db_conn)
 
-        # Generators: existing, new and the wind and solar bins
+        # Generators: CCS retrofits first (the retrofitted generators output to their
+        # intermediate commodity), existing, new and the wind and solar bins
         generation = {
+            "CCS retrofit and bypass": ccs_retrofits,
             "existing": existing_generation,
             "new": new_generation,
             "wind and solar bin": vre_bins,
@@ -453,11 +518,15 @@ def build_electricity(
         logger.info(f"Building {len(storage)} storage technologies")
         for technology in storage:
             technology.build(db_conn)
-        # TODO: CCS retrofits, interties
+        # TODO: interties
 
-    # The fuels the generators burn, for the fuel module
+    # The fuels the generators burn, for the fuel module, and the CO2 captured
+    captures = any(t.input_emission_factors for t in generators)
     return CANOEModuleOutput(
-        fuel_imports=declare_fuel_imports(CANOESector.Electricity, generators)
+        fuel_imports=declare_fuel_imports(CANOESector.Electricity, generators),
+        emissions=[CANOEEmissionDeclaration(CANOESector.Electricity, CANOEEmission.CO2)]
+        if captures
+        else [],
     )
 
 
@@ -515,6 +584,10 @@ def _generation_notes(cfg: "CANOEElectricityConfig") -> GenerationNotes:
         + f"provinces: StatCan 25-10-0015-01 {years.statcan_monthly_hydro} monthly "
         + "hydro generation, flat within the month, shared between hydro types by "
         + "CODERS annual energy",
+        capture="minus the capture rate times the CO2 combustion factor of the fuel "
+        + "(electricity sector, shared with the fuel module, which accounts the "
+        + "emissions); retrofits per unit of the generator's electricity, with the "
+        + "configured generator heat rate (ccs_retrofit_heat_rates)",
     )
 
 

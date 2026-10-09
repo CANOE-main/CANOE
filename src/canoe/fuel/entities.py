@@ -160,7 +160,7 @@ def build_fuel_supply(
       `canoe.fuel.loaders.get_upstream_emission_factors`.
     - combustion_factors: emissions of burning each fuel in each sector, the columns
       of `upstream_factors` plus `sector`, see
-      `canoe.fuel.loaders.get_combustion_emission_factors`.
+      `canoe.common.loaders.get_combustion_emission_factors`.
     - lifetime: technology lifetime (years), one period so each vintage only
       supplies its own period
 

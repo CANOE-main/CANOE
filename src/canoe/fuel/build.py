@@ -13,7 +13,10 @@ from canoe.common import (
     CANOESector,
     atomic_transaction,
 )
-from canoe.common.loaders import get_exchange_and_inflation_tables
+from canoe.common.loaders import (
+    get_combustion_emission_factors,
+    get_exchange_and_inflation_tables,
+)
 from canoe.common.naming import DatasetIdentifier
 from canoe.common.periods import ProjectionPoint, projection_year_by_period
 
@@ -21,7 +24,6 @@ from .emission_factors import add_combustion_factor_proxies, check_combustion_fa
 from .entities import build_fuel_supply
 from .loaders import (
     get_atb_fuel_prices,
-    get_combustion_emission_factors,
     get_eia_energy_prices,
     get_fixed_fuel_prices,
     get_upstream_emission_factors,

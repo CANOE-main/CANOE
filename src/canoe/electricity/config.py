@@ -107,6 +107,18 @@ class GenerationConfig(BaseModel):
     """Carbon capture retrofits the model can build on coal and natural gas combined
     cycle generators; empty for none."""
 
+    ccs_retrofit_heat_rates: dict[GenerationTechnology, float] = Field(
+        default_factory=lambda: {
+            GenerationTechnology.Coal: 8.49,
+            GenerationTechnology.NaturalGasCC: 6.196,
+        }
+    )
+    """Heat rate (MMBtu of fuel per MWh) of the generators a CCS retrofit treats, for
+    the CO2 it captures: one value for all the plant vintages whose output the
+    retrofit takes. Defaults: NREL ATB 2024, 2022 new plant (`Coal-new`, `NG 2-on-1
+    Combined Cycle (H-Frame)`). TODO: replace with a source for the existing fleet's
+    heat rates."""
+
     @field_validator("new_technologies", "ccs_retrofits")
     @classmethod
     def _check_technologies[T](cls, value: list[T]) -> list[T]:
@@ -128,6 +140,18 @@ class GenerationConfig(BaseModel):
 
     @model_validator(mode="after")
     def _check_retrofitted_generators(self) -> Self:
+        without_heat_rate = sorted(
+            {
+                r.get_generator().value
+                for r in self.ccs_retrofits
+                if not self.ccs_retrofit_heat_rates.get(r.get_generator(), 0) > 0
+            }
+        )
+        if without_heat_rate:
+            raise ValueError(
+                f"CCS retrofits of {without_heat_rate} need a positive heat rate in "
+                + "ccs_retrofit_heat_rates"
+            )
         if not self.skip_existing:
             return self
         orphans = [

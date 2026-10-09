@@ -9,6 +9,7 @@ from canoe.common import CANOEFuel, CANOEProvince, CANOESector
 from canoe.common.naming import DatasetIdentifier
 from canoe.electricity.catalogue import GenerationTechnology, GridLevel
 from canoe.electricity.generation.entities import (
+    CarbonCapture,
     GenerationEntities,
     GenerationNotes,
     build_existing_generation,
@@ -35,7 +36,7 @@ NOTES = GenerationNotes(
     capacity="capacity", atb_costs="atb", coders_costs="coders",
     atb_efficiency="atb", cogeneration="cogeneration", vre_bin_costs="bins",
     vre_bin_limits="limits", vre_bin_capacity_factors="bin profiles",
-    vre_capacity_factors="vre", hydro_capacity_factors="hydro",
+    vre_capacity_factors="vre", hydro_capacity_factors="hydro", capture="capture",
 )  # fmt: skip
 HOURS = 8760
 CG = GenerationTechnology.NaturalGasCogeneration
@@ -132,6 +133,7 @@ def _build(db: sqlite3.Connection) -> GenerationEntities:
         pd.DataFrame(
             {"region": QC, "technology": MLY, "day": range(365), "factor": 0.5}
         ),
+        CarbonCapture(),
         NOTES,
         DATA_ID,
     )
@@ -247,6 +249,7 @@ def test_new_generation_reads_atb_at_projection_year(db: sqlite3.Connection):
         process_investment_costs(processes, atb, 2.0),
         process_om_costs(processes, pd.DataFrame(), atb, {SMR: 60}, PERIODS, 2.0, 1.0),
         {SMR: 60},
+        CarbonCapture(),
         NOTES,
         DATA_ID,
     )

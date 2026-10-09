@@ -226,8 +226,9 @@ def get_atb_generation(
     -------
     pd.DataFrame
         Columns `display_name`, `parameter` (`Heat Rate` in MMBtu/MWh, `OCC` in
-        $/kW, `Fixed O&M` in $/kW-year, `Variable O&M` in $/MWh), `year` and
-        `value`.
+        $/kW, `Fixed O&M` in $/kW-year, `Variable O&M` in $/MWh; for CCS
+        retrofits `Net Output Penalty`, a fraction, and `Additional OCC` in $/kW),
+        `year` and `value`.
 
     Raises
     ------
@@ -237,7 +238,14 @@ def get_atb_generation(
     file_path = _cache_file(cache_config, "atb")
     logger.debug(f"Loading cached NREL ATB from {file_path}")
     df = pd.read_parquet(file_path)
-    parameters = ["Heat Rate", "OCC", "Fixed O&M", "Variable O&M"]
+    parameters = [
+        "Heat Rate",
+        "OCC",
+        "Fixed O&M",
+        "Variable O&M",
+        "Net Output Penalty",
+        "Additional OCC",
+    ]
     selected = df.loc[
         df["display_name"].isin(display_names)
         & df["core_metric_parameter"].isin(parameters)

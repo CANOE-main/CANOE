@@ -85,6 +85,12 @@ ccs_retrofits = [
   "ng_ccs_retrofit_90",
   "ng_ccs_retrofit_95",
 ]
+# Heat rate (MMBtu/MWh) of the generators a CCS retrofit treats, for the CO2 it captures
+# (capture rate x combustion factor x heat rate / retrofit efficiency). One value for all
+# the plant vintages whose output the retrofit takes. Defaults: NREL ATB 2024, 2022 new
+# plant (coal "Coal-new", NG "NG 2-on-1 Combined Cycle (H-Frame)").
+# TODO: replace with a source for the existing fleet's heat rates
+ccs_retrofit_heat_rates = { coal = 8.49, ng_cc = 6.196 }
 
 # ----------------------------------------------------------
 #                         STORAGE

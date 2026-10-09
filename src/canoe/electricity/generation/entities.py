@@ -36,11 +36,15 @@ from canoe.canoe_objects.commodity import (
     SourceCommodityEntity,
 )
 from canoe.canoe_objects.technology import TechnologyEntity
-from canoe.common import CANOEProvince, CANOESector
-from canoe.common.naming import DatasetIdentifier, get_fuel_commodity_in_sector
+from canoe.common import CANOEEmission, CANOEProvince, CANOESector
+from canoe.common.naming import (
+    DatasetIdentifier,
+    get_emission_commodity_name,
+    get_fuel_commodity_in_sector,
+)
 from canoe.common.time_slices import hour_to_day, hour_to_tod
 
-from ..catalogue import GenerationTechnology
+from ..catalogue import CCSRetrofit, GenerationTechnology
 from .parameters import Technology
 
 
@@ -76,6 +80,8 @@ class GenerationNotes:
         the wind and solar bins.
     vre_capacity_factors, hydro_capacity_factors : str
         Source of the capacity factors of the existing wind and solar, and hydro.
+    capture : str
+        How the CO2 captured is computed.
     """
 
     capacity: str
@@ -88,6 +94,7 @@ class GenerationNotes:
     vre_bin_capacity_factors: str
     vre_capacity_factors: str
     hydro_capacity_factors: str
+    capture: str
 
 
 @dataclass
@@ -107,6 +114,37 @@ class GenerationEntities:
             technology.build(db_conn)
 
 
+@dataclass(frozen=True)
+class CarbonCapture:
+    """
+    How the generators connect to carbon capture.
+
+    Parameters
+    ----------
+    outputs : dict[GenerationTechnology, str]
+        Generators whose output goes to the intermediate commodity of their CCS
+        retrofits (see `retrofit_intermediate_commodity`) instead of the grid.
+    factors : dict[GenerationTechnology, float]
+        CO2 captured per unit of fuel burned (negative, kt/PJ) by the generators built
+        with capture, see `generation.ccs.generator_capture_factors`.
+    """
+
+    outputs: dict[GenerationTechnology, str] = field(default_factory=dict)
+    factors: dict[GenerationTechnology, float] = field(default_factory=dict)
+
+
+def retrofit_intermediate_commodity(generator: GenerationTechnology) -> str:
+    """
+    Commodity between a retrofitted generator and the grid.
+
+    Examples
+    --------
+    >>> retrofit_intermediate_commodity(GenerationTechnology.NaturalGasCC)
+    'E_elc_tx_ng_cc'
+    """
+    return f"{generator.get_grid_level().get_commodity()}_{generator.value}"
+
+
 def build_existing_generation(
     fleet: pd.DataFrame,
     lifetimes: dict[GenerationTechnology, int],
@@ -115,6 +153,7 @@ def build_existing_generation(
     cogeneration: pd.DataFrame,
     capacity_factors: pd.DataFrame,
     seasonal_limits: pd.DataFrame,
+    capture: CarbonCapture,
     notes: GenerationNotes,
     data_id: DatasetIdentifier,
 ) -> GenerationEntities:
@@ -141,6 +180,8 @@ def build_existing_generation(
     seasonal_limits : pd.DataFrame
         Upper limits on each day's capacity factor (columns `region`, `technology`,
         `day`, `factor`), see `generation.capacity_factors.daily_capacity_factors`.
+    capture : CarbonCapture
+        Outputs of the retrofitted generators, and capture of those built with it.
     notes : GenerationNotes
         Notes of the rows.
     data_id : DatasetIdentifier
@@ -184,6 +225,7 @@ def build_existing_generation(
             notes,
             data_id,
             input_commodity=reservoir if is_reservoir else None,
+            capture=capture,
         ).with_existing_capacity(
             capacity,
             notes=notes.capacity
@@ -292,6 +334,7 @@ def build_new_generation(
     investment: pd.DataFrame,
     costs: pd.DataFrame,
     lifetimes: dict[GenerationTechnology, int],
+    capture: CarbonCapture,
     notes: GenerationNotes,
     data_id: DatasetIdentifier,
 ) -> GenerationEntities:
@@ -309,6 +352,8 @@ def build_new_generation(
         See `generation.parameters.process_om_costs`.
     lifetimes : dict[GenerationTechnology, int]
         See `generation.parameters.generation_lifetimes`.
+    capture : CarbonCapture
+        Outputs of the retrofitted generators, and capture of those built with it.
     notes : GenerationNotes
         Notes of the rows.
     data_id : DatasetIdentifier
@@ -330,6 +375,7 @@ def build_new_generation(
             lifetimes[technology],
             notes,
             data_id,
+            capture=capture,
         ).with_investment_cost(
             region_vintage(
                 investment.loc[investment["technology"] == technology],
@@ -437,6 +483,148 @@ def build_vre_bins(
     return entities
 
 
+def build_ccs_retrofits(
+    processes: pd.DataFrame,
+    bypasses: pd.DataFrame,
+    efficiencies: pd.DataFrame,
+    investment: pd.DataFrame,
+    costs: pd.DataFrame,
+    captures: dict[CCSRetrofit, float],
+    notes: GenerationNotes,
+    data_id: DatasetIdentifier,
+) -> GenerationEntities:
+    """
+    The CCS retrofits and the commodities and bypasses around them. Each retrofitted
+    generator outputs to its intermediate commodity (see `CarbonCapture`):
+
+        E_elc_tx_<gen> --<GEN>_RFIT_BYPASS---------> E_elc_tx
+                       \\--<GEN>_CCS_RFIT_<rate>---> E_elc_tx  (captures CO2)
+
+    The bypass is free and unlimited; the retrofits are built (one vintage per period
+    where a generator can be retrofitted), lose part of the electricity and capture
+    part of the CO2 of the fuel burned upstream.
+
+    Parameters
+    ----------
+    processes, bypasses : pd.DataFrame
+        See `generation.ccs.retrofit_processes`.
+    efficiencies : pd.DataFrame
+        See `generation.ccs.retrofit_efficiencies`.
+    investment : pd.DataFrame
+        See `generation.parameters.process_investment_costs` (`Additional OCC`).
+    costs : pd.DataFrame
+        See `generation.ccs.retrofit_om_costs`.
+    captures : dict[CCSRetrofit, float]
+        See `generation.ccs.retrofit_capture_factors`.
+    notes : GenerationNotes
+        Notes of the rows.
+    data_id : DatasetIdentifier
+        Data set of the electricity module.
+    """
+    entities = GenerationEntities()
+    for generator in dict.fromkeys(bypasses["generator"]):
+        intermediate = retrofit_intermediate_commodity(generator)
+        grid = generator.get_grid_level().get_commodity()
+        entities.commodities.append(
+            PhysicalCommodityEntity(
+                name=intermediate,
+                description=f"{generator.get_description()}, to the grid either "
+                + "directly or through a CCS retrofit",
+                data_id=data_id,
+            )
+        )
+        of_bypass = bypasses.loc[bypasses["generator"] == generator]
+        regions: list[CANOEProvince] = list(dict.fromkeys(of_bypass["region"]))
+        lifetimes = RegionalValuesArray(regions)
+        for region, lifetime in zip(of_bypass["region"], of_bypass["lifetime"]):
+            lifetimes.set(float(lifetime), region=region)
+        first_period = min(int(v) for v in processes["vintage"])
+        entities.technologies.append(
+            TechnologyEntity(
+                name=f"{generator.get_tech_code()}_RFIT_BYPASS",
+                output_commodity=grid,
+                data_id=data_id,
+                description=f"{generator.get_description()} without CCS retrofit",
+                sector=CANOESector.Electricity,
+            )
+            .set_unlimited_capacity()
+            .with_efficiency(
+                intermediate,
+                RegionVintageArray(regions, [first_period], fill=1.0),
+                notes="No losses: the generator's output as it is",
+                units="PJ/PJ",
+            )
+            .with_lifetime(
+                lifetimes,
+                notes="Until the end of life of the last retrofittable generator",
+            )
+            .with_capacity_to_activity(
+                RegionalValuesArray(regions, fill=capacity_to_activity()),
+                notes="PJ produced by 1 GW over a year (8760 h)",
+                units="PJ/GWy",
+            )
+        )
+
+        for retrofit in dict.fromkeys(
+            r for r in processes["technology"] if r.get_generator() == generator
+        ):
+            of_retrofit = processes.loc[processes["technology"] == retrofit]
+            regions = list(dict.fromkeys(of_retrofit["region"]))
+            vintages = sorted({int(v) for v in of_retrofit["vintage"]})
+            entity = (
+                TechnologyEntity(
+                    name=retrofit.get_tech_code(),
+                    output_commodity=grid,
+                    data_id=data_id,
+                    description=retrofit.get_description(),
+                    sector=CANOESector.Electricity,
+                )
+                .with_efficiency(
+                    intermediate,
+                    region_vintage(
+                        efficiencies.loc[efficiencies["technology"] == retrofit],
+                        "efficiency",
+                        regions,
+                        vintages,
+                    ),
+                    notes=f"1 + net output penalty ({retrofit.get_atb_display_name()})"
+                    + f": {notes.atb_efficiency}",
+                    units="PJ/PJ",
+                )
+                .with_lifetime_process(
+                    region_vintage(of_retrofit, "lifetime", regions, vintages),
+                    notes=f"{generator.get_description()} service life, capped at "
+                    + "the end of life of the last retrofittable generator",
+                )
+                .with_capacity_to_activity(
+                    RegionalValuesArray(regions, fill=capacity_to_activity()),
+                    notes="PJ produced by 1 GW over a year (8760 h)",
+                    units="PJ/GWy",
+                )
+                .with_investment_cost(
+                    region_vintage(
+                        investment.loc[investment["technology"] == retrofit],
+                        "cost",
+                        regions,
+                        vintages,
+                    ),
+                    notes=f"Additional OCC ({retrofit.get_atb_display_name()}): "
+                    + notes.atb_costs,
+                    units="M$/GW",
+                )
+                .with_input_emission_factor(
+                    get_emission_commodity_name(CANOEEmission.CO2),
+                    intermediate,
+                    captures[retrofit],
+                    notes=f"Captured: {notes.capture}",
+                    units="kt/PJ",
+                )
+            )
+            with_om_costs(entity, retrofit, costs, regions, vintages, notes)
+            entities.technologies.append(entity)
+    return entities
+
+
 def _commodities(
     technologies: list[GenerationTechnology], data_id: DatasetIdentifier
 ) -> list[FuelCommodityEntity | SourceCommodityEntity | PhysicalCommodityEntity]:
@@ -475,10 +663,12 @@ def _generator(
     notes: GenerationNotes,
     data_id: DatasetIdentifier,
     input_commodity: str | None = None,
+    capture: CarbonCapture | None = None,
 ) -> TechnologyEntity:
     """
-    A generator from its fuel (or `E_ethos`, or `input_commodity`) to its grid
-    level, with its flags, lifetime and capacity to activity.
+    A generator from its fuel (or `E_ethos`, or `input_commodity`) to its grid level
+    (or the intermediate commodity of its CCS retrofits), with its flags, lifetime,
+    capacity to activity and, if built with capture, the CO2 it captures.
     """
     fuel = technology.get_input_fuel()
     source = input_commodity or (
@@ -487,10 +677,13 @@ def _generator(
         else get_fuel_commodity_in_sector(CANOESector.Electricity, fuel)
     )
     regions: list[CANOEProvince] = list(efficiency.coords["region"])
-    return (
+    capture = capture or CarbonCapture()
+    entity = (
         TechnologyEntity(
             name=name,
-            output_commodity=technology.get_grid_level().get_commodity(),
+            output_commodity=capture.outputs.get(
+                technology, technology.get_grid_level().get_commodity()
+            ),
             data_id=data_id,
             description=f"{technology.get_description()} - {kind}",
             sector=CANOESector.Electricity,
@@ -519,6 +712,15 @@ def _generator(
             units="PJ/GWy",
         )
     )
+    if technology in capture.factors:
+        entity.with_input_emission_factor(
+            get_emission_commodity_name(CANOEEmission.CO2),
+            source,
+            capture.factors[technology],
+            notes=f"Captured: {notes.capture}",
+            units="kt/PJ",
+        )
+    return entity
 
 
 def with_om_costs(
