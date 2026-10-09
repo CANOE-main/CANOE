@@ -1,5 +1,7 @@
 """
-The existing generators: CODERS units grouped by region, technology and vintage.
+The existing generators: CODERS units given a technology and a vintage
+(`existing_units`), then grouped by region, technology and vintage
+(`existing_generators`).
 """
 
 import numpy as np
@@ -11,22 +13,20 @@ from canoe.common import CANOEProvince
 from .catalogue import GenerationTechnology
 
 
-def existing_generators(
+def existing_units(
     units: pd.DataFrame,
     provinces: list[CANOEProvince],
-    lifetimes: dict[GenerationTechnology, int],
     first_period: int,
     period_step: int,
-    threshold: float,
 ) -> pd.DataFrame:
     """
-    Existing capacity of each technology by region and vintage.
+    The CODERS units of the modelled technologies and provinces, with their
+    technology and vintage.
 
     A unit's vintage is its last renewal (its start if never renewed), rounded to
     a multiple of `period_step` and at most the year before the first period; units
     of technologies that never retire (hydro) all take that year. Units built from
-    the first period on are left out, and so are groups retired by the first period
-    (vintage + lifetime) or with `threshold` GW or less.
+    the first period on, and units without capacity, are left out.
 
     Parameters
     ----------
@@ -34,54 +34,38 @@ def existing_generators(
         CODERS generators, see `loaders.get_coders_generators`.
     provinces : list[CANOEProvince]
         Regions modelled; units elsewhere are left out.
-    lifetimes : dict[GenerationTechnology, int]
-        Lifetime of each technology, see `generation.parameters.existing_lifetimes`.
     first_period : int
         First model period.
     period_step : int
         Years between the vintages.
-    threshold : float
-        Smallest capacity kept, GW.
 
     Returns
     -------
     pd.DataFrame
-        Columns `region`, `technology` (`GenerationTechnology`), `vintage`,
-        `capacity` (GW), `annual_energy` (average annual output, PJ) and
-        `facilities` (names, ` - `-separated), sorted by technology, region and
-        vintage.
+        The columns of `units` plus `technology` (`GenerationTechnology`) and
+        `vintage`.
 
     Examples
     --------
-    A dam renewed in 2023 is a 2024 vintage, as all hydro; two Ontario gas turbines
-    built in 2012 and 2013 fall in the 2010 and 2015 vintages:
+    A dam renewed in 2023 is a 2024 vintage, as all hydro; gas turbines built in 2012
+    and 2013 fall in the 2010 and 2015 vintages:
 
     >>> ON = CANOEProvince.ONTARIO
     >>> units = pd.DataFrame(
     ...     {
     ...         "region": [ON, ON, ON],
     ...         "coders_type": ["ng_sc", "ng_sc", "hydro_daily"],
-    ...         "facility": ["A", "B", "C"],
     ...         "capacity": [100.0, 50.0, 300.0],
-    ...         "annual_energy": [200.0, 100.0, 1000.0],
     ...         "start_year": [2012, 2013, 1950],
     ...         "renewal_year": [2012, 2013, 2023],
     ...     }
     ... )
-    >>> lifetimes = {
-    ...     GenerationTechnology.NaturalGasCT: 45,
-    ...     GenerationTechnology.HydroDaily: 100,
-    ... }
-    >>> fleet = existing_generators(units, [ON], lifetimes, 2025, 5, 0.001)
-    >>> fleet[["technology", "vintage", "capacity", "facilities"]]
-        technology  vintage  capacity facilities
-    0  hydro_daily     2024      0.30          C
-    1        ng_ct     2010      0.10          A
-    2        ng_ct     2015      0.05          B
+    >>> existing_units(units, [ON], 2025, 5)[["technology", "vintage"]]
+        technology  vintage
+    0        ng_ct     2010
+    1        ng_ct     2015
+    2  hydro_daily     2024
     """
-    MW_TO_GW = 1e-3
-    GWH_TO_PJ = 3.6e-3
-
     type_to_technology = {
         coders_type: technology
         for technology in GenerationTechnology
@@ -112,9 +96,63 @@ def existing_generators(
     fleet["vintage"] = rounded.clip(upper=first_period - 1).mask(
         never_retires, first_period - 1
     )
+    return fleet.reset_index(drop=True)
+
+
+def existing_generators(
+    units: pd.DataFrame,
+    lifetimes: dict[GenerationTechnology, int],
+    first_period: int,
+    threshold: float,
+) -> pd.DataFrame:
+    """
+    Existing capacity of each technology by region and vintage: the units grouped,
+    leaving out the groups retired by the first period (vintage + lifetime) or with
+    `threshold` GW or less.
+
+    Parameters
+    ----------
+    units : pd.DataFrame
+        See `existing_units`.
+    lifetimes : dict[GenerationTechnology, int]
+        Lifetime of each technology, see `generation.parameters.generation_lifetimes`.
+    first_period : int
+        First model period.
+    threshold : float
+        Smallest capacity kept, GW.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns `region`, `technology` (`GenerationTechnology`), `vintage`,
+        `capacity` (GW), `annual_energy` (average annual output, PJ) and
+        `facilities` (names, ` - `-separated), sorted by technology, region and
+        vintage.
+
+    Examples
+    --------
+    >>> ON = CANOEProvince.ONTARIO
+    >>> units = pd.DataFrame(
+    ...     {
+    ...         "region": [ON, ON, ON],
+    ...         "technology": [GenerationTechnology.NaturalGasCT] * 3,
+    ...         "vintage": [1975, 2010, 2010],
+    ...         "facility": ["A", "B", "C"],
+    ...         "capacity": [100.0, 50.0, 30.0],
+    ...         "annual_energy": [200.0, 100.0, 60.0],
+    ...     }
+    ... )
+    >>> existing_generators(
+    ...     units, {GenerationTechnology.NaturalGasCT: 45}, 2025, 0.001
+    ... )[["vintage", "capacity", "facilities"]]
+       vintage  capacity facilities
+    0     2010      0.08      B - C
+    """
+    MW_TO_GW = 1e-3
+    GWH_TO_PJ = 3.6e-3
 
     grouped = (
-        fleet.groupby(["region", "technology", "vintage"], sort=False)
+        units.groupby(["region", "technology", "vintage"], sort=False)
         .agg(
             capacity=("capacity", "sum"),
             annual_energy=("annual_energy", "sum"),
@@ -128,7 +166,10 @@ def existing_generators(
     missing = sorted(set(grouped["technology"]) - set(lifetimes))
     if missing:
         raise ValueError(f"Existing generators without a lifetime: {missing}")
-    alive = grouped["vintage"] + grouped["technology"].map(lifetimes) > first_period
+    lifetime = pd.Series(
+        [lifetimes[t] for t in grouped["technology"]], index=grouped.index
+    )
+    alive = grouped["vintage"] + lifetime > first_period
     grouped = grouped.loc[alive & (grouped["capacity"] > threshold)]
 
     # Catalogue order of technologies, then provinces, then vintages

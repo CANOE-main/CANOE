@@ -110,3 +110,57 @@ class RegionVintagePeriodArray(LabeledArray):
         mask = np.broadcast_to(v + life <= p, self.shape)
         self.data[mask] = fill
         return self
+
+
+class RegionSeasonArray(LabeledArray):
+    """Values by region and season (time slice season, e.g. a day `D001`)."""
+
+    def __init__(
+        self,
+        region: list[CANOEProvince],
+        season: list[str],
+        fill: float = np.nan,
+    ):
+        coords = {
+            "region": region,
+            "season": season,
+        }
+        super().__init__(coords, fill)
+
+
+class RegionSeasonTodArray(LabeledArray):
+    """Values by region and time slice (season and time of day, e.g. `D001`, `H01`)."""
+
+    def __init__(
+        self,
+        region: list[CANOEProvince],
+        season: list[str],
+        tod: list[str],
+        fill: float = np.nan,
+    ):
+        coords = {
+            "region": region,
+            "season": season,
+            "tod": tod,
+        }
+        super().__init__(coords, fill)
+
+
+class RegionVintageSeasonTodArray(LabeledArray):
+    """Values by region, vintage and time slice (season and time of day)."""
+
+    def __init__(
+        self,
+        region: list[CANOEProvince],
+        vintage: list[int],
+        season: list[str],
+        tod: list[str],
+        fill: float = np.nan,
+    ):
+        coords = {
+            "region": region,
+            "vintage": vintage,
+            "season": season,
+            "tod": tod,
+        }
+        super().__init__(coords, fill)

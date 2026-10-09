@@ -571,6 +571,52 @@ def vre_bin_limits(
     return selected.reset_index(drop=True)
 
 
+def vre_bin_capacity_factors(
+    factors: pd.DataFrame,
+    technologies: list[GenerationTechnology],
+    provinces: list[CANOEProvince],
+    periods: list[int],
+    tolerance: float,
+) -> pd.DataFrame:
+    """
+    Hourly capacity factor of each new wind and solar bin of `technologies` in
+    `provinces`, for the vintages in `periods`; those below `tolerance` set to 0.
+
+    Parameters
+    ----------
+    factors : pd.DataFrame
+        See `loaders.get_vre_bin_capacity_factors`.
+    tolerance : float
+        Smallest capacity factor kept (noise in the data).
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns `region`, `technology`, `bin`, `vintage`, `hour` and `factor`.
+
+    Raises
+    ------
+    ValueError
+        If a bin lacks the hours of a vintage.
+    """
+    HOURS = 8760
+    selected = factors.loc[
+        factors["technology"].isin(technologies)
+        & factors["region"].isin(provinces)
+        & factors["vintage"].isin(periods)
+    ]
+    counts = selected.groupby(["region", "technology", "bin"], sort=False).size()
+    short = counts.loc[counts != HOURS * len(periods)]
+    if not short.empty:
+        raise ValueError(
+            "VRE bins without the hourly capacity factors of every vintage: "
+            + f"{short.index.tolist()}"
+        )
+    return selected.assign(
+        factor=selected["factor"].mask(selected["factor"] < tolerance, 0.0)
+    ).reset_index(drop=True)
+
+
 def _atb_value(
     atb: pd.DataFrame, technology: GenerationTechnology, parameter: str, year: int
 ) -> float:

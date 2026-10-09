@@ -16,6 +16,7 @@ the reservoir, a seasonal storage of 730 hours (a month) at full output.
 
 from dataclasses import dataclass, field
 from sqlite3 import Connection
+from typing import cast
 
 import pandas as pd
 from canoe_schema.v4_0 import CommodityTypeCode, OperatorCode, TechnologyTypeCode
@@ -23,8 +24,11 @@ from canoe_schema.v4_0 import CommodityTypeCode, OperatorCode, TechnologyTypeCod
 from canoe.canoe_objects.array_types import (
     RegionalValuesArray,
     RegionPeriodArray,
+    RegionSeasonArray,
+    RegionSeasonTodArray,
     RegionVintageArray,
     RegionVintagePeriodArray,
+    RegionVintageSeasonTodArray,
 )
 from canoe.canoe_objects.commodity import (
     FuelCommodityEntity,
@@ -34,6 +38,7 @@ from canoe.canoe_objects.commodity import (
 from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.common import CANOEProvince, CANOESector
 from canoe.common.naming import DatasetIdentifier, get_fuel_commodity_in_sector
+from canoe.common.time_slices import hour_to_day, hour_to_tod
 
 from ..catalogue import GenerationTechnology
 
@@ -65,9 +70,11 @@ class GenerationNotes:
         Source of the ATB heat rates.
     cogeneration : str
         Source and meaning of the cogeneration activity limits.
-    vre_bin_costs, vre_bin_limits : str
-        Source (and currency) of the costs and capacity limits of the wind and
-        solar bins.
+    vre_bin_costs, vre_bin_limits, vre_bin_capacity_factors : str
+        Source (and currency) of the costs, capacity limits and capacity factors of
+        the wind and solar bins.
+    vre_capacity_factors, hydro_capacity_factors : str
+        Source of the capacity factors of the existing wind and solar, and hydro.
     """
 
     capacity: str
@@ -77,6 +84,9 @@ class GenerationNotes:
     cogeneration: str
     vre_bin_costs: str
     vre_bin_limits: str
+    vre_bin_capacity_factors: str
+    vre_capacity_factors: str
+    hydro_capacity_factors: str
 
 
 @dataclass
@@ -102,12 +112,15 @@ def build_existing_generation(
     efficiencies: pd.DataFrame,
     costs: pd.DataFrame,
     cogeneration: pd.DataFrame,
+    capacity_factors: pd.DataFrame,
+    seasonal_limits: pd.DataFrame,
     notes: GenerationNotes,
     data_id: DatasetIdentifier,
 ) -> GenerationEntities:
     """
     One `-EXS` technology per technology of the fleet, in the regions and vintages
-    where it has capacity; monthly hydro also gets its reservoir inflow (`-IN`).
+    where it has capacity; monthly hydro also gets its reservoir inflow (`-IN`),
+    which carries the monthly hydro's daily limits.
 
     Parameters
     ----------
@@ -121,6 +134,12 @@ def build_existing_generation(
         See `generation.parameters.process_om_costs`.
     cogeneration : pd.DataFrame
         See `generation.parameters.cogeneration_activity`.
+    capacity_factors : pd.DataFrame
+        Hourly capacity factors (columns `region`, `technology`, `hour`, `factor`),
+        see `generation.capacity_factors`.
+    seasonal_limits : pd.DataFrame
+        Upper limits on each day's capacity factor (columns `region`, `technology`,
+        `day`, `factor`), see `generation.capacity_factors.daily_capacity_factors`.
     notes : GenerationNotes
         Notes of the rows.
     data_id : DatasetIdentifier
@@ -201,13 +220,37 @@ def build_existing_generation(
                     activity, operator, notes=notes.cogeneration, units="PJ"
                 )
 
+        # Weather: hourly capacity factors, or daily limits (on the inflow of
+        # monthly hydro)
+        is_hydro = technology in (
+            GenerationTechnology.HydroDaily,
+            GenerationTechnology.HydroMonthly,
+            GenerationTechnology.HydroRunOfRiver,
+        )
+        factor_notes = (
+            notes.hydro_capacity_factors if is_hydro else notes.vre_capacity_factors
+        )
+        of_factors = capacity_factors.loc[capacity_factors["technology"] == technology]
+        if not of_factors.empty:
+            entity.with_capacity_factor(
+                _hourly_values(of_factors, regions), notes=factor_notes
+            )
+        of_limits = seasonal_limits.loc[seasonal_limits["technology"] == technology]
+        daily_limits = (
+            _daily_values(of_limits, regions) if not of_limits.empty else None
+        )
+        if daily_limits is not None and not is_reservoir:
+            entity.with_limit_seasonal_capacity_factor(
+                daily_limits, notes=f"Daily average: {factor_notes}"
+            )
+
         entities.technologies.append(entity)
 
         if is_reservoir:
             inflow = RegionVintageArray(regions, vintages)
             for record in capacity.to_records():
                 inflow.set(1.0, region=record["region"], vintage=record["vintage"])
-            entities.technologies.append(
+            inflow_entity = (
                 TechnologyEntity(
                     name=f"{name}-IN",
                     output_commodity=reservoir,
@@ -234,6 +277,11 @@ def build_existing_generation(
                     units="PJ/GWy",
                 )
             )
+            if daily_limits is not None:
+                inflow_entity.with_limit_seasonal_capacity_factor(
+                    daily_limits, notes=f"Daily average inflow: {factor_notes}"
+                )
+            entities.technologies.append(inflow_entity)
 
     return entities
 
@@ -300,13 +348,15 @@ def build_vre_bins(
     investment: pd.DataFrame,
     fixed: pd.DataFrame,
     limits: pd.DataFrame,
+    capacity_factors: pd.DataFrame,
     lifetimes: dict[GenerationTechnology, int],
     notes: GenerationNotes,
     data_id: DatasetIdentifier,
 ) -> GenerationEntities:
     """
     One technology per new wind and solar resource bin (`<code>-NEW-<n>`), in the
-    regions and vintages of its investment costs, limited to the bin's capacity.
+    regions and vintages of its investment costs, limited to the bin's capacity,
+    with an hourly capacity factor for each vintage.
 
     Parameters
     ----------
@@ -314,6 +364,8 @@ def build_vre_bins(
         See `generation.parameters.vre_bin_costs`.
     limits : pd.DataFrame
         See `generation.parameters.vre_bin_limits`.
+    capacity_factors : pd.DataFrame
+        See `generation.parameters.vre_bin_capacity_factors`.
     lifetimes : dict[GenerationTechnology, int]
         See `generation.parameters.generation_lifetimes`.
     notes : GenerationNotes
@@ -325,6 +377,10 @@ def build_vre_bins(
         dict.fromkeys(investment["technology"])
     )
     entities = GenerationEntities(commodities=_commodities(technologies, data_id))
+    # Millions of rows: grouped once rather than filtered for every bin
+    factors_by_bin = dict(
+        list(capacity_factors.groupby(["technology", "bin"], sort=False))
+    )
     bins = investment[["technology", "bin"]].drop_duplicates()
     for technology, number in zip(bins["technology"], bins["bin"]):
         of_investment = investment.loc[
@@ -369,6 +425,12 @@ def build_vre_bins(
                 units="M$/GWy",
             )
             .with_limit_capacity(capacity, notes=notes.vre_bin_limits, units="GW")
+            .with_capacity_factor_process(
+                _hourly_vintage_values(
+                    factors_by_bin[(technology, number)], regions, vintages
+                ),
+                notes=notes.vre_bin_capacity_factors,
+            )
         )
         entities.technologies.append(entity)
     return entities
@@ -507,6 +569,63 @@ def _region_vintage_period(
         values.set(
             float(value), region=region, vintage=int(vintage), period=int(period)
         )
+    return values
+
+
+def _time_slices() -> tuple[list[str], list[str]]:
+    """The seasons (days D001-D365) and times of day (H01-H24) of the model year"""
+    hours_per_day, days = 24, 365
+    seasons = [hour_to_day(day * hours_per_day) for day in range(days)]
+    tods = [hour_to_tod(hour) for hour in range(hours_per_day)]
+    return seasons, tods
+
+
+def _hourly_values(
+    factors: pd.DataFrame, regions: list[CANOEProvince]
+) -> RegionSeasonTodArray:
+    """Hourly `factor` of each region (columns `region`, `hour`) by time slice"""
+    seasons, tods = _time_slices()
+    values = RegionSeasonTodArray(regions, seasons, tods)
+    for region, of_region in factors.groupby("region", sort=False):
+        hourly = of_region.sort_values("hour")["factor"].to_numpy(dtype=float)
+        values.set_block(
+            hourly.reshape(len(seasons), len(tods)),
+            dims=("season", "tod"),
+            region=region,
+        )
+    return values
+
+
+def _hourly_vintage_values(
+    factors: pd.DataFrame, regions: list[CANOEProvince], vintages: list[int]
+) -> RegionVintageSeasonTodArray:
+    """Hourly `factor` of each region and vintage (columns `region`, `vintage`,
+    `hour`) by time slice"""
+    seasons, tods = _time_slices()
+    values = RegionVintageSeasonTodArray(regions, vintages, seasons, tods)
+    for keys, of_process in factors.groupby(["region", "vintage"], sort=False):
+        region, vintage = cast(tuple[CANOEProvince, int], keys)
+        if region not in regions or vintage not in vintages:
+            continue
+        hourly = of_process.sort_values("hour")["factor"].to_numpy(dtype=float)
+        values.set_block(
+            hourly.reshape(len(seasons), len(tods)),
+            dims=("season", "tod"),
+            region=region,
+            vintage=vintage,
+        )
+    return values
+
+
+def _daily_values(
+    factors: pd.DataFrame, regions: list[CANOEProvince]
+) -> RegionSeasonArray:
+    """Daily `factor` of each region (columns `region`, `day`) by season (day)"""
+    seasons, _ = _time_slices()
+    values = RegionSeasonArray(regions, seasons)
+    for region, of_region in factors.groupby("region", sort=False):
+        daily = of_region.sort_values("day")["factor"].to_numpy(dtype=float)
+        values.set_block(daily, dims=("season",), region=region)
     return values
 
 

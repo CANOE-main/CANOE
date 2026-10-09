@@ -58,6 +58,8 @@ existing_capacity_threshold = 0.001
 # Lower bound of the annual output of existing cogeneration, as a share of its
 # historical output (the upper bound); below 1 for feasbility slack
 cogeneration_floor = 0.95
+# Capacity factors below this are set to 0 (noise in the weather data)
+capacity_factor_tolerance = 0.01
 
 # New generators the model can build (-NEW); [] for none. Options (those with NREL
 # ATB costs, and capacity factors if they burn no fuel): "biomass", "biomass_cg",

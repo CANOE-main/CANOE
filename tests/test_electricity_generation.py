@@ -22,6 +22,7 @@ from canoe.electricity.generation.parameters import (
     process_efficiencies,
     process_investment_costs,
     process_om_costs,
+    vre_bin_capacity_factors,
     vre_bin_costs,
     vre_bin_limits,
 )
@@ -33,8 +34,10 @@ PERIODS = [2025, 2030, 2035]
 NOTES = GenerationNotes(
     capacity="capacity", atb_costs="atb", coders_costs="coders",
     atb_efficiency="atb", cogeneration="cogeneration", vre_bin_costs="bins",
-    vre_bin_limits="limits",
+    vre_bin_limits="limits", vre_bin_capacity_factors="bin profiles",
+    vre_capacity_factors="vre", hydro_capacity_factors="hydro",
 )  # fmt: skip
+HOURS = 8760
 CG = GenerationTechnology.NaturalGasCogeneration
 MLY = GenerationTechnology.HydroMonthly
 WIND = GenerationTechnology.WindOnshore
@@ -57,6 +60,14 @@ def db() -> sqlite3.Connection:
             (i, p, "e" if p < PERIODS[0] else "f")
             for i, p in enumerate([2000, 2020, 2024, *PERIODS])
         ],
+    )
+    db.executemany(
+        "INSERT INTO time_season (sequence, season, segment_fraction) VALUES (?, ?, ?)",
+        [(d, f"D{d + 1:03d}", 1 / 365) for d in range(365)],
+    )
+    db.executemany(
+        "INSERT INTO time_of_day (sequence, tod, hours) VALUES (?, ?, 1)",
+        [(h, f"H{h + 1:02d}") for h in range(24)],
     )
     build_grid(
         pd.DataFrame({"region": [ON, QC], "efficiency": [0.92, 0.92]}),
@@ -108,6 +119,19 @@ def _build(db: sqlite3.Connection) -> GenerationEntities:
         process_efficiencies(processes, generic, atb),
         process_om_costs(processes, generic, atb, LIFETIMES, PERIODS, 1.0, 1.0),
         cogeneration_activity(fleet, LIFETIMES, PERIODS, 0.95),
+        # Ontario wind: 0.3 by day (hours 8-19), 0 at night
+        pd.DataFrame(
+            {
+                "region": ON,
+                "technology": WIND,
+                "hour": range(HOURS),
+                "factor": [0.3 if 8 <= h % 24 < 20 else 0.0 for h in range(HOURS)],
+            }
+        ),
+        # Quebec monthly hydro: 0.5 every day
+        pd.DataFrame(
+            {"region": QC, "technology": MLY, "day": range(365), "factor": 0.5}
+        ),
         NOTES,
         DATA_ID,
     )
@@ -140,6 +164,11 @@ def test_monthly_hydro_reservoir(db: sqlite3.Connection):
     assert db.execute(
         "SELECT region, tech, duration FROM storage_duration"
     ).fetchall() == [("QC", "E_HYD_MLY-EXS", 730.0)]
+    # The daily limits of monthly hydro are on its inflow
+    assert db.execute(
+        "SELECT tech_or_group, operator, COUNT(*), MIN(factor), MAX(factor)"
+        + " FROM limit_seasonal_capacity_factor GROUP BY tech_or_group"
+    ).fetchall() == [("E_HYD_MLY-EXS-IN", "le", 365, 0.5, 0.5)]
     # Costs on the turbine only
     assert {
         row[0] for row in db.execute("SELECT tech FROM cost_fixed WHERE region = 'QC'")
@@ -175,6 +204,15 @@ def test_fuels_and_sources(db: sqlite3.Connection):
         "SELECT tech, flag, reserve, curtail FROM technology "
         + "WHERE tech IN ('E_NG_CG-EXS', 'E_WND_ON-EXS') ORDER BY tech"
     ).fetchall() == [("E_NG_CG-EXS", "p", 1, 0), ("E_WND_ON-EXS", "p", 1, 1)]
+    # Wind: hourly capacity factors, 8760 time slices
+    assert db.execute(
+        "SELECT COUNT(*), SUM(factor > 0) FROM capacity_factor_tech"
+        + " WHERE tech = 'E_WND_ON-EXS' AND region = 'ON'"
+    ).fetchone() == (HOURS, 365 * 12)
+    assert db.execute(
+        "SELECT season, tod, factor FROM capacity_factor_tech"
+        + " WHERE tod IN ('H08', 'H09') AND season = 'D002' ORDER BY tod"
+    ).fetchall() == [("D002", "H08", 0.0), ("D002", "H09", 0.3)]
     # Wind: ATB fixed cost, no variable cost (zero), free input
     assert db.execute(
         "SELECT DISTINCT cost FROM cost_fixed WHERE tech = 'E_WND_ON-EXS'"
@@ -266,10 +304,22 @@ def test_vre_bins(db: sqlite3.Connection):
     investment, fixed = vre_bin_costs(
         costs, costs.assign(cost=30.0), [WIND], [ON], PERIODS, LIFETIMES, 0.5
     )
+    # Hourly profile of each bin and vintage: the vintage's share of 0.1 per bin
+    factors = pd.DataFrame(
+        [
+            (region, WIND, number, vintage, hour, 0.1 * number + (vintage - 2025) / 100)
+            for region in (ON, QC)
+            for number in (1, 2)
+            for vintage in PERIODS
+            for hour in range(HOURS)
+        ],
+        columns=["region", "technology", "bin", "vintage", "hour", "factor"],
+    )
     generation = build_vre_bins(
         investment,
         fixed,
         vre_bin_limits(limits, [WIND], [ON], PERIODS),
+        vre_bin_capacity_factors(factors, [WIND], [ON], PERIODS, 0.01),
         LIFETIMES,
         NOTES,
         DATA_ID,
@@ -294,3 +344,13 @@ def test_vre_bins(db: sqlite3.Connection):
         "SELECT DISTINCT input_comm, efficiency FROM efficiency"
         + " WHERE tech LIKE 'E_WND_ON-NEW-%'"
     ).fetchall() == [("E_ethos", 1.0)]
+    # Capacity factors by vintage, only the modelled province
+    assert db.execute(
+        "SELECT region, tech, vintage, COUNT(*), MIN(factor), MAX(factor)"
+        + " FROM capacity_factor_process GROUP BY region, tech, vintage"
+        + " ORDER BY tech, vintage"
+    ).fetchall() == [
+        ("ON", f"E_WND_ON-NEW-{n}", v, HOURS, f, f)
+        for n in (1, 2)
+        for v, f in zip(PERIODS, (0.1 * n, 0.1 * n + 0.05, 0.1 * n + 0.1))
+    ]

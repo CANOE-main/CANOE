@@ -95,6 +95,9 @@ class GenerationConfig(BaseModel):
     """Lower bound of the annual output of existing cogeneration, as a share of its
     historical output (the upper bound). Below 1 to give the solver slack."""
 
+    capacity_factor_tolerance: float = Field(default=0.01, ge=0, lt=1)
+    """Capacity factors below this are set to 0 (noise in the weather data)."""
+
     new_technologies: list[GenerationTechnology]
     """New generators the model can build (`-NEW`); empty for none. Only those with
     data (see `GenerationTechnology.can_be_new`). Solar and onshore wind come as

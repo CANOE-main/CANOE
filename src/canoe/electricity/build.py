@@ -26,7 +26,8 @@ from canoe.common.periods import (
 from canoe.common.validation import check_missing_existing_periods
 
 from .catalogue import GenerationTechnology
-from .fleet import existing_generators
+from .fleet import existing_generators, existing_units
+from .generation.capacity_factors import existing_capacity_factors
 from .generation.entities import (
     GenerationEntities,
     GenerationNotes,
@@ -42,6 +43,7 @@ from .generation.parameters import (
     process_efficiencies,
     process_investment_costs,
     process_om_costs,
+    vre_bin_capacity_factors,
     vre_bin_costs,
     vre_bin_limits,
 )
@@ -51,6 +53,12 @@ from .loaders import (
     get_coders_generation_generic,
     get_coders_generators,
     get_coders_system_line_losses,
+    get_ieso_generator_output,
+    get_ieso_hydro_types,
+    get_ieso_output_by_fuel,
+    get_renewables_ninja_facility_profiles,
+    get_statcan_monthly_hydro,
+    get_vre_bin_capacity_factors,
     get_vre_bin_capacity_limits,
     get_vre_bin_fixed_costs,
     get_vre_bin_investment_costs,
@@ -130,15 +138,26 @@ def build_electricity(
             f"Loaded {len(units)} CODERS generating units, {len(generic)} generic "
             + f"types and {len(atb)} ATB values"
         )
-        # New wind and solar bins (2021 USD, GW), only if modelled
+        # Weather of the existing wind, solar and hydro: IESO hourly output (MWh, MW),
+        # StatCan monthly hydro (MWh), renewables.ninja profiles (capacity factors)
+        years = cfg.source_years
+        output_by_fuel = get_ieso_output_by_fuel(years.ieso_hourly)
+        generator_output = get_ieso_generator_output(years.ieso_hourly)
+        hydro_types = get_ieso_hydro_types()
+        monthly_hydro = get_statcan_monthly_hydro(years.statcan_monthly_hydro)
+        facility_profiles = get_renewables_ninja_facility_profiles(
+            years.renewables_ninja
+        )
+        # New wind and solar bins (2021 USD, GW, hourly capacity factors), only if
+        # modelled
         binned = [t for t in cfg.generation.new_technologies if t.is_resource_binned()]
-        bin_investment = bin_fixed = bin_limits = None
+        bin_investment = bin_fixed = bin_limits = bin_factors = None
         if binned:
             bin_investment = get_vre_bin_investment_costs(cfg.data_cache_config)
             bin_fixed = get_vre_bin_fixed_costs(cfg.data_cache_config)
             bin_limits = get_vre_bin_capacity_limits(cfg.data_cache_config)
-        # TODO: CODERS (storage, reserve, interties, demand), IESO, StatCan,
-        # renewables.ninja, ramp rates
+            bin_factors = get_vre_bin_capacity_factors(cfg.data_cache_config)
+        # TODO: CODERS (storage, reserve, interties, demand), ramp rates
 
         # Compute parameters
         # ------------------
@@ -182,17 +201,35 @@ def build_electricity(
         notes = _generation_notes(cfg)
 
         # - Existing generation: CODERS units grouped by (region, technology,
-        #   vintage), efficiencies, O&M costs and the activity bounds of
-        #   cogeneration; the ATB is read at the vintage year
+        #   vintage), efficiencies, O&M costs, the activity bounds of cogeneration
+        #   (the ATB is read at the vintage year), and the capacity factors of the
+        #   weather-driven ones
         existing_generation: GenerationEntities | None = None
         if not cfg.generation.skip_existing:
+            fleet_units = existing_units(
+                units, cfg.provinces, cfg.future_periods[0], cfg.period_step
+            )
             fleet = existing_generators(
-                units,
-                cfg.provinces,
+                fleet_units,
                 lifetimes,
                 cfg.future_periods[0],
-                cfg.period_step,
                 cfg.generation.existing_capacity_threshold,
+            )
+            hourly_factors, daily_limits = existing_capacity_factors(
+                fleet,
+                # The units of the groups kept
+                fleet_units.merge(
+                    fleet[["region", "technology", "vintage"]],
+                    on=["region", "technology", "vintage"],
+                ),
+                output_by_fuel,
+                generator_output,
+                hydro_types,
+                monthly_hydro,
+                facility_profiles,
+                years.ieso_hourly,
+                years.statcan_monthly_hydro,
+                cfg.generation.capacity_factor_tolerance,
             )
             check_missing_existing_periods(
                 db_conn,
@@ -219,6 +256,8 @@ def build_electricity(
                     cfg.future_periods,
                     cfg.generation.cogeneration_floor,
                 ),
+                hourly_factors,
+                daily_limits,
                 notes,
                 electricity_data_id,
             )
@@ -257,6 +296,7 @@ def build_electricity(
             bin_investment is not None
             and bin_fixed is not None
             and bin_limits is not None
+            and bin_factors is not None
         ):
             bins_conversion = currency_conversion_factor(
                 bin_investment.currency,
@@ -278,11 +318,18 @@ def build_electricity(
                 investment,
                 fixed,
                 vre_bin_limits(bin_limits, binned, cfg.provinces, cfg.future_periods),
+                vre_bin_capacity_factors(
+                    bin_factors,
+                    binned,
+                    cfg.provinces,
+                    cfg.future_periods,
+                    cfg.generation.capacity_factor_tolerance,
+                ),
                 lifetimes,
                 notes,
                 electricity_data_id,
             )
-        # TODO: capacity factors, storage, CCS, reliability, trade
+        # TODO: storage, CCS, reliability, trade
 
         # Build TEMOA Objects
         # -------------------
@@ -348,6 +395,7 @@ def _cost_notes(cfg: "CANOEElectricityConfig", reference: str) -> str:
 
 
 def _generation_notes(cfg: "CANOEElectricityConfig") -> GenerationNotes:
+    years = cfg.source_years
     to_model = f"to {cfg.model_currency_year} CAD (GDP deflator)"
     point = {
         ProjectionPoint.PeriodEnd: "the end",
@@ -376,6 +424,19 @@ def _generation_notes(cfg: "CANOEElectricityConfig") -> GenerationNotes:
         + f"USD {to_model}",
         vre_bin_limits="Wind and solar resource (Sutubra, 2024): grid cells binned "
         + "by ascending LCOE",
+        vre_bin_capacity_factors="Hourly profile of the bin (Sutubra, 2024; 2018 "
+        + "weather), indexed to NREL ATB 2023 by construction year; hours missing "
+        + "from the source are 0",
+        vre_capacity_factors=f"Ontario: IESO {years.ieso_hourly} hourly output by "
+        + "fuel, scaled to the CODERS capacity-weighted capacity factor of units over "
+        + "20 MW; other provinces: renewables.ninja "
+        + f"{years.renewables_ninja} profiles at each CODERS facility, weighted by "
+        + "capacity and scaled to CODERS annual energy",
+        hydro_capacity_factors=f"Ontario: IESO {years.ieso_hourly} output over "
+        + "available capacity of the generators of each hydro type; other "
+        + f"provinces: StatCan 25-10-0015-01 {years.statcan_monthly_hydro} monthly "
+        + "hydro generation, flat within the month, shared between hydro types by "
+        + "CODERS annual energy",
     )
 
 
