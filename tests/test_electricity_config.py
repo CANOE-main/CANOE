@@ -61,6 +61,17 @@ class TestPipelineConfig:
         assert compiler.electricity.database_file == base.db_output_dir
         assert compiler.electricity.model_currency_year == base.model_currency_year
 
+    def test_resolves_bare_toml_path(
+        self,
+        compiler_raw: dict[str, Any],
+        electricity_raw: dict[str, Any],
+        base: CANOEBaseConfig,
+    ):
+        # The path alone, in place of a table naming it in `config_file`
+        raw = {**compiler_raw, "sectors": {}, "electricity": str(ELECTRICITY_CONFIG)}
+        compiler = CANOECompilerConfig.model_validate(raw)
+        assert compiler.electricity == _config(electricity_raw, base)
+
     def test_electricity_is_optional(self, compiler_raw: dict[str, Any]):
         raw = {
             key: value for key, value in compiler_raw.items() if key != "electricity"

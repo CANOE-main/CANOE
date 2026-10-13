@@ -1,12 +1,4 @@
 # ####################################################################################
-# ELECTRICITY CONFIG
-# ####################################################################################
-# Electricity supply of the sectors (E_<S>_ELC) and the grid behind it; runs after the
-# sectors, and its generators' fuels are supplied by the fuel module
-[compiler]
-electricity = "configuration/electricity-default.toml"
-
-# ####################################################################################
 # COMPILER CONFIG
 # ####################################################################################
 [compiler.base]
@@ -72,6 +64,14 @@ commercial = "configuration/commercial-default.toml"
 agriculture = "configuration/agriculture-default.toml"
 industry = "configuration/industry-default.toml"
 residential = "configuration/residential-default.toml"
+
+# ####################################################################################
+# ELECTRICITY CONFIG
+# ####################################################################################
+# Electricity supply of the sectors (E_<S>_ELC) and the grid behind it; runs after the
+# sectors, and its generators' fuels are supplied by the fuel module
+[compiler.electricity]
+config_file = "configuration/electricity-default.toml"
 
 # ####################################################################################
 # FUELS CONFIG
