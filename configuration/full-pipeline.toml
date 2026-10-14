@@ -94,6 +94,23 @@ validation_behavior = "error"  # database lacks periods, regions or commodities
 missing_data_behavior = "warning"  # a fuel imported by a sector has no price or emission factors
 
 # ####################################################################################
+# REPRESENTATIVE PERIODS CONFIG
+# ####################################################################################
+# Reduce the database to representative days before running Temoa
+[representative_periods_config]
+# What the reduced database keeps of each demand: "hourly" values of the
+# representative days (the annual demand changes) or the "annual" demand
+demand_preservation = "hourly"
+# Share of each demand's distribution set to zero, from its smallest values
+dsd_threshold = 0.01
+
+# The clustering to apply: one of a collection precomputed with tsam
+[representative_periods_config.clustering]
+kind = "tsam_collection"
+collection = "src/canoe/representative_periods/data/clusterings/weather2018-hierarchical-pca6"
+n_periods = 1
+
+# ####################################################################################
 # TEMOA CONFIG
 # ####################################################################################
 # [temoa_config]

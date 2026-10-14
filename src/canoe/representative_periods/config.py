@@ -1,90 +1,32 @@
-"""Pydantic model mirroring the structure of config.yaml."""
+"""Configuration of the representative periods step."""
 
-from pathlib import Path
 from typing import Literal
 
-import yaml
 from pydantic import BaseModel, ConfigDict, Field
 
-# Arbitrarily nested directories of csv timeseries files. Dict keys are directory
-# names, leaves are lists of csv file (column) names. A leaf directory with nothing
-# selected yet (e.g. `temoa-canada:` with no items) parses to None.
-# Declared with the PEP 695 `type` statement (rather than a plain assignment) so
-# pydantic can recognise the self-reference and build a recursive schema instead
-# of expanding it indefinitely.
-type TimeseriesTree = dict[str, "TimeseriesTree | list[str] | None"]
-
-
-class PCAGroup(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
-    name: str | None = None
-    columns: list[str]
-    n_components: int
-    scale: bool = True
-
-    def as_dict(self) -> dict:  # pyright: ignore[reportMissingTypeArgument]
-        return self.__dict__  # pyright: ignore[reportReturnType]
-
-
-class ExtremePeriods(BaseModel):
-    """Under each extreme period type, the timeseries vectors that should apply it."""
-
-    model_config = ConfigDict(extra="forbid")
-
-    max_peak: list[str] | None = None
-    min_peak: list[str] | None = None
-    max_mean: list[str] | None = None
-    min_mean: list[str] | None = None
-
-
-class CustomFeature(BaseModel):
-    """Calls a method of feature_identification.py with the given parameters."""
-
-    model_config = ConfigDict(extra="allow")
-
-    method: Literal["max_mean_period"]
-    days_in_period: int
-    timeseries: str
-
-    def as_dict(self) -> dict:  # pyright: ignore[reportMissingTypeArgument]
-        return self.__dict__  # pyright: ignore[reportReturnType]
+from canoe.representative_periods.clusterings import Clustering
 
 
 class RepresentativePeriodsConfig(BaseModel):
-    model_config = ConfigDict(extra="forbid")
+    """
+    Reduce a full-year database to representative days, from a clustering computed
+    elsewhere.
+    """
 
-    data_dir: Path
-    show_plots: bool = False
-    days_per_period: int = 1
-    disaggregate_multiday: bool = True
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
+    clustering: Clustering
+    """The clustering to apply (see `canoe.representative_periods.clusterings`)."""
+
     demand_preservation: Literal["hourly", "annual"] = "hourly"
-    dsd_threshold: float = 0.01
-    final_periods: int
-    test_periods: list[int] | None = None
+    """What the reduced database keeps of each demand. The representative days
+    cannot keep both:
 
-    use_pca: bool = True
-    pca_groups: list[PCAGroup] = Field(default_factory=list)
+    - `hourly`: the hourly values of the representative days; the annual demand
+      changes;
+    - `annual`: the annual demand; the hourly values are rescaled."""
 
-    force_days: list[int] | None = None
-    extreme_periods: ExtremePeriods = Field(default_factory=ExtremePeriods)
-    custom_features: list[CustomFeature] | None = None
-
-    day_to_index: int = -1
-    clustering_method: Literal[
-        "averaging",
-        "k_means",
-        "k_medoids",
-        "k_maxoids",
-        "hierarchical",
-        "adjacent_periods",
-    ] = "hierarchical"
-
-    timeseries: TimeseriesTree
-    model_years: list[int]
-
-    @classmethod
-    def from_yaml(cls, path: str | Path) -> "RepresentativePeriodsConfig":
-        with open(path) as stream:
-            raw = yaml.safe_load(stream)
-        return cls.model_validate(raw)
+    dsd_threshold: float = Field(default=0.01, ge=0, lt=1)
+    """Share of each demand's distribution set to zero, taken from its smallest
+    values (per region, period and demand). With `hourly` preservation, the annual
+    demand drops by up to this share."""

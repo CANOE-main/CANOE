@@ -108,12 +108,14 @@ all = [
     { name = "plotly" },
     { name = "pyomo-pounce" },
     { name = "ruff" },
+    { name = "tomlkit" },
 ]
 dev = [
     { name = "marimo" },
     { name = "matplotlib" },
     { name = "plotly" },
     { name = "ruff" },
+    { name = "tomlkit" },
 ]
 docs = [
     { name = "griffe-pydantic" },
@@ -158,6 +160,7 @@ requires-dist = [
     { name = "pyyaml" },
     { name = "ruff", marker = "extra == 'dev'" },
     { name = "temoa", git = "https://github.com/yamilbknsu/temoa.git?rev=e69223976bd9bdfbdeb25f8f73cc32922108215b" },
+    { name = "tomlkit", marker = "extra == 'dev'" },
     { name = "tsam", git = "https://github.com/CANOE-main/tsam.git?rev=v3.2-patch" },
     { name = "typer", specifier = "==0.27.1" },
 ]

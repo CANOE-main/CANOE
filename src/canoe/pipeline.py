@@ -10,8 +10,8 @@ from canoe.common.naming import DatasetIdentifier
 from canoe.electricity.config import CANOEElectricityConfig
 from canoe.emissions import processing as emissions_processing
 from canoe.fuel.config import CANOEFuelConfig
+from canoe.representative_periods.build import build_representative_periods
 from canoe.representative_periods.config import RepresentativePeriodsConfig
-from canoe.representative_periods.process_all import run_representative_periods
 
 from .initializer import CANOEBaseConfig
 from .initializer import run as run_initializer
@@ -164,14 +164,23 @@ def run(config: CANOEPipelineConfig):
     if config.compiler is not None:
         run_compiler(config.compiler)
 
-    # Representative periods
+    # Representative periods: a reduced copy of the database, which Temoa runs on
+    # with the settings it needs
+    temoa_config = config.temoa_config
     if config.representative_periods_config is not None:
         logger.info("Processing representative periods...")
-        db_path = run_representative_periods(
+        reduced = build_representative_periods(
             db_path, config.working_directory, config.representative_periods_config
         )
 
+        # Update workflow with output of rep. periods
+        db_path = reduced.db_path
+        if temoa_config is not None:
+            temoa_config = temoa_config.model_copy(
+                update={"time_sequencing": reduced.time_sequencing}
+            )
+
     # Run TEMOA
-    if config.temoa_config is not None:
+    if temoa_config is not None:
         logger.info("Running TEMOA...")
-        run_temoa(db_path, config.temoa_config)
+        run_temoa(db_path, temoa_config)
