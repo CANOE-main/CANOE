@@ -9,6 +9,8 @@ add a methodology, add a variant and extend the union.
 
 import tomllib
 from datetime import datetime
+from importlib.resources import files
+from importlib.resources.abc import Traversable
 from pathlib import Path
 from typing import Annotated, Literal
 
@@ -102,15 +104,34 @@ class TsamCollection(BaseModel):
 
     kind: Literal["tsam_collection"] = "tsam_collection"
     """Selects this variant."""
-    collection: Path
-    """Folder of the collection."""
+    collection: str
+    """Name of the collection (its folder), e.g. `weather2018-hierarchical-pca6`."""
+    collections_dir: Path | None = None
+    """Folder holding the collection; the collections packaged with canoe
+    (`canoe/representative_periods/data/clusterings`) if left out."""
     n_periods: PositiveInt
     """Number of representative periods (a column of `assignments.csv`)."""
 
+    def folder(self) -> Traversable:
+        """The folder of the collection, wherever canoe is installed."""
+        root = (
+            self.collections_dir
+            if self.collections_dir is not None
+            else files("canoe.representative_periods").joinpath("data/clusterings")
+        )
+        folder = root.joinpath(self.collection)
+        if not folder.is_dir():
+            available = sorted(p.name for p in root.iterdir() if p.is_dir())
+            raise ValueError(
+                f"No collection {self.collection!r} in {root}; available: {available}"
+            )
+        return folder
+
     def load_mapping(self) -> RepresentativeSeasonMapping:
         """The mapping for `n_periods`, from `assignments.csv`."""
-        path = self.collection / "assignments.csv"
-        table = pd.read_csv(path, index_col="season", dtype=str)
+        path = self.folder().joinpath("assignments.csv")
+        with path.open("rb") as f:
+            table = pd.read_csv(f, index_col="season", dtype=str)
         column = str(self.n_periods)
         if column not in table.columns:
             raise ValueError(
@@ -129,7 +150,7 @@ class TsamCollection(BaseModel):
 
     def load_metadata(self) -> TsamCollectionMetadata:
         """The metadata of the collection, from `clustering.toml`."""
-        with (self.collection / "clustering.toml").open("rb") as f:
+        with self.folder().joinpath("clustering.toml").open("rb") as f:
             return TsamCollectionMetadata.model_validate(tomllib.load(f))
 
 

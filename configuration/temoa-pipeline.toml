@@ -8,10 +8,12 @@ demand_preservation = "hourly"
 # Share of each demand's distribution set to zero, from its smallest values
 dsd_threshold = 0.01
 
-# The clustering to apply: one of a collection precomputed with tsam
+# The clustering to apply: one of a collection precomputed with tsam, by name (the
+# collections packaged with canoe, or those in `collections_dir` if set)
 [representative_periods_config.clustering]
 kind = "tsam_collection"
-collection = "src/canoe/representative_periods/data/clusterings/weather2018-hierarchical-pca6"
+collection = "weather2018-hierarchical-pca6"
+# collections_dir = "path/to/my/clusterings"
 n_periods = 1
 
 [temoa_config]

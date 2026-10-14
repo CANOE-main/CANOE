@@ -93,3 +93,14 @@ force-exclude = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Data the modules read at run time (with importlib.resources), shipped in the wheel
+[tool.setuptools.package-data]
+"*" = [
+  "data/**/*.csv",
+  "data/**/*.gz",
+  "data/**/*.toml",
+  "data/**/*.xlsx",
+  "config/*.csv",
+  "config/*.xlsx",
+]
