@@ -10,8 +10,8 @@ from canoe.common.naming import DatasetIdentifier
 from canoe.electricity.config import CANOEElectricityConfig
 from canoe.emissions import processing as emissions_processing
 from canoe.fuel.config import CANOEFuelConfig
+from canoe.representative_periods.build import build_representative_periods
 from canoe.representative_periods.config import RepresentativePeriodsConfig
-from canoe.representative_periods.process_all import run_representative_periods
 
 from .initializer import CANOEBaseConfig
 from .initializer import run as run_initializer
@@ -23,8 +23,8 @@ class CANOECompilerConfig(BaseModel):
     base: CANOEBaseConfig
     sectors: dict[str, SectorConfig] = Field(default_factory=dict)
     electricity: CANOEElectricityConfig | None = None
-    """Supplies the electricity the sectors import, from the path of its TOML; none
-    supplied if left out."""
+    """Supplies the electricity the sectors import, from the path of its TOML (directly
+    or as `config_file` of the table); none supplied if left out."""
     fuel: CANOEFuelConfig | None = None
     """Supplies the fuels the sectors and the electricity module import; none
     supplied if left out."""
@@ -40,10 +40,12 @@ class CANOECompilerConfig(BaseModel):
     @field_validator("electricity", mode="before")
     @classmethod
     def _resolve_electricity(cls, value: Any, info: ValidationInfo) -> Any:
-        # Path to its TOML (or a table, e.g. in tests): validated with `base` in
-        # context so inherited fields resolve
+        # Path to its TOML, a table naming it in `config_file`, or the table itself
+        # (e.g. in tests): validated with `base` in context so inherited fields resolve
         if isinstance(value, (str, Path)):
-            with Path(value).open("rb") as f:
+            value = {"config_file": value}
+        if isinstance(value, dict) and "config_file" in value:
+            with Path(value["config_file"]).open("rb") as f:
                 value = tomllib.load(f)
         if not isinstance(value, dict):
             return value
@@ -89,85 +91,96 @@ class CANOEPipelineConfig(BaseModel):
         raise RuntimeError("No database path source is set.")
 
 
+def run_compiler(config: CANOECompilerConfig):
+    if config.base.data_cache_config.force_sync:
+        raise NotImplementedError(
+            "Forcing canoe-lake sync has not been implemented yet."
+        )
+
+    # Initialize empty database
+    run_initializer(config.base)
+
+    with atomic_transaction(config.base.db_output_dir) as db_conn:
+        # Emission commodities, before the sectors write emission activities
+        emissions_processing.init(
+            db_conn,
+            config.base.emissions,
+            config.base.provinces,
+            config.base.future_periods,
+            DatasetIdentifier(
+                sector=CANOESector.Electricity,
+                code_description="HR",
+                version=config.base.data_version,
+            ),
+        )
+
+    # Run each sector
+    module_outputs: list[CANOEModuleOutput] = []
+    for sector_name, sector_config in config.sectors.items():
+        logger.info(f"Running sector: {sector_name}")
+        sector_output = sector_config.run()
+        logger.info(f"Sector {sector_name} output: {sector_output}")
+        module_outputs.append(sector_output)
+
+    # Electricity supply: the electricity the sectors consume, and the grid
+    # behind it; its generators' fuels are imports for the fuel supply
+    sector_imports = [i for output in module_outputs for i in output.fuel_imports]
+    if config.electricity is not None:
+        logger.info("Running electricity supply")
+        module_outputs.append(config.electricity.run(sector_imports))
+    elif any(i.fuel == CANOEFuel.Electricity for i in sector_imports):
+        logger.warning(
+            "No [compiler.electricity] configured: the electricity imports of the "
+            + "sectors are not supplied"
+        )
+
+    # Fuel supply: imports and distribution of the fuels the sectors and the
+    # electricity module consume
+    fuel_imports = [i for output in module_outputs for i in output.fuel_imports]
+    if config.fuel is not None:
+        logger.info("Running fuel supply")
+        module_outputs.append(config.fuel.run(fuel_imports))
+    elif fuel_imports:
+        logger.warning(
+            f"No [compiler.fuel] configured: {len(fuel_imports)} fuel imports of "
+            + "the sectors are not supplied"
+        )
+
+    logger.info("Processing emissions...")
+    with atomic_transaction(config.base.db_output_dir) as db_conn:
+        # Emissions: check declarations and derive CO2-equivalents
+        emissions_processing.finalize(
+            db_conn,
+            config.base.emissions,
+            [d for output in module_outputs for d in output.emissions],
+        )
+
+
 def run(config: CANOEPipelineConfig):
     # Potentially changing throughout the pipeline
     db_path = config.db_path
 
     # Compiler
     if config.compiler is not None:
-        if config.compiler.base.data_cache_config.force_sync:
-            raise NotImplementedError(
-                "Forcing canoe-lake sync has not been implemented yet."
-            )
+        run_compiler(config.compiler)
 
-        base = config.compiler.base
-
-        # Initialize empty database
-        run_initializer(base)
-
-        with atomic_transaction(base.db_output_dir) as db_conn:
-            # Emission commodities, before the sectors write emission activities
-            emissions_processing.init(
-                db_conn,
-                base.emissions,
-                base.provinces,
-                base.future_periods,
-                DatasetIdentifier(
-                    sector=CANOESector.Electricity,
-                    code_description="HR",
-                    version=base.data_version,
-                ),
-            )
-
-        # Run each sector
-        module_outputs: list[CANOEModuleOutput] = []
-        for sector_name, sector_config in config.compiler.sectors.items():
-            logger.info(f"Running sector: {sector_name}")
-            sector_output = sector_config.run()
-            logger.info(f"Sector {sector_name} output: {sector_output}")
-            module_outputs.append(sector_output)
-
-        # Electricity supply: the electricity the sectors consume, and the grid
-        # behind it; its generators' fuels are imports for the fuel supply
-        sector_imports = [i for output in module_outputs for i in output.fuel_imports]
-        if config.compiler.electricity is not None:
-            logger.info("Running electricity supply")
-            module_outputs.append(config.compiler.electricity.run(sector_imports))
-        elif any(i.fuel == CANOEFuel.Electricity for i in sector_imports):
-            logger.warning(
-                "No [compiler.electricity] configured: the electricity imports of the "
-                + "sectors are not supplied"
-            )
-
-        # Fuel supply: imports and distribution of the fuels the sectors and the
-        # electricity module consume
-        fuel_imports = [i for output in module_outputs for i in output.fuel_imports]
-        if config.compiler.fuel is not None:
-            logger.info("Running fuel supply")
-            module_outputs.append(config.compiler.fuel.run(fuel_imports))
-        elif fuel_imports:
-            logger.warning(
-                f"No [compiler.fuel] configured: {len(fuel_imports)} fuel imports of "
-                + "the sectors are not supplied"
-            )
-
-        logger.info("Processing emissions...")
-        with atomic_transaction(base.db_output_dir) as db_conn:
-            # Emissions: check declarations and derive CO2-equivalents
-            emissions_processing.finalize(
-                db_conn,
-                base.emissions,
-                [d for output in module_outputs for d in output.emissions],
-            )
-
-    # Representative periods
+    # Representative periods: a reduced copy of the database, which Temoa runs on
+    # with the settings it needs
+    temoa_config = config.temoa_config
     if config.representative_periods_config is not None:
         logger.info("Processing representative periods...")
-        db_path = run_representative_periods(
+        reduced = build_representative_periods(
             db_path, config.working_directory, config.representative_periods_config
         )
 
+        # Update workflow with output of rep. periods
+        db_path = reduced.db_path
+        if temoa_config is not None:
+            temoa_config = temoa_config.model_copy(
+                update={"time_sequencing": reduced.time_sequencing}
+            )
+
     # Run TEMOA
-    if config.temoa_config is not None:
+    if temoa_config is not None:
         logger.info("Running TEMOA...")
-        run_temoa(db_path, config.temoa_config)
+        run_temoa(db_path, temoa_config)

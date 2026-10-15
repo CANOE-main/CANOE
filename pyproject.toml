@@ -27,7 +27,7 @@ canoe-compiler = "canoe.cli:main"
 
 [project.optional-dependencies]
 all = ["canoe[dev]", "canoe[docs]", "canoe[solvers]"]
-dev = ["ruff", "matplotlib", "marimo", "plotly"]
+dev = ["ruff", "matplotlib", "marimo", "plotly", "tomlkit"]
 docs = ["mkdocs-material>=9.5", "mkdocs-git-revision-date-localized-plugin>=1.2", "mike", "mkdocstrings[python]", "griffe-pydantic"]
 solvers = ["gurobipy", "pyomo-pounce"]
 
@@ -93,3 +93,14 @@ force-exclude = true
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+# Data the modules read at run time (with importlib.resources), shipped in the wheel
+[tool.setuptools.package-data]
+"*" = [
+  "data/**/*.csv",
+  "data/**/*.gz",
+  "data/**/*.toml",
+  "data/**/*.xlsx",
+  "config/*.csv",
+  "config/*.xlsx",
+]
