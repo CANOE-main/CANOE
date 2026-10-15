@@ -1,0 +1,52 @@
+# Reproduction of canoe-pwd/canoe-v4-all-high.sqlite (see pipeline.toml). Same as
+# configuration/industry-default.toml except: other_fuels = "free", the previous
+# module's model of NRCan's "Other" fuels.
+module_name = "industry"
+# data_version, gdp_scenario and gdp_projection_point are inherited from
+# [compiler.base]; set them here to override
+
+# Year of the NRCan CEUD industry data read (energy use and fuel mix of each
+# subsector). GDP projections are indexed to this year.
+ceud_data_year = 2022
+
+# ----------------------------------------------------------
+#                          FUELS
+# ----------------------------------------------------------
+# Fuels the subsector technologies consume, unless a subsector sets its own.
+# Options: "ELC", "NG", "DSL", "HFO", "PCK", "NGL", "COAL", "COKE", "WOOD".
+# In each province, the share of a subsector's fuels not listed is spread over its
+# fuels in proportion to their shares; a fuel with no energy use is left out there.
+fuels = ["ELC", "NG", "DSL", "HFO", "PCK", "NGL", "COAL", "COKE", "WOOD"]
+
+# NRCan's "Other" energy source (OTH) has no price or emission factors in the fuel
+# module (see INDUSTRY_MODULE_BUGS.md), so it is not a fuel above:
+#   "deduct" -> its energy use is taken out of the subsector demands
+#   "free"   -> it stays an input (I_oth), supplied at no cost and with no emissions
+other_fuels = "free"
+
+# "ge" (lower bound), "le" (upper bound) or "e" (exact share)
+input_split_operator = "ge"
+
+# ----------------------------------------------------------
+#                        SUBSECTORS
+# ----------------------------------------------------------
+# Every subsector is modelled with the fuels above. A table per subsector changes
+# that:
+#   skip  = true           -> leave the subsector out (no demand, no technology)
+#   fuels = ["ELC", ...]   -> fuels of this subsector instead of the ones above
+# Subsectors: "construction", "pulp and paper", "smelting and refining",
+# "petroleum refining", "cement", "chemicals", "iron and steel",
+# "other manufacturing", "forestry", "mining"
+#
+# [subsectors.construction]
+# skip = true
+#
+# [subsectors."pulp and paper"]
+# fuels = ["ELC", "NG", "WOOD"]
+
+# ----------------------------------------------------------
+#                     RUNTIME SWITCHES
+# ----------------------------------------------------------
+# "error" or "warning"
+validation_behavior = "error"      # database lacks periods or regions
+missing_data_behavior = "warning"  # data missing for a modelled subsector

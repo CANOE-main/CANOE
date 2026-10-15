@@ -1,0 +1,143 @@
+# Electricity module, referenced from the pipeline TOML:
+#   [compiler]
+#   electricity = "configuration/electricity-default.toml"
+# data_version, provinces, periods and model_currency_year are inherited from
+# [compiler.base]; set them here to override.
+#
+# The module supplies the electricity the sectors import (E_<S>_ELC, from E_elc_dem)
+# and builds the grid behind it: E_elc_tx -> E_elc_dx -> E_elc_dem. The grid always
+# runs; the tables below say which of its parts are left out.
+
+# ----------------------------------------------------------
+#                    EXOGENOUS DEMAND
+# ----------------------------------------------------------
+# true -> add the CODERS annual forecast by province as an electricity demand, with
+# the hourly profile of source_years.coders_hourly. Off by default: the end-use
+# sectors' electricity imports are the demand, and alongside them it counts their
+# electricity use twice. Meant for runs of the electricity module on its own. The
+# forecast is read at gdp_projection_point of each period (inherited).
+exogenous_demand = false
+# Hours of its profile below this share of the average hour are set to 0
+exogenous_demand_profile_tolerance = 0.02
+
+# ----------------------------------------------------------
+#                       COST SOURCES
+# ----------------------------------------------------------
+# NREL ATB scenario of the efficiencies and costs taken from the ATB: "Advanced",
+# "Moderate" or "Conservative"
+atb_scenario = "Moderate"
+
+# ----------------------------------------------------------
+#                     RUNTIME SWITCHES
+# ----------------------------------------------------------
+# "error" or "warning"
+validation_behavior = "error"  # database lacks periods or regions
+missing_data_behavior = "warning"  # data missing for a modelled component
+
+# ----------------------------------------------------------
+#                      SOURCE YEARS
+# ----------------------------------------------------------
+# Each source keeps its own year, as in the previous module (to be harmonized into one
+# weather year once the cache has every source for the same year).
+[source_years]
+coders_hourly = 2018  # CODERS hourly demand and transfers
+ieso_hourly = 2018  # IESO hourly output (Ontario wind, solar, hydro)
+statcan_monthly_hydro = 2018  # StatCan 25-10-0015-01 (hydro outside Ontario)
+renewables_ninja = 2018  # existing wind and solar outside Ontario
+ieso_reliability_outlook = 2025  # IESO Reliability Outlook (capacity credits, derates)
+# Year of the US dollars of NREL ATB 2024 costs (2022). Set 2021 to reproduce the
+# previous module (see ELECTRICITY_MODULE_BUGS.md).
+atb_currency = 2022
+# Year of the Canadian dollars of CODERS generation_generic costs (the table gives none)
+coders_currency = 2020
+
+# ----------------------------------------------------------
+#                       GENERATION
+# ----------------------------------------------------------
+[generation]
+# Leave out the existing generators (-EXS), the CODERS fleet
+skip_existing = false
+# Smallest existing capacity kept for a (region, technology, vintage), GW
+existing_capacity_threshold = 0.001
+# Lower bound of the annual output of existing cogeneration, as a share of its
+# historical output (the upper bound); below 1 for feasbility slack
+cogeneration_floor = 0.95
+# Capacity factors below this are set to 0 (noise in the weather data)
+capacity_factor_tolerance = 0.01
+
+# New generators the model can build (-NEW); [] for none. Options (those with NREL
+# ATB costs, and capacity factors if they burn no fuel): "biomass", "biomass_cg",
+# "coal", "coal_ccs", "ng_cc", "ng_ccs", "ng_ct", "nuclear_pwr", "nuclear_smr",
+# "solar", "wind_onshore". Solar and onshore wind come as resource bins.
+new_technologies = [
+  "biomass",
+  "ng_cc",
+  "ng_ccs",
+  "ng_ct",
+  "nuclear_pwr",
+  "nuclear_smr",
+  "solar",
+  "wind_onshore",
+]
+
+# Carbon capture retrofits of coal and natural gas combined cycle generators; [] for
+# none. Options: "coal_ccs_retrofit_90", "coal_ccs_retrofit_95",
+# "ng_ccs_retrofit_90", "ng_ccs_retrofit_95"
+ccs_retrofits = [
+  "coal_ccs_retrofit_90",
+  "coal_ccs_retrofit_95",
+  "ng_ccs_retrofit_90",
+  "ng_ccs_retrofit_95",
+]
+# Heat rate (MMBtu/MWh) of the generators a CCS retrofit treats, for the CO2 it captures
+# (capture rate x combustion factor x heat rate / retrofit efficiency). One value for all
+# the plant vintages whose output the retrofit takes. Defaults: NREL ATB 2024, 2022 new
+# plant (coal "Coal-new", NG "NG 2-on-1 Combined Cycle (H-Frame)").
+# TODO: replace with a source for the existing fleet's heat rates
+ccs_retrofit_heat_rates = { coal = 8.49, ng_cc = 6.196 }
+
+# ----------------------------------------------------------
+#                         STORAGE
+# ----------------------------------------------------------
+[storage]
+# Leave out the existing storage (-EXS), from CODERS
+skip_existing = false
+
+# Storage the model can build (-NEW); [] for none. Options (those with NREL ATB
+# costs): "battery_1h", "battery_2h", "battery_3h", "battery_4h", "battery_5h",
+# "pump_10h"
+new_technologies = ["battery_2h", "battery_4h"]
+
+# Electricity out per unit stored; defaults from NREL ATB
+battery_round_trip_efficiency = 0.85
+pumped_hydro_round_trip_efficiency = 0.80
+
+# ----------------------------------------------------------
+#                          TRADE
+# ----------------------------------------------------------
+[trade]
+# Leave out the interties between modelled provinces (E_INT), whose flows the model
+# decides
+skip_endogenous = false
+# Leave out the interties with the US, fixed to the historical flows of
+# source_years.coders_hourly
+skip_boundary = false
+# true -> interties and exports lose the sending province's system (transmission and
+# distribution) losses, as the previous module did; false: transmission losses only
+# (see ELECTRICITY_MODULE_BUGS.md)
+reproduce_previous_intertie_losses = false
+
+# ----------------------------------------------------------
+#                       RELIABILITY
+# ----------------------------------------------------------
+[reliability]
+# Leave out the planning reserve margin, capacity credits (static reserve margin) and
+# reserve capacity derates (dynamic); Temoa's reserve_margin setting picks which applies
+skip = false
+# Capacity credits and derates: IESO Reliability Outlook capability at summer peak
+# over installed capacity, by fuel ("Firm" or "Planned"); Ontario's, used everywhere
+ieso_peak_type = "Firm"
+# true -> derate the monthly hydro reservoir as the previous module did, counting its
+# low availability twice in Temoa's dynamic reserve margin (see
+# ELECTRICITY_MODULE_BUGS.md)
+reproduce_previous_hydro_storage_derate = false

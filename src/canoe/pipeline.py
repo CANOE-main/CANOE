@@ -1,11 +1,13 @@
+import tomllib
 from pathlib import Path
 from typing import Any
 
 from loguru import logger
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
-from canoe.common import CANOEModuleOutput, CANOESector, atomic_transaction
+from canoe.common import CANOEFuel, CANOEModuleOutput, CANOESector, atomic_transaction
 from canoe.common.naming import DatasetIdentifier
+from canoe.electricity.config import CANOEElectricityConfig
 from canoe.emissions import processing as emissions_processing
 from canoe.fuel.config import CANOEFuelConfig
 from canoe.representative_periods.config import RepresentativePeriodsConfig
@@ -20,8 +22,12 @@ from .temoa_protocol import CANOETemoaConfig, run_temoa
 class CANOECompilerConfig(BaseModel):
     base: CANOEBaseConfig
     sectors: dict[str, SectorConfig] = Field(default_factory=dict)
+    electricity: CANOEElectricityConfig | None = None
+    """Supplies the electricity the sectors import, from the path of its TOML; none
+    supplied if left out."""
     fuel: CANOEFuelConfig | None = None
-    """Supplies the fuels the sectors import; none supplied if left out."""
+    """Supplies the fuels the sectors and the electricity module import; none
+    supplied if left out."""
 
     @field_validator("sectors", mode="before")
     @classmethod
@@ -30,6 +36,19 @@ class CANOECompilerConfig(BaseModel):
             return value
         base = (info.data or {}).get("base")
         return {key: resolve_sector_config(item, base) for key, item in value.items()}
+
+    @field_validator("electricity", mode="before")
+    @classmethod
+    def _resolve_electricity(cls, value: Any, info: ValidationInfo) -> Any:
+        # Path to its TOML (or a table, e.g. in tests): validated with `base` in
+        # context so inherited fields resolve
+        if isinstance(value, (str, Path)):
+            with Path(value).open("rb") as f:
+                value = tomllib.load(f)
+        if not isinstance(value, dict):
+            return value
+        base = (info.data or {}).get("base")
+        return CANOEElectricityConfig.model_validate(value, context={"base": base})
 
     @field_validator("fuel", mode="before")
     @classmethod
@@ -108,7 +127,20 @@ def run(config: CANOEPipelineConfig):
             logger.info(f"Sector {sector_name} output: {sector_output}")
             module_outputs.append(sector_output)
 
-        # Fuel supply: imports and distribution of the fuels the sectors consume
+        # Electricity supply: the electricity the sectors consume, and the grid
+        # behind it; its generators' fuels are imports for the fuel supply
+        sector_imports = [i for output in module_outputs for i in output.fuel_imports]
+        if config.compiler.electricity is not None:
+            logger.info("Running electricity supply")
+            module_outputs.append(config.compiler.electricity.run(sector_imports))
+        elif any(i.fuel == CANOEFuel.Electricity for i in sector_imports):
+            logger.warning(
+                "No [compiler.electricity] configured: the electricity imports of the "
+                + "sectors are not supplied"
+            )
+
+        # Fuel supply: imports and distribution of the fuels the sectors and the
+        # electricity module consume
         fuel_imports = [i for output in module_outputs for i in output.fuel_imports]
         if config.compiler.fuel is not None:
             logger.info("Running fuel supply")

@@ -54,7 +54,7 @@ class LabeledArray:
         self,
         array: np.ndarray | list[Any],
         dims: Sequence[str],
-        **fixed_dims: dict[str, Any],
+        **fixed_dims: Any,
     ):
         """
         Assign an array to a sub-block.

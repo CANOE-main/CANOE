@@ -17,6 +17,9 @@ from typing import Any
 
 import numpy as np
 from canoe_schema.v4_0 import (
+    CapacityCredit,
+    CapacityFactorProcess,
+    CapacityFactorTech,
     CapacityToActivity,
     CostFixed,
     CostInvest,
@@ -26,10 +29,17 @@ from canoe_schema.v4_0 import (
     ExistingCapacity,
     LifetimeProcess,
     LifetimeTech,
+    LimitActivity,
     LimitAnnualCapacityFactor,
+    LimitCapacity,
+    LimitSeasonalCapacityFactor,
     LimitTechInputSplit,
     LimitTechInputSplitAnnual,
     OperatorCode,
+    RampDownHourly,
+    RampUpHourly,
+    ReserveCapacityDerate,
+    StorageDuration,
     Technology,
     TechnologyTypeCode,
 )
@@ -37,8 +47,12 @@ from canoe_schema.v4_0 import (
 from canoe.canoe_objects.array_types import (
     RegionalValuesArray,
     RegionPeriodArray,
+    RegionSeasonArray,
+    RegionSeasonTodArray,
     RegionVintageArray,
     RegionVintagePeriodArray,
+    RegionVintageSeasonArray,
+    RegionVintageSeasonTodArray,
 )
 from canoe.canoe_objects.parameter import Parameter, ParameterMetadata, RowOptions
 from canoe.common import CANOEProvince, CANOESector, DataQualityProfile
@@ -129,6 +143,11 @@ class TechnologyEntity:
     - capacity factor limits for commodities that are not outputs
     - emission factors for commodities that are not inputs, or for a (region, vintage)
       without efficiency for that input
+    - a storage duration or seasonal storage on a technology that is not storage
+    - capacity credits or reserve capacity derates on a technology not in the
+      reserve, or for a (region, vintage) without any efficiency; capacity credits
+      for periods outside the vintage's life
+    - capacity credits outside [0, 1], ramp rates outside (0, 1]
 
     Parameters
     ----------
@@ -220,6 +239,9 @@ class TechnologyEntity:
 
         self.annual: int = 0
         self.unlimited_capacity: int = 0
+        self.reserve: int = 0
+        self.curtailable: int = 0
+        self.seasonal_storage: int = 0
 
         # Set-able parameters
         # -------------------
@@ -240,6 +262,25 @@ class TechnologyEntity:
         ] = {}
         # (emission commodity, input commodity) -> emission factor
         self.input_emission_factors: dict[tuple[str, str], InputEmissionFactor] = {}
+        self.storage_duration: Parameter[RegionalValuesArray] | None = None
+        # operator -> activity limit
+        self.activity_limits: dict[OperatorCode, Parameter[RegionPeriodArray]] = {}
+        # operator -> capacity limit
+        self.capacity_limits: dict[OperatorCode, Parameter[RegionPeriodArray]] = {}
+        # Time-sliced (hourly), written as plain tuples, see `build`
+        self.capacity_factors: Parameter[RegionSeasonTodArray] | None = None
+        self.process_capacity_factors: Parameter[RegionVintageSeasonTodArray] | None = (
+            None
+        )
+        # operator -> seasonal capacity factor limit
+        self.seasonal_capacity_factor_limits: dict[
+            OperatorCode, Parameter[RegionSeasonArray]
+        ] = {}
+        # Reserve margin: capacity credits (static) and derates (dynamic)
+        self.capacity_credit: Parameter[RegionVintagePeriodArray] | None = None
+        self.reserve_capacity_derate: Parameter[RegionVintageSeasonArray] | None = None
+        self.ramp_up: Parameter[RegionalValuesArray] | None = None
+        self.ramp_down: Parameter[RegionalValuesArray] | None = None
 
     @property
     def inputs(self) -> list[str]:
@@ -295,6 +336,30 @@ class TechnologyEntity:
         does not track its capacity, only its activity.
         """
         self.unlimited_capacity = int(unlimited)
+        return self
+
+    def set_reserve(self, reserve: bool = True):
+        """
+        Mark the technology as counting towards the planning reserve margin
+        (`reserve` column).
+        """
+        self.reserve = int(reserve)
+        return self
+
+    def set_curtailable(self, curtailable: bool = True):
+        """
+        Mark the technology's output as curtailable (`curtail` column): it may
+        produce less than its capacity factor allows, e.g. wind and solar.
+        """
+        self.curtailable = int(curtailable)
+        return self
+
+    def set_seasonal_storage(self, seasonal: bool = True):
+        """
+        Mark a storage technology (flag `ps`) as seasonal (`seas_stor` column): its
+        stored energy carries over from one season to the next.
+        """
+        self.seasonal_storage = int(seasonal)
         return self
 
     def with_efficiency(
@@ -790,6 +855,381 @@ class TechnologyEntity:
         )
         return self
 
+    def with_storage_duration(
+        self,
+        hours: RegionalValuesArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+    ):
+        """
+        Set the energy a storage technology (flag `ps`) holds, in hours of output at
+        full capacity.
+
+        Writes `storage_duration`: one row per region with a value.
+
+        Parameters
+        ----------
+        hours : RegionalValuesArray
+            Duration in hours, by region.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> battery = (
+        ...     TechnologyEntity(
+        ...         "C_BAT", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001"),
+        ...         flag=TechnologyTypeCode.PS,
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=0.85))
+        ...     .with_storage_duration(RegionalValuesArray(regions, fill=4))
+        ... )
+        >>> battery.build(db)
+        >>> db.execute("SELECT region, tech, duration FROM storage_duration").fetchall()
+        [('ON', 'C_BAT', 4.0)]
+        """
+        self.storage_duration = Parameter(
+            hours, ParameterMetadata(notes, reference_code, data_quality)
+        )
+        return self
+
+    def with_limit_activity(
+        self,
+        activity: RegionPeriodArray,
+        operator: OperatorCode = OperatorCode.LE,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        """
+        Limit the technology's total output over each period's year, all vintages
+        together.
+
+        Writes `limit_activity`: one row per (region, period) with a value. The
+        technology can have one limit per operator (e.g. a lower and an upper
+        bound); calling it again with the same operator replaces that limit.
+
+        Parameters
+        ----------
+        activity : RegionPeriodArray
+            Annual output by region and period.
+        operator : OperatorCode
+            Upper bound (`le`, default), lower bound (`ge`) or exact output (`e`).
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> chp = (
+        ...     TechnologyEntity(
+        ...         "C_CHP", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025], fill=0.4))
+        ...     .with_limit_activity(
+        ...         RegionPeriodArray(regions, [2025], fill=9.5), OperatorCode.GE, units="PJ"
+        ...     )
+        ...     .with_limit_activity(
+        ...         RegionPeriodArray(regions, [2025], fill=10.0), OperatorCode.LE, units="PJ"
+        ...     )
+        ... )
+        >>> chp.build(db)
+        >>> db.execute(
+        ...     "SELECT region, period, tech_or_group, operator, activity, units"
+        ...     " FROM limit_activity"
+        ... ).fetchall()
+        [('ON', 2025, 'C_CHP', 'ge', 9.5, 'PJ'), ('ON', 2025, 'C_CHP', 'le', 10.0, 'PJ')]
+        """
+        self.activity_limits[operator] = Parameter(
+            activity, ParameterMetadata(notes, reference_code, data_quality, units)
+        )
+        return self
+
+    def with_limit_capacity(
+        self,
+        capacity: RegionPeriodArray,
+        operator: OperatorCode = OperatorCode.LE,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+        units: str | None = None,
+    ):
+        """
+        Limit the technology's total installed capacity in each period, all vintages
+        together, e.g. the resource available to a wind farm.
+
+        Writes `limit_capacity`: one row per (region, period) with a value. The
+        technology can have one limit per operator; calling it again with the same
+        operator replaces that limit.
+
+        Parameters
+        ----------
+        capacity : RegionPeriodArray
+            Capacity by region and period.
+        operator : OperatorCode
+            Upper bound (`le`, default), lower bound (`ge`) or exact capacity (`e`).
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> panels = (
+        ...     TechnologyEntity(
+        ...         "C_PV", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=1.0))
+        ...     .with_limit_capacity(
+        ...         RegionPeriodArray(regions, [2025, 2030], fill=0.5), units="GW"
+        ...     )
+        ... )
+        >>> panels.build(db)
+        >>> db.execute(
+        ...     "SELECT region, period, tech_or_group, operator, capacity, units"
+        ...     " FROM limit_capacity"
+        ... ).fetchall()
+        [('ON', 2025, 'C_PV', 'le', 0.5, 'GW'), ('ON', 2030, 'C_PV', 'le', 0.5, 'GW')]
+        """
+        self.capacity_limits[operator] = Parameter(
+            capacity, ParameterMetadata(notes, reference_code, data_quality, units)
+        )
+        return self
+
+    def with_capacity_factor(
+        self,
+        capacity_factors: RegionSeasonTodArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+    ):
+        """
+        Set the capacity factor of every vintage in each time slice: the fraction of
+        its capacity the technology can use, e.g. the wind available in that hour.
+
+        Writes `capacity_factor_tech`: one row per (region, season, time of day) with
+        a value. Values must be within [0, 1].
+
+        Parameters
+        ----------
+        capacity_factors : RegionSeasonTodArray
+            Capacity factor by region and time slice.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> panels = (
+        ...     TechnologyEntity(
+        ...         "C_PV", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_elc", RegionVintageArray(regions, [2025], fill=1.0))
+        ...     .with_capacity_factor(
+        ...         RegionSeasonTodArray(regions, ["D001"], ["H01", "H02"], fill=0.0)
+        ...     )
+        ... )
+        >>> panels.capacity_factors.values.set(0.3, tod="H02")
+        >>> panels.build(db)
+        >>> db.execute(
+        ...     "SELECT region, season, tod, tech, factor FROM capacity_factor_tech"
+        ... ).fetchall()
+        [('ON', 'D001', 'H01', 'C_PV', 0.0), ('ON', 'D001', 'H02', 'C_PV', 0.3)]
+        """
+        self.capacity_factors = Parameter(
+            capacity_factors, ParameterMetadata(notes, reference_code, data_quality)
+        )
+        return self
+
+    def with_capacity_factor_process(
+        self,
+        capacity_factors: RegionVintageSeasonTodArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+    ):
+        """
+        Set the capacity factor of each vintage in each time slice, for technologies
+        whose profile changes between vintages. Where set, it overrides the
+        technology's capacity factor (see `with_capacity_factor`).
+
+        Writes `capacity_factor_process`: one row per (region, vintage, season, time
+        of day) with a value. Values must be within [0, 1], and every (region,
+        vintage) needs an efficiency.
+
+        Parameters
+        ----------
+        capacity_factors : RegionVintageSeasonTodArray
+            Capacity factor by region, vintage and time slice.
+        """
+        self.process_capacity_factors = Parameter(
+            capacity_factors, ParameterMetadata(notes, reference_code, data_quality)
+        )
+        return self
+
+    def with_limit_seasonal_capacity_factor(
+        self,
+        capacity_factors: RegionSeasonArray,
+        operator: OperatorCode = OperatorCode.LE,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+    ):
+        """
+        Limit the average capacity factor of the technology over each season, all
+        vintages together, leaving its use within the season free (e.g. a
+        reservoir's daily water).
+
+        Writes `limit_seasonal_capacity_factor`: one row per (region, season) with a
+        value. Values must be within [0, 1]. The technology can have one limit per
+        operator; calling it again with the same operator replaces that limit.
+
+        Parameters
+        ----------
+        capacity_factors : RegionSeasonArray
+            Capacity factor by region and season.
+        operator : OperatorCode
+            Upper bound (`le`, default), lower bound (`ge`) or exact factor (`e`).
+        """
+        self.seasonal_capacity_factor_limits[operator] = Parameter(
+            capacity_factors, ParameterMetadata(notes, reference_code, data_quality)
+        )
+        return self
+
+    def with_capacity_credit(
+        self,
+        credits: RegionVintagePeriodArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+    ):
+        """
+        Set the share of each vintage's capacity that counts towards the planning
+        reserve margin in each period, when Temoa runs with a static reserve margin.
+        Only for technologies in the reserve (see `set_reserve`).
+
+        Writes `capacity_credit`: one row per (region, vintage, period) with a value.
+        Values must be within [0, 1], every (region, vintage) needs an efficiency,
+        and periods must be within the vintage's life.
+
+        Parameters
+        ----------
+        credits : RegionVintagePeriodArray
+            Capacity credit by region, vintage and period.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> turbine = (
+        ...     TechnologyEntity(
+        ...         "C_GT", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .set_reserve()
+        ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025], fill=0.4))
+        ...     .with_capacity_credit(
+        ...         RegionVintagePeriodArray(regions, [2025], [2025, 2030], fill=0.9)
+        ...     )
+        ... )
+        >>> turbine.build(db)
+        >>> db.execute(
+        ...     "SELECT region, period, tech, vintage, credit FROM capacity_credit"
+        ... ).fetchall()
+        [('ON', 2025, 'C_GT', 2025, 0.9), ('ON', 2030, 'C_GT', 2025, 0.9)]
+        """
+        self.capacity_credit = Parameter(
+            credits, ParameterMetadata(notes, reference_code, data_quality)
+        )
+        return self
+
+    def with_reserve_capacity_derate(
+        self,
+        factors: RegionVintageSeasonArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+    ):
+        """
+        Set the share of each vintage's available output that counts towards the
+        planning reserve margin in each season, when Temoa runs with a dynamic
+        reserve margin (storage: the share of its net discharge). Only for
+        technologies in the reserve (see `set_reserve`); Temoa takes 1 where unset.
+
+        Writes `reserve_capacity_derate`: one row per (region, season, vintage) with
+        a value. Values must be within [0, 1], and every (region, vintage) needs an
+        efficiency.
+
+        Parameters
+        ----------
+        factors : RegionVintageSeasonArray
+            Derate by region, vintage and season.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> turbine = (
+        ...     TechnologyEntity(
+        ...         "C_GT", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .set_reserve()
+        ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025], fill=0.4))
+        ...     .with_reserve_capacity_derate(
+        ...         RegionVintageSeasonArray(regions, [2025], ["D001"], fill=0.9)
+        ...     )
+        ... )
+        >>> turbine.build(db)
+        >>> db.execute(
+        ...     "SELECT region, season, tech, vintage, factor FROM reserve_capacity_derate"
+        ... ).fetchall()
+        [('ON', 'D001', 'C_GT', 2025, 0.9)]
+        """
+        self.reserve_capacity_derate = Parameter(
+            factors, ParameterMetadata(notes, reference_code, data_quality)
+        )
+        return self
+
+    def with_ramp_rates(
+        self,
+        up: RegionalValuesArray,
+        down: RegionalValuesArray,
+        notes: str | None = None,
+        data_quality: DataQualityProfile | None = None,
+        reference_code: str | None = None,
+    ):
+        """
+        Limit the change of output from one time slice to the next, as a fraction of
+        capacity per hour.
+
+        Writes `ramp_up_hourly` and `ramp_down_hourly`: one row per region with a
+        value. Values must be within (0, 1].
+
+        Parameters
+        ----------
+        up, down : RegionalValuesArray
+            Largest hourly increase and decrease, by region.
+
+        Examples
+        --------
+        >>> from canoe.common import CANOESector
+        >>> regions = [CANOEProvince.ONTARIO]
+        >>> rates = RegionalValuesArray(regions, fill=0.25)
+        >>> turbine = (
+        ...     TechnologyEntity(
+        ...         "C_GT", "C_elc", DatasetIdentifier(CANOESector.Commercial, "DOC", "001")
+        ...     )
+        ...     .with_efficiency("C_ng", RegionVintageArray(regions, [2025], fill=0.4))
+        ...     .with_ramp_rates(rates, rates)
+        ... )
+        >>> turbine.build(db)
+        >>> db.execute("SELECT region, tech, rate FROM ramp_up_hourly").fetchall()
+        [('ON', 'C_GT', 0.25)]
+        >>> db.execute("SELECT region, tech, rate FROM ramp_down_hourly").fetchall()
+        [('ON', 'C_GT', 0.25)]
+        """
+        metadata = ParameterMetadata(notes, reference_code, data_quality)
+        self.ramp_up = Parameter(up, metadata)
+        self.ramp_down = Parameter(down, metadata)
+        return self
+
     def validate(self) -> None:
         """
         Check the parameters are consistent before writing them (called by `build`).
@@ -841,12 +1281,82 @@ class TechnologyEntity:
                 for (o, operator), limit in self.capacity_factor_limits.items()
             },
             "process lifetime": self.process_lifetime,
+            "storage duration": self.storage_duration,
+            **{
+                f"activity limit ({operator})": limit
+                for operator, limit in self.activity_limits.items()
+            },
+            **{
+                f"capacity limit ({operator})": limit
+                for operator, limit in self.capacity_limits.items()
+            },
+            "capacity credit": self.capacity_credit,
+            "ramp up rate": self.ramp_up,
+            "ramp down rate": self.ramp_down,
         }
         for parameter_name, parameter in parameters.items():
             if parameter is not None and not parameter.values.to_records():
                 raise ValueError(
                     f"Technology {self.name}: {parameter_name} was set but has no values"
                 )
+
+        # Fractions: capacity credits within [0, 1], ramp rates within (0, 1]
+        fractions: dict[str, tuple[Parameter[Any] | None, bool]] = {
+            "capacity credit": (self.capacity_credit, True),
+            "ramp up rate": (self.ramp_up, False),
+            "ramp down rate": (self.ramp_down, False),
+        }
+        for parameter_name, (parameter, zero_allowed) in fractions.items():
+            if parameter is None:
+                continue
+            for record in parameter.values.to_records():
+                value = record["value"]
+                if value > 1 or value < 0 or (value == 0 and not zero_allowed):
+                    raise ValueError(
+                        f"Technology {self.name}: {parameter_name} {value} outside "
+                        + ("[0, 1]" if zero_allowed else "(0, 1]")
+                        + f" at {record['region']}"
+                    )
+
+        # The reserve margin only counts technologies in the reserve
+        if not self.reserve and (self.capacity_credit or self.reserve_capacity_derate):
+            raise ValueError(
+                f"Technology {self.name}: capacity credit or reserve capacity derate "
+                + "on a technology that is not in the reserve (see set_reserve)"
+            )
+
+        # Capacity factors: checked on the arrays (millions of cells), within [0, 1]
+        time_sliced: dict[str, Parameter[Any] | None] = {
+            "capacity factor": self.capacity_factors,
+            "process capacity factor": self.process_capacity_factors,
+            **{
+                f"seasonal capacity factor limit ({operator})": limit
+                for operator, limit in self.seasonal_capacity_factor_limits.items()
+            },
+            "reserve capacity derate": self.reserve_capacity_derate,
+        }
+        for parameter_name, parameter in time_sliced.items():
+            if parameter is None:
+                continue
+            data = parameter.values.data
+            if np.isnan(data).all():
+                raise ValueError(
+                    f"Technology {self.name}: {parameter_name} was set but has no values"
+                )
+            if np.nanmin(data) < 0 or np.nanmax(data) > 1:
+                raise ValueError(
+                    f"Technology {self.name}: {parameter_name} outside [0, 1] "
+                    + f"({np.nanmin(data)} to {np.nanmax(data)})"
+                )
+
+        # Storage parameters only for storage technologies
+        if self.flag != TechnologyTypeCode.PS and (
+            self.storage_duration or self.seasonal_storage
+        ):
+            raise ValueError(
+                f"Technology {self.name}: storage duration or seasonal storage on a "
+                + f"technology that is not storage (flag {self.flag})"
+            )
 
         # (region, vintage) cells with at least one efficiency
         efficiency_cells: set[tuple[CANOEProvince, int]] = set()
@@ -919,10 +1429,11 @@ class TechnologyEntity:
                     + f"at {region}, {period}"
                 )
 
-        # Existing capacity and investment costs
+        # Existing capacity, investment costs and capacity credits
         vintage_parameters = {
             "existing capacity": self.existing_capacity,
             "investment cost": self.investment_cost,
+            "capacity credit": self.capacity_credit,
         }
         for parameter_name, parameter in vintage_parameters.items():
             if parameter is None:
@@ -941,6 +1452,27 @@ class TechnologyEntity:
                     raise ValueError(
                         f"Technology {self.name}: variable cost without efficiency "
                         + f"at {record['region']}, {record['vintage']}"
+                    )
+
+        # Process capacity factors and derates need an efficiency for their vintage
+        by_vintage_and_time: dict[str, Parameter[Any] | None] = {
+            "process capacity factor": self.process_capacity_factors,
+            "reserve capacity derate": self.reserve_capacity_derate,
+        }
+        for parameter_name, parameter in by_vintage_and_time.items():
+            if parameter is None:
+                continue
+            values = parameter.values
+            # (region, vintage) with any value, from the array (millions of cells)
+            time_axes = tuple(range(2, values.data.ndim))
+            has_value = ~np.isnan(values.data).all(axis=time_axes)
+            for i, j in zip(*np.nonzero(has_value)):
+                region = values.coords["region"][i]
+                vintage = values.coords["vintage"][j]
+                if (region, vintage) not in efficiency_cells:
+                    raise ValueError(
+                        f"Technology {self.name}: {parameter_name} without "
+                        + f"efficiency at {region}, {vintage}"
                     )
 
         # Process lifetimes need an efficiency for their vintage
@@ -973,6 +1505,7 @@ class TechnologyEntity:
         period_parameters = {
             "fixed cost": self.fixed_cost,
             "variable cost": self.variable_cost,
+            "capacity credit": self.capacity_credit,
         }
         for parameter_name, parameter in period_parameters.items():
             if parameter is None:
@@ -1029,6 +1562,9 @@ class TechnologyEntity:
             description=self.description,
             unlim_cap=self.unlimited_capacity,
             annual=self.annual,
+            reserve=self.reserve,
+            curtail=self.curtailable,
+            seas_stor=self.seasonal_storage,
             data_id=options.dataset_code(),
         )
         sql, params = Technology.to_insert_or_ignore_sql(technology)
@@ -1315,3 +1851,236 @@ class TechnologyEntity:
                 emission_activities, include_nulls=True
             )
             db_conn.executemany(sql, params)
+
+        # Storage duration
+        if self.storage_duration:
+            meta = self.storage_duration.metadata
+            durations = [
+                StorageDuration(
+                    region=row["region"].short(),
+                    tech=self.name,
+                    duration=row["value"],
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(self.storage_duration.values.to_records())
+            ]
+            sql, params = StorageDuration.bulk_insert_or_ignore_sql(
+                durations, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Activity limits (one set of rows per operator)
+        for operator, limit in self.activity_limits.items():
+            meta = limit.metadata
+            activity_limits = [
+                LimitActivity(
+                    region=row["region"].short(),
+                    period=row["period"],
+                    tech_or_group=self.name,
+                    operator=operator,
+                    activity=row["value"],
+                    units=meta.units,
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(limit.values.to_records())
+            ]
+            sql, params = LimitActivity.bulk_insert_or_ignore_sql(
+                activity_limits, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Capacity limits (one set of rows per operator)
+        for operator, limit in self.capacity_limits.items():
+            meta = limit.metadata
+            capacity_limits = [
+                LimitCapacity(
+                    region=row["region"].short(),
+                    period=row["period"],
+                    tech_or_group=self.name,
+                    operator=operator,
+                    capacity=row["value"],
+                    units=meta.units,
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(limit.values.to_records())
+            ]
+            sql, params = LimitCapacity.bulk_insert_or_ignore_sql(
+                capacity_limits, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Capacity credits
+        if self.capacity_credit:
+            meta = self.capacity_credit.metadata
+            credits = [
+                CapacityCredit(
+                    region=row["region"].short(),
+                    period=row["period"],
+                    tech=self.name,
+                    vintage=row["vintage"],
+                    credit=row["value"],
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(self.capacity_credit.values.to_records())
+            ]
+            sql, params = CapacityCredit.bulk_insert_or_ignore_sql(
+                credits, include_nulls=True
+            )
+            db_conn.executemany(sql, params)
+
+        # Ramp rates
+        for model, parameter in (
+            (RampUpHourly, self.ramp_up),
+            (RampDownHourly, self.ramp_down),
+        ):
+            if not parameter:
+                continue
+            meta = parameter.metadata
+            rates = [
+                model(
+                    region=row["region"].short(),
+                    tech=self.name,
+                    rate=row["value"],
+                    notes=options.notes(meta, i),
+                    data_source=options.reference(meta, i),
+                    data_id=options.dataset_code(row["region"]),
+                    **options.data_quality(meta, i),
+                )
+                for i, row in enumerate(parameter.values.to_records())
+            ]
+            sql, params = model.bulk_insert_or_ignore_sql(rates, include_nulls=True)
+            db_conn.executemany(sql, params)
+
+        # Time-sliced tables: hourly, up to millions of rows, so plain tuples (one
+        # per row, columns spelled out) streamed into SQLite instead of one model
+        # per row; their values were checked on the arrays by `validate`
+        quality_columns = ("dq_cred", "dq_geog", "dq_struc", "dq_tech", "dq_time")
+
+        # Capacity factors
+        if self.capacity_factors:
+            meta = self.capacity_factors.metadata
+            quality = options.data_quality(meta, 0)
+            sql = (
+                f"INSERT OR IGNORE INTO {CapacityFactorTech.__table_name__} "
+                + "(region, season, tod, tech, factor, notes, data_source, "
+                + "dq_cred, dq_geog, dq_struc, dq_tech, dq_time, data_id) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            )
+            db_conn.executemany(
+                sql,
+                (
+                    (
+                        row["region"].short(),  # region
+                        row["season"],  # season
+                        row["tod"],  # tod
+                        self.name,  # tech
+                        float(row["value"]),  # factor
+                        options.notes(meta, i),  # notes
+                        options.reference(meta, i),  # data_source
+                        *(quality.get(c) if i == 0 else None for c in quality_columns),
+                        options.dataset_code(row["region"]),  # data_id
+                    )
+                    for i, row in enumerate(self.capacity_factors.values.to_records())
+                ),
+            )
+
+        # Capacity factors by vintage
+        if self.process_capacity_factors:
+            meta = self.process_capacity_factors.metadata
+            quality = options.data_quality(meta, 0)
+            sql = (
+                f"INSERT OR IGNORE INTO {CapacityFactorProcess.__table_name__} "
+                + "(region, season, tod, tech, vintage, factor, notes, data_source, "
+                + "dq_cred, dq_geog, dq_struc, dq_tech, dq_time, data_id) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            )
+            db_conn.executemany(
+                sql,
+                (
+                    (
+                        row["region"].short(),  # region
+                        row["season"],  # season
+                        row["tod"],  # tod
+                        self.name,  # tech
+                        row["vintage"],  # vintage
+                        float(row["value"]),  # factor
+                        options.notes(meta, i),  # notes
+                        options.reference(meta, i),  # data_source
+                        *(quality.get(c) if i == 0 else None for c in quality_columns),
+                        options.dataset_code(row["region"]),  # data_id
+                    )
+                    for i, row in enumerate(
+                        self.process_capacity_factors.values.to_records()
+                    )
+                ),
+            )
+
+        # Seasonal capacity factor limits (one set of rows per operator)
+        for operator, limit in self.seasonal_capacity_factor_limits.items():
+            meta = limit.metadata
+            quality = options.data_quality(meta, 0)
+            sql = (
+                f"INSERT OR IGNORE INTO {LimitSeasonalCapacityFactor.__table_name__} "
+                + "(region, season, tech_or_group, operator, factor, notes, "
+                + "data_source, dq_cred, dq_geog, dq_struc, dq_tech, dq_time, data_id) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            )
+            db_conn.executemany(
+                sql,
+                (
+                    (
+                        row["region"].short(),  # region
+                        row["season"],  # season
+                        self.name,  # tech_or_group
+                        operator.value,  # operator
+                        float(row["value"]),  # factor
+                        options.notes(meta, i),  # notes
+                        options.reference(meta, i),  # data_source
+                        *(quality.get(c) if i == 0 else None for c in quality_columns),
+                        options.dataset_code(row["region"]),  # data_id
+                    )
+                    for i, row in enumerate(limit.values.to_records())
+                ),
+            )
+
+        # Reserve capacity derates
+        if self.reserve_capacity_derate:
+            meta = self.reserve_capacity_derate.metadata
+            quality = options.data_quality(meta, 0)
+            sql = (
+                f"INSERT OR IGNORE INTO {ReserveCapacityDerate.__table_name__} "
+                + "(region, season, tech, vintage, factor, notes, data_source, "
+                + "dq_cred, dq_geog, dq_struc, dq_tech, dq_time, data_id) "
+                + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+            )
+            db_conn.executemany(
+                sql,
+                (
+                    (
+                        row["region"].short(),  # region
+                        row["season"],  # season
+                        self.name,  # tech
+                        row["vintage"],  # vintage
+                        float(row["value"]),  # factor
+                        options.notes(meta, i),  # notes
+                        options.reference(meta, i),  # data_source
+                        *(quality.get(c) if i == 0 else None for c in quality_columns),
+                        options.dataset_code(row["region"]),  # data_id
+                    )
+                    for i, row in enumerate(
+                        self.reserve_capacity_derate.values.to_records()
+                    )
+                ),
+            )

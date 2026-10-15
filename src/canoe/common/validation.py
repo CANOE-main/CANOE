@@ -21,8 +21,14 @@ from canoe_schema.v4_0.models import (
 from loguru import logger
 
 from canoe.common.emissions import CANOEEmission
-from canoe.common.naming import get_emission_commodity_name
+from canoe.common.fuels import CANOEFuel
+from canoe.common.module_interface import CANOEFuelImport
+from canoe.common.naming import (
+    get_emission_commodity_name,
+    get_fuel_commodity_in_sector,
+)
 from canoe.common.provinces import CANOEProvince
+from canoe.common.sectors import CANOESector
 from canoe.common.time_slices import CANOETimeSliceSet
 
 ValidationBehavior = Literal["error", "warning"]
@@ -173,6 +179,57 @@ def check_emission_commodities(
         handle_validation_issue(
             f"Emission commodities {missing} are absent from the commodity table. "
             + "The central emissions step must register them before this module runs.",
+            behavior,
+        )
+
+
+def check_import_provinces(
+    imports: list[CANOEFuelImport],
+    provinces: list[CANOEProvince],
+    behavior: ValidationBehavior = "error",
+):
+    """
+    Checks that the fuel imports are in the provinces of the module supplying them
+    (a sector config can set its own provinces).
+    """
+    outside = [
+        f"{str(i.sector).lower()} {i.fuel.get_desc_name()} in {p.short()}"
+        for i in imports
+        for p in i.provinces
+        if p not in provinces
+    ]
+    if outside:
+        handle_validation_issue(
+            f"Fuel imports outside the provinces of the module supplying them: {outside}",
+            behavior,
+        )
+
+
+def check_sector_fuel_commodities(
+    db_conn: Connection,
+    supplied: list[tuple[CANOESector, CANOEFuel]],
+    behavior: ValidationBehavior = "error",
+):
+    """
+    Checks that the fuel commodity of every supplied (sector, fuel), e.g. `C_ng`,
+    exists in the commodity table: the sectors register them, and the technologies
+    supplying them output them.
+    """
+    db_commodities = {
+        row[0]
+        for row in db_conn.execute(
+            f"SELECT name FROM {Commodity.__table_name__}"
+        ).fetchall()
+    }
+    missing = [
+        get_fuel_commodity_in_sector(sector, fuel)
+        for sector, fuel in supplied
+        if get_fuel_commodity_in_sector(sector, fuel) not in db_commodities
+    ]
+    if missing:
+        handle_validation_issue(
+            f"Sector fuel commodities {missing} are absent from the commodity table. "
+            + "The sectors must register the fuels they import before this module runs.",
             behavior,
         )
 

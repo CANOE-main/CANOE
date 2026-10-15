@@ -6,14 +6,14 @@ readme = "README.md"
 requires-python = ">=3.12"
 license-files = ["LICENSE*"]
 dependencies = [
-  "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git@0025a069cbfa31895567b59ef5722a8ab3848eed",
+  "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git@b8a177bff5032e2404f3f5ea6b807fc964bcf526",
   "loguru==0.7.3",
   "matplotlib",
   "numpy==2.4.3",
   "pandas==3.0.1",
   "pydantic==2.13.4",
-  "temoa @ git+https://github.com/yamilbknsu/temoa.git@e69223976bd9bdfbdeb25f8f73cc32922108215b",
   "pyyaml",
+  "temoa @ git+https://github.com/yamilbknsu/temoa.git@e69223976bd9bdfbdeb25f8f73cc32922108215b",
   "tsam @ git+https://github.com/CANOE-main/tsam.git@v3.2-patch",
   "typer==0.27.1",
 
@@ -49,29 +49,19 @@ reportUnknownArgumentType = false
 reportUnknownVariableType = false
 reportUnknownMemberType = false
 
-exclude = [
-    "**/node_modules",
-    "**/__pycache__",
-    "**/.*",
-    "assets",
-    "notebooks"
-]
+exclude = ["**/node_modules", "**/__pycache__", "**/.*", "assets", "notebooks"]
 ignore = ["assets", "notebooks"]
-
-[tool.ruff]
-extend-exclude = ["assets", "notebooks"]
-force-exclude = true
 
 [tool.hatch.envs.dev]
 dependencies = [
   "pandas-stubs",
 ]
 
-
 [tool.pytest.ini_options]
+addopts = "--doctest-modules"
 # Doctests are collected from canoe_objects (see src/canoe/canoe_objects/conftest.py),
-# the commercial and agriculture configurations, the fuel, industry and residential
-# modules, and the census divisions, ceud, gdp, periods, provinces, fuels, sectors and
+# the commercial and agriculture configurations, the electricity, fuel, industry and
+# residential modules, and the census divisions, ceud, gdp, periods, provinces, fuels, sectors and
 # emissions modules
 testpaths = [
   "tests",
@@ -90,12 +80,16 @@ testpaths = [
   "src/canoe/common/provinces.py",
   "src/canoe/common/fuels.py",
   "src/canoe/common/sectors.py",
+  "src/canoe/electricity",
   "src/canoe/emissions",
   "src/canoe/fuel",
   "src/canoe/industry",
   "src/canoe/residential",
 ]
-addopts = "--doctest-modules"
+
+[tool.ruff]
+extend-exclude = ["assets", "notebooks"]
+force-exclude = true
 
 [tool.setuptools.packages.find]
 where = ["src"]

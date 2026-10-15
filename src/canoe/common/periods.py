@@ -45,6 +45,34 @@ def period_end_years(future_periods: list[int], period_step: int) -> dict[int, i
     return dict(zip(future_periods, [*future_periods[1:], end_of_horizon]))
 
 
+def horizon_length(future_periods: list[int], period_step: int) -> int:
+    """
+    Years from the first model period to the end of the horizon
+    (`future_periods[-1] + period_step`). A technology with a single vintage, the
+    first period, serves every period with this lifetime.
+
+    Examples
+    --------
+    >>> horizon_length([2025, 2030, 2035, 2040, 2045], 5)
+    25
+    """
+    return future_periods[-1] + period_step - future_periods[0]
+
+
+def never_retiring_lifetime(future_periods: list[int], period_step: int) -> int:
+    """
+    Lifetime of technologies that never retire: from the last existing vintage (the
+    year before the first period, where their existing capacity is grouped) to the
+    end of the horizon, so every vintage from then on serves to the end.
+
+    Examples
+    --------
+    >>> never_retiring_lifetime([2025, 2030, 2035, 2040, 2045], 5)
+    26
+    """
+    return horizon_length(future_periods, period_step) + 1
+
+
 def projection_year_by_period(
     future_periods: list[int], period_step: int, projection_point: ProjectionPoint
 ) -> dict[int, int]:

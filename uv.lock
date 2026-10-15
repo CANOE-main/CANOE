@@ -137,7 +137,7 @@ requires-dist = [
     { name = "canoe", extras = ["dev"], marker = "extra == 'all'" },
     { name = "canoe", extras = ["docs"], marker = "extra == 'all'" },
     { name = "canoe", extras = ["solvers"], marker = "extra == 'all'" },
-    { name = "canoe-schema", git = "https://github.com/CANOE-main/canoe-schema.git?rev=0025a069cbfa31895567b59ef5722a8ab3848eed" },
+    { name = "canoe-schema", git = "https://github.com/CANOE-main/canoe-schema.git?rev=b8a177bff5032e2404f3f5ea6b807fc964bcf526" },
     { name = "fastparquet" },
     { name = "gdown" },
     { name = "griffe-pydantic", marker = "extra == 'docs'" },
@@ -169,7 +169,7 @@ dev = [{ name = "pytest", specifier = ">=9.1.1" }]
 [[package]]
 name = "canoe-schema"
 version = "4.0.0"
-source = { git = "https://github.com/CANOE-main/canoe-schema.git?rev=0025a069cbfa31895567b59ef5722a8ab3848eed#0025a069cbfa31895567b59ef5722a8ab3848eed" }
+source = { git = "https://github.com/CANOE-main/canoe-schema.git?rev=b8a177bff5032e2404f3f5ea6b807fc964bcf526#b8a177bff5032e2404f3f5ea6b807fc964bcf526" }
 dependencies = [
     { name = "loguru" },
     { name = "pydantic" },
