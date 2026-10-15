@@ -26,7 +26,6 @@ existing_periods = [
 future_periods = [2025, 2030, 2035, 2040, 2045]
 period_step = 5
 provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
-# provinces = ["ON", "AB"]
 global_discount_rate = 0.03
 
 # GDP projections that scale the sector demands, inherited by the sectors
@@ -110,14 +109,33 @@ dsd_threshold = 0.01
 kind = "tsam_collection"
 collection = "weather2018-hierarchical-pca6"
 # collections_dir = "path/to/my/clusterings"
-# Representative days, forced and extreme days included
+# Representative days, forced days included
 n_periods = 1
-# Days added as representative days, and the days with the highest/lowest hourly
-# value (peak) or daily mean of clustered features (see the collection's
-# features.csv), as tsam adds them
+# Days added as representative days
 # forced_days = ["D041"]
-# max_peak = ["weather_pc1"]
-# min_peak = []
+
+# Or the days clustered with tsam when the pipeline runs, on your own series: one
+# CSV per series under `data_dir`, named after it, with a `time` column (with UTC
+# offsets) and the values
+# [representative_periods_config.clustering]
+# kind = "tsam"
+# data_dir = "assets/rep_periods_data/timeseries"
+# weather_year = 2018
+# # Series clustered: patterns of their paths in data_dir without .csv; all series
+# # if neither is set (not both)
+# include = ["*_temperature", "*_humidity", "*_wind_speed", "*_irradiance_surface"]
+# # exclude = ["ontario/*"]
+# # Principal components clustered (leave out to cluster the series themselves)
+# pca_components = 6
+# # hierarchical, k_means, k_medoids or adjacent_periods
+# method = "hierarchical"
+# # Representative days, forced and extreme days included
+# n_periods = 16
+# forced_days = ["D041"]
+# # Days with the highest/lowest hourly value (peak) or daily mean of any series
+# # of data_dir
+# max_peak = ["load"]
+# min_peak = ["on_temperature"]
 # max_mean = []
 # min_mean = []
 

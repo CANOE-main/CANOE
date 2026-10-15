@@ -52,7 +52,7 @@ def build_representative_periods(
     """
     logger.info(f"Reducing {input_db} to representative periods...")
 
-    mapping = config.clustering.load_mapping()
+    mapping = config.clustering.mapping()
     # Representatives always represent themselves: their number needs no database
     n_periods = len(set(mapping.representative_of.values()))
     output_db = output_dir / f"{input_db.stem}_{n_periods}d.sqlite"
