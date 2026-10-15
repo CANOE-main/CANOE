@@ -52,15 +52,17 @@ def build_representative_periods(
     """
     logger.info(f"Reducing {input_db} to representative periods...")
 
-    mapping = config.clustering.mapping()
+    # This is were the selection of clustering matters
+    mapping: RepresentativeSeasonMapping = config.clustering.mapping()
     # Representatives always represent themselves: their number needs no database
     n_periods = len(set(mapping.representative_of.values()))
     output_db = output_dir / f"{input_db.stem}_{n_periods}d.sqlite"
 
+    # Read schema version
     with atomic_transaction(input_db, force_foreign_keys=False) as conn:
         version = get_schema_version(conn)
 
-    # In this part we decide which processing function we have to use based on the schema
+    # Decide which processing function we have to use based on the schema
     reduce: Callable[
         [sqlite3.Connection, RepresentativeSeasonMapping, RepresentativePeriodsConfig],
         str,
@@ -74,6 +76,8 @@ def build_representative_periods(
             )
 
     output_dir.mkdir(parents=True, exist_ok=True)
+
+    # Process the database, start by copying
     shutil.copyfile(input_db, output_db)
     try:
         # Foreign keys off while editing; checked at the end, where a failure names

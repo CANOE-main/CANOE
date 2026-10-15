@@ -105,45 +105,45 @@ dsd_threshold = 0.01
 
 # The clustering to apply: one of a collection precomputed with tsam, by name (the
 # collections packaged with canoe, or those in `collections_dir` if set)
-[representative_periods_config.clustering]
-kind = "tsam_collection"
-collection = "weather2018-hierarchical-pca6"
-# collections_dir = "path/to/my/clusterings"
-# Representative days, forced days included
-n_periods = 1
-# Days added as representative days
-# forced_days = ["D041"]
+# [representative_periods_config.clustering]
+# kind = "tsam_collection"
+# collection = "weather2018-hierarchical-pca6"
+# # collections_dir = "path/to/my/clusterings"
+# # Representative days, forced days included
+# n_periods = 1
+# # Days added as representative days
+# # forced_days = ["D041"]
 
 # Or the days clustered with tsam when the pipeline runs, on your own series: one
 # CSV per series under `data_dir`, named after it, with a `time` column (with UTC
 # offsets) and the values
-# [representative_periods_config.clustering]
-# kind = "tsam"
-# data_dir = "assets/rep_periods_data/timeseries"
-# weather_year = 2018
-# # Series clustered: patterns of their paths in data_dir without .csv; all series
-# # if neither is set (not both)
-# include = ["*_temperature", "*_humidity", "*_wind_speed", "*_irradiance_surface"]
-# # exclude = ["ontario/*"]
-# # Principal components clustered (leave out to cluster the series themselves)
-# pca_components = 6
-# # hierarchical, k_means, k_medoids or adjacent_periods
-# method = "hierarchical"
-# # Representative days, forced and extreme days included
-# n_periods = 16
-# forced_days = ["D041"]
-# # Days with the highest/lowest hourly value (peak) or daily mean of any series
-# # of data_dir
-# max_peak = ["load"]
-# min_peak = ["on_temperature"]
-# max_mean = []
-# min_mean = []
+[representative_periods_config.clustering]
+kind = "tsam"
+data_dir = "assets/rep_periods_data/timeseries"
+weather_year = 2018
+# Series clustered: patterns of their paths in data_dir without .csv; all series
+# if neither is set (not both)
+include = ["*_temperature", "*_humidity", "*_wind_speed", "*_irradiance_surface"]
+# exclude = ["ontario/*"]
+# Principal components clustered (leave out to cluster the series themselves)
+pca_components = 6
+# hierarchical, k_means, k_medoids or adjacent_periods
+method = "hierarchical"
+# Representative days, forced and extreme days included
+n_periods = 16
+forced_days = ["D041"]
+# Days with the highest/lowest hourly value (peak) or daily mean of any series
+# of data_dir
+max_peak = ["load"]
+min_peak = ["on_temperature"]
+max_mean = []
+min_mean = []
 
 # ####################################################################################
 # TEMOA CONFIG
 # ####################################################################################
-# [temoa_config]
-# solver_name = "gurobi"
-# scenario_mode = "perfect_foresight"
-# silent = false
-# save_duals = true
+[temoa_config]
+solver = "gurobi"
+scenario_mode = "build_only"
+silent = false
+save_duals = true

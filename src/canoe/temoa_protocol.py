@@ -99,7 +99,7 @@ def _check_temoa_solver(solver: SolverSpec, save_duals: bool = False):
             error_message += "Refer to the solver's official documentation for installation instructions."
         raise SolverNotAvailableError(error_message)
     else:
-        logger.info("Using solver: %s (%s)", solver.name, location)
+        logger.info(f"Using solver: {solver.name} ({location})", solver.name, location)
 
     if solver.name == "appsi_highs" and save_duals:
         raise ValueError(
@@ -112,4 +112,7 @@ def run_temoa(db_path: Path, config: CANOETemoaConfig):
     temoa_config = config.to_temoa_config(db_path)
     setup_logging(temoa_config.output_path, False, temoa_config.silent)
     sequencer = TemoaSequencer(config=temoa_config)
-    sequencer.start()
+    if temoa_config.scenario_mode == TemoaMode.BUILD_ONLY:
+        sequencer.build_model()
+    else:
+        sequencer.start()
