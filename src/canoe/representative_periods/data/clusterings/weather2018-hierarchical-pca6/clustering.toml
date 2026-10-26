@@ -1,0 +1,12 @@
+description = "Hierarchical clustering (tsam) of the days over principal components, with the old representative periods workflow"
+time_series = "CSV files under assets/rep_periods_data/timeseries, 2018-01-02 00:00:00-05:00 to 2018-12-30 23:00:00-05:00"
+season_labels = "Dnnn is day nnn of the year, in EST"
+method = "hierarchical"
+extreme_period_method = "new_cluster_center"
+tsam_version = "0.0.0.dev651+g6f0c8cdc5"
+
+[[pca_groups]]
+name = "weather"
+n_components = 6
+scale = true
+columns = ["ab_wind_speed", "bc_wind_speed", "mb_wind_speed", "sk_wind_speed", "ab_irradiance_surface", "bc_irradiance_surface", "mb_irradiance_surface", "sk_irradiance_surface", "ab_humidity", "bc_humidity", "mb_humidity", "sk_humidity", "ab_temperature", "bc_temperature", "mb_temperature", "sk_temperature", "nb_wind_speed", "nllab_wind_speed", "ns_wind_speed", "on_wind_speed", "pei_wind_speed", "qc_wind_speed", "nb_irradiance_surface", "nllab_irradiance_surface", "ns_irradiance_surface", "on_irradiance_surface", "pei_irradiance_surface", "qc_irradiance_surface", "nb_humidity", "nllab_humidity", "ns_humidity", "on_humidity", "pei_humidity", "qc_humidity", "nb_temperature", "nllab_temperature", "ns_temperature", "on_temperature", "pei_temperature", "qc_temperature"]

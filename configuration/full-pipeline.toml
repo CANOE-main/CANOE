@@ -1,12 +1,4 @@
 # ####################################################################################
-# ELECTRICITY CONFIG
-# ####################################################################################
-# Electricity supply of the sectors (E_<S>_ELC) and the grid behind it; runs after the
-# sectors, and its generators' fuels are supplied by the fuel module
-[compiler]
-electricity = "configuration/electricity-default.toml"
-
-# ####################################################################################
 # COMPILER CONFIG
 # ####################################################################################
 [compiler.base]
@@ -34,7 +26,6 @@ existing_periods = [
 future_periods = [2025, 2030, 2035, 2040, 2045]
 period_step = 5
 provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
-# provinces = ["ON", "AB"]
 global_discount_rate = 0.03
 
 # GDP projections that scale the sector demands, inherited by the sectors
@@ -74,6 +65,14 @@ industry = "configuration/industry-default.toml"
 residential = "configuration/residential-default.toml"
 
 # ####################################################################################
+# ELECTRICITY CONFIG
+# ####################################################################################
+# Electricity supply of the sectors (E_<S>_ELC) and the grid behind it; runs after the
+# sectors, and its generators' fuels are supplied by the fuel module
+[compiler.electricity]
+config_file = "configuration/electricity-default.toml"
+
+# ####################################################################################
 # FUELS CONFIG
 # ####################################################################################
 # Fuel supply of the fuels the sectors import (electricity is left to the electricity
@@ -94,10 +93,57 @@ validation_behavior = "error"  # database lacks periods, regions or commodities
 missing_data_behavior = "warning"  # a fuel imported by a sector has no price or emission factors
 
 # ####################################################################################
+# REPRESENTATIVE PERIODS CONFIG
+# ####################################################################################
+# Reduce the database to representative days before running Temoa
+[representative_periods_config]
+# What the reduced database keeps of each demand: "hourly" values of the
+# representative days (the annual demand changes) or the "annual" demand
+demand_preservation = "hourly"
+# Share of each demand's distribution set to zero, from its smallest values
+dsd_threshold = 0.01
+
+# The clustering to apply: one of a collection precomputed with tsam, by name (the
+# collections packaged with canoe, or those in `collections_dir` if set)
+# [representative_periods_config.clustering]
+# kind = "tsam_collection"
+# collection = "weather2018-hierarchical-pca6"
+# # collections_dir = "path/to/my/clusterings"
+# # Representative days, forced days included
+# n_periods = 1
+# # Days added as representative days
+# # forced_days = ["D041"]
+
+# Or the days clustered with tsam when the pipeline runs, on your own series: one
+# CSV per series under `data_dir`, named after it, with a `time` column (with UTC
+# offsets) and the values
+[representative_periods_config.clustering]
+kind = "tsam"
+data_dir = "assets/rep_periods_data/timeseries"
+weather_year = 2018
+# Series clustered: patterns of their paths in data_dir without .csv; all series
+# if neither is set (not both)
+include = ["*_temperature", "*_humidity", "*_wind_speed", "*_irradiance_surface"]
+# exclude = ["ontario/*"]
+# Principal components clustered (leave out to cluster the series themselves)
+pca_components = 6
+# hierarchical, k_means, k_medoids or adjacent_periods
+method = "hierarchical"
+# Representative days, forced and extreme days included
+n_periods = 16
+forced_days = ["D041"]
+# Days with the highest/lowest hourly value (peak) or daily mean of any series
+# of data_dir
+max_peak = ["load"]
+min_peak = ["on_temperature"]
+max_mean = []
+min_mean = []
+
+# ####################################################################################
 # TEMOA CONFIG
 # ####################################################################################
-# [temoa_config]
-# solver_name = "gurobi"
-# scenario_mode = "perfect_foresight"
-# silent = false
-# save_duals = true
+[temoa_config]
+solver = "gurobi"
+scenario_mode = "build_only"
+silent = false
+save_duals = true
