@@ -119,10 +119,10 @@ class CANOEFuelConfig(InheritsFromBase):
     `canoe.fuel.price_sources.read_price_table`). A (sector, fuel) that none of them
     prices is not supplied."""
 
-    price_fallback: PriceFallback = PriceFallback.PerFuel
-    """How the `price_sources` share the prices: each fuel from the first source
-    that prices it (`per_fuel`), or each (region, sector, fuel) from the first source
-    that has it (`per_series`)."""
+    price_fallback: PriceFallback = PriceFallback.PerSeries
+    """How the `price_sources` share the prices: each (region, sector, fuel) from the
+    first source that has it (`per_series`), or each fuel from the first source that
+    prices it (`per_fuel`)."""
 
     reproduce_previous_price_errors: bool = False
     """Reproduce the price errors of the previous fuel module, to compare with its
