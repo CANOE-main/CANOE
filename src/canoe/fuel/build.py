@@ -2,6 +2,7 @@
 
 from typing import TYPE_CHECKING
 
+import pandas as pd
 from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
@@ -28,11 +29,17 @@ from .loaders import (
     get_fixed_fuel_prices,
     get_upstream_emission_factors,
 )
-from .prices import (
-    check_price_sources,
-    compute_delivered_prices,
+from .price_sources import (
+    FuelPriceSource,
+    combine_price_sources,
     convert_to_model_units,
-    get_delivered_price_sources,
+    harmonize_atb_prices,
+    harmonize_eia_prices,
+    harmonize_fixed_prices,
+)
+from .prices import (
+    check_price_coverage,
+    delivered_prices_by_period,
     split_import_and_distribution,
 )
 from .validation import validate_db_against_config
@@ -94,14 +101,69 @@ def build_fuel(
 
         # Load and pre-process data sources
         # ----------------------------------
-        # Prices, each in its own currency, year and units: EIA AEO Table 3
-        # delivered prices by sector and fuel (2024 USD/MMBtu), NREL ATB biomass and
-        # uranium (2022 USD/MMBtu), fixed report prices (2020 CAD/GJ)
-        eia_prices = get_eia_energy_prices(cfg.data_cache_config)
-        atb_prices = get_atb_fuel_prices(cfg.data_cache_config)
-        fixed_prices = get_fixed_fuel_prices()
-        # Exchange rates and inflation, to convert them to CAD of model_currency_year
+        # Exchange rates and inflation, to convert the prices to CAD of
+        # model_currency_year
         exchange, inflation = get_exchange_and_inflation_tables()
+        # Year each period reads the prices at (price_projection_point)
+        projection_years = projection_year_by_period(
+            cfg.future_periods, cfg.period_step, cfg.price_projection_point
+        )
+        # Harmonized delivered prices of each source configured, in priority order:
+        # loaded in the source's currency, year and units, converted to M$/PJ of
+        # model_currency_year, then labelled by region, sector and fuel
+        harmonized_prices: list[pd.DataFrame] = []
+        for source in cfg.price_sources:
+            match source:
+                case FuelPriceSource.EIA:
+                    # EIA AEO Table 3 delivered prices by sector and fuel, US
+                    # average (2024 USD/MMBtu)
+                    eia_prices = convert_to_model_units(
+                        get_eia_energy_prices(cfg.data_cache_config),
+                        cfg.model_currency_year,
+                        exchange,
+                        inflation,
+                        cfg.reproduce_previous_price_errors,
+                    )
+                    harmonized_prices.append(
+                        harmonize_eia_prices(
+                            eia_prices,
+                            cfg.provinces,
+                            cfg.reproduce_previous_price_errors,
+                        )
+                    )
+                case FuelPriceSource.ATB:
+                    # NREL ATB biomass and uranium (2022 USD/MMBtu), constant
+                    atb_prices = convert_to_model_units(
+                        get_atb_fuel_prices(cfg.data_cache_config),
+                        cfg.model_currency_year,
+                        exchange,
+                        inflation,
+                        cfg.reproduce_previous_price_errors,
+                    )
+                    harmonized_prices.append(
+                        harmonize_atb_prices(
+                            atb_prices,
+                            cfg.provinces,
+                            list(projection_years.values()),
+                        )
+                    )
+                case FuelPriceSource.Fixed:
+                    # Fixed report prices (2020 CAD/GJ), constant
+                    fixed_prices = convert_to_model_units(
+                        get_fixed_fuel_prices(),
+                        cfg.model_currency_year,
+                        exchange,
+                        inflation,
+                        cfg.reproduce_previous_price_errors,
+                    )
+                    harmonized_prices.append(
+                        harmonize_fixed_prices(
+                            fixed_prices,
+                            cfg.provinces,
+                            list(projection_years.values()),
+                        )
+                    )
+        prices = combine_price_sources(harmonized_prices, cfg.price_fallback)
         # Emission factors (kt/PJ): combustion by sector and fuel, upstream by fuel
         combustion_factors = get_combustion_emission_factors()
         # Agriculture gasoline takes the transportation factors (none in the source)
@@ -110,49 +172,32 @@ def build_fuel(
         )
         upstream_factors = get_upstream_emission_factors()
         logger.debug(
-            f"Loaded {len(eia_prices.prices)} EIA prices "
-            + f"({eia_prices.prices['year'].min()}-{eia_prices.prices['year'].max()}), "
-            + f"{len(atb_prices.prices)} ATB and {len(fixed_prices.prices)} fixed "
-            + f"prices, exchange and inflation for {len(exchange)} and "
-            + f"{len(inflation)} years, {len(combustion_factors)} combustion and "
+            f"Loaded {len(prices)} harmonized prices from "
+            + ", ".join(str(s) for s in cfg.price_sources)
+            + f" ({cfg.price_fallback}), exchange and inflation for {len(exchange)} "
+            + f"and {len(inflation)} years, {len(combustion_factors)} combustion and "
             + f"{len(upstream_factors)} upstream emission factors"
         )
 
         # Compute parameters
         # ------------------
-        # (sector, fuel) supplied: those with a price (the others are reported with
-        # missing_data_behavior and not supplied), and their emission factors
-        sources = get_delivered_price_sources(cfg.reproduce_previous_price_errors)
-        supplied = check_price_sources(imports, sources, cfg.missing_data_behavior)
+        # Imports supplied: in the provinces where their (sector, fuel) has a price
+        # (the others are reported with missing_data_behavior and not supplied), and
+        # their emission factors
+        supplied = check_price_coverage(imports, prices, cfg.missing_data_behavior)
         check_combustion_factors(
             [(i.sector, i.fuel) for i in supplied],
             combustion_factors,
             cfg.missing_data_behavior,
         )
-        # - Delivered price (sector, fuel, period) in M$/PJ of model_currency_year,
-        #   of every sector of the price table for the fuels supplied, read at
-        #   price_projection_point
-        projection_years = projection_year_by_period(
-            cfg.future_periods, cfg.period_step, cfg.price_projection_point
-        )
-        delivered_prices = compute_delivered_prices(
-            sources,
-            list(dict.fromkeys(i.fuel for i in supplied)),
-            projection_years,
-            *(
-                convert_to_model_units(
-                    source,
-                    cfg.model_currency_year,
-                    exchange,
-                    inflation,
-                    cfg.reproduce_previous_price_errors,
-                )
-                for source in (eia_prices, atb_prices, fixed_prices)
-            ),
+        # - Delivered price (region, sector, fuel, period) in M$/PJ of
+        #   model_currency_year, of every sector priced for the fuels supplied
+        delivered_prices = delivered_prices_by_period(
+            prices, list(dict.fromkeys(i.fuel for i in supplied)), projection_years
         )
         # - Import costs (region, period, fuel): the lowest delivered price of each
-        #   fuel; distribution costs (region, period, sector, fuel): the rest of each
-        #   sector's price
+        #   fuel in the region; distribution costs (region, period, sector, fuel): the
+        #   rest of each sector's price
         import_costs, distribution_costs = split_import_and_distribution(
             delivered_prices, supplied, cost_notes_suffix=_cost_notes_suffix(cfg)
         )

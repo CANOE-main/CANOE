@@ -14,7 +14,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, ClassVar, Self
 
-from pydantic import ConfigDict, model_validator
+from pydantic import ConfigDict, Field, model_validator
 
 from canoe.common import (
     CANOEFuelImport,
@@ -27,7 +27,11 @@ from canoe.common import (
 from canoe.common.periods import ProjectionPoint
 from canoe.common.validation import ValidationBehavior
 from canoe.fuel.build import build_fuel
-from canoe.fuel.prices import PREVIOUS_MODULE_CURRENCY_YEAR
+from canoe.fuel.price_sources import (
+    PREVIOUS_MODULE_CURRENCY_YEAR,
+    FuelPriceSource,
+    PriceFallback,
+)
 
 from ..common.module_inheritance import InheritsFromBase, inherit
 from ..initializer import CANOEBaseConfig
@@ -99,6 +103,21 @@ class CANOEFuelConfig(InheritsFromBase):
     model_currency_year: int = inherit()
     """Year of the Canadian dollars the fuel prices are written in. Inherited."""
 
+    price_sources: list[FuelPriceSource] = Field(
+        default_factory=lambda: [
+            FuelPriceSource.EIA,
+            FuelPriceSource.ATB,
+            FuelPriceSource.Fixed,
+        ]
+    )
+    """Sources of the delivered fuel prices, in priority order (see
+    `price_fallback`). A (sector, fuel) that none of them prices is not supplied."""
+
+    price_fallback: PriceFallback = PriceFallback.PerFuel
+    """How the `price_sources` share the prices: each fuel from the first source
+    that prices it (`per_fuel`), or each (region, sector, fuel) from the first source
+    that has it (`per_series`)."""
+
     reproduce_previous_price_errors: bool = False
     """Reproduce the price errors of the previous fuel module, to compare with its
     databases: $/MMBtu multiplied by 1.055 instead of divided, fixed exchange rate
@@ -119,6 +138,17 @@ class CANOEFuelConfig(InheritsFromBase):
 
     missing_data_behavior: ValidationBehavior = "warning"
     """What to do when a fuel a sector imports has no price or emission factors."""
+
+    @model_validator(mode="after")
+    def _check_price_sources(self) -> Self:
+        if not self.price_sources:
+            raise ValueError("price_sources is empty: no fuel would be priced")
+        repeated = sorted(
+            {str(s) for s in self.price_sources if self.price_sources.count(s) > 1}
+        )
+        if repeated:
+            raise ValueError(f"price_sources repeats {repeated}")
+        return self
 
     @model_validator(mode="after")
     def _check_previous_price_errors(self) -> Self:

@@ -129,7 +129,6 @@ skip_endogenous = false
 skip_boundary = false
 # true -> interties and exports lose the sending province's system (transmission and
 # distribution) losses, as the previous module did; false: transmission losses only
-# (see ELECTRICITY_MODULE_BUGS.md)
 reproduce_previous_intertie_losses = false
 
 # ----------------------------------------------------------
@@ -143,6 +142,5 @@ skip = false
 # over installed capacity, by fuel ("Firm" or "Planned"); Ontario's, used everywhere
 ieso_peak_type = "Firm"
 # true -> derate the monthly hydro reservoir as the previous module did, counting its
-# low availability twice in Temoa's dynamic reserve margin (see
-# ELECTRICITY_MODULE_BUGS.md)
+# low availability twice in Temoa's dynamic reserve margin
 reproduce_previous_hydro_storage_derate = false

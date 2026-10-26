@@ -82,6 +82,24 @@ class TestValidation:
         with pytest.raises(ValidationError, match="mandatory fields missing"):
             CANOEFuelConfig.model_validate(compiler_raw["fuel"])
 
+    def test_rejects_repeated_price_sources(
+        self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
+    ):
+        with pytest.raises(ValidationError, match="repeats \\['eia'\\]"):
+            _config(compiler_raw, base, price_sources=["eia", "atb", "eia"])
+
+    def test_rejects_no_price_sources(
+        self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
+    ):
+        with pytest.raises(ValidationError, match="price_sources is empty"):
+            _config(compiler_raw, base, price_sources=[])
+
+    def test_rejects_unknown_price_sources(
+        self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
+    ):
+        with pytest.raises(ValidationError, match="price_sources"):
+            _config(compiler_raw, base, price_sources=["aeo"])
+
 
 def test_previous_price_errors_need_2020_dollars(
     compiler_raw: dict[str, Any], base: CANOEBaseConfig

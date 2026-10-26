@@ -1,4 +1,4 @@
-input_database = "canoe-pwd/canoe.sqlite"
+input_database = "canoe-pwd/canoe-v4-all-high.sqlite"
 
 # Reduce the database to representative days before running Temoa
 # [representative_periods_config]
@@ -36,21 +36,18 @@ pca_components = 6
 method = "hierarchical"
 # Representative days, forced and extreme days included
 n_periods = 16
-forced_days = ["D041"]
+forced_days = []
 # Days with the highest/lowest hourly value (peak) or daily mean of any series
 # of data_dir
-max_peak = ["load"]
-min_peak = ["on_temperature"]
+max_peak = []
+min_peak = []
 max_mean = []
 min_mean = []
 
 [temoa_config]
-scenario_mode = "build_only"
+solver = "gurobi"
+scenario_mode = "perfect_foresight"
 silent = false
 save_duals = true
 save_lp_file = true
-# extensions = ["growth_rates"]
-
-[temoa_config.solver]
-name = "pounce"
-options = { tol = 1.0e-4, print_level = 11, solver_selection = "lp-ipm" }
+extensions = ["growth_rates"]
