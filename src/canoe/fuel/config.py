@@ -29,8 +29,11 @@ from canoe.common.validation import ValidationBehavior
 from canoe.fuel.build import build_fuel
 from canoe.fuel.price_sources import (
     PREVIOUS_MODULE_CURRENCY_YEAR,
-    FuelPriceSource,
+    ATBPriceSource,
+    EIAPriceSource,
+    FixedPriceSource,
     PriceFallback,
+    PriceSource,
 )
 
 from ..common.module_inheritance import InheritsFromBase, inherit
@@ -103,15 +106,18 @@ class CANOEFuelConfig(InheritsFromBase):
     model_currency_year: int = inherit()
     """Year of the Canadian dollars the fuel prices are written in. Inherited."""
 
-    price_sources: list[FuelPriceSource] = Field(
+    price_sources: list[PriceSource] = Field(
         default_factory=lambda: [
-            FuelPriceSource.EIA,
-            FuelPriceSource.ATB,
-            FuelPriceSource.Fixed,
+            EIAPriceSource(),
+            ATBPriceSource(),
+            FixedPriceSource(),
         ]
     )
     """Sources of the delivered fuel prices, in priority order (see
-    `price_fallback`). A (sector, fuel) that none of them prices is not supplied."""
+    `price_fallback`), each a table with its `source`: `eia`, `atb`, `fixed`, or
+    `csv` with the `path` of a price file (see
+    `canoe.fuel.price_sources.read_price_table`). A (sector, fuel) that none of them
+    prices is not supplied."""
 
     price_fallback: PriceFallback = PriceFallback.PerFuel
     """How the `price_sources` share the prices: each fuel from the first source
@@ -143,9 +149,11 @@ class CANOEFuelConfig(InheritsFromBase):
     def _check_price_sources(self) -> Self:
         if not self.price_sources:
             raise ValueError("price_sources is empty: no fuel would be priced")
-        repeated = sorted(
-            {str(s) for s in self.price_sources if self.price_sources.count(s) > 1}
-        )
+        repeated = [
+            s.model_dump(mode="json")
+            for i, s in enumerate(self.price_sources)
+            if s in self.price_sources[:i]
+        ]
         if repeated:
             raise ValueError(f"price_sources repeats {repeated}")
         return self

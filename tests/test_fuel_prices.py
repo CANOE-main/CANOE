@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from pathlib import Path
 
 import pandas as pd
 import pytest
@@ -8,12 +9,16 @@ from canoe.fuel.loaders import SourcePrices
 from canoe.fuel.price_sources import (
     EIASeries,
     PriceFallback,
+    atb_price_table,
+    check_price_table,
     combine_price_sources,
+    convert_to_model_units,
     eia_price_series,
-    harmonize_atb_prices,
-    harmonize_eia_prices,
-    harmonize_fixed_prices,
+    eia_price_table,
+    expand_price_table,
+    fixed_price_table,
     price_conversion_factor,
+    read_price_table,
 )
 from canoe.fuel.prices import (
     check_price_coverage,
@@ -37,30 +42,31 @@ def test_errors_only_change_existing_eia_entries():
     assert eia_price_series(True).keys() == eia_price_series(False).keys()
 
 
-def _model_units(
-    columns: list[str], rows: Sequence[tuple[object, ...]]
-) -> SourcePrices:
+def _source(columns: list[str], rows: Sequence[tuple[object, ...]]) -> SourcePrices:
     return SourcePrices(
-        pd.DataFrame(rows, columns=[*columns, "price"]), "CAD", 2020, "$/GJ", "src"
+        pd.DataFrame(rows, columns=[*columns, "price"]), "USD", 2024, "$/MMBtu", "src"
     )
 
 
-def _all_harmonized() -> pd.DataFrame:
-    """Every (sector, fuel) of the default sources, priced 1.0, in Ontario."""
-    eia = _model_units(
+def _eia(price: float = 4.0) -> SourcePrices:
+    """Every series the EIA entries read, once, in 2030."""
+    return _source(
         ["eia_sector", "eia_fuel", "year"],
         list(
             dict.fromkeys(
-                (s.sector.get_eia_sector(), s.fuel.get_eia_fuel(s.sector), 2030, 1.0)
+                (s.sector.get_eia_sector(), s.fuel.get_eia_fuel(s.sector), 2030, price)
                 for s in eia_price_series(False).values()
             )
         ),
     )
-    atb = _model_units(
+
+
+def _default_tables() -> list[pd.DataFrame]:
+    atb = _source(
         ["atb_technology"],
         [(t, 1.0) for t in {f.get_atb_technology() for f in CANOEFuel} - {None}],
     )
-    fixed = _model_units(
+    fixed = _source(
         ["fuel"],
         [
             (f, 1.0)
@@ -71,102 +77,166 @@ def _all_harmonized() -> pd.DataFrame:
             )
         ],
     )
-    return combine_price_sources(
-        [
-            harmonize_eia_prices(eia, [ON], False),
-            harmonize_atb_prices(atb, [ON], [2030]),
-            harmonize_fixed_prices(fixed, [ON], [2030]),
-        ],
-        PriceFallback.PerSeries,
-    )
+    return [
+        eia_price_table(_eia(), False),
+        atb_price_table(atb),
+        fixed_price_table(fixed),
+    ]
 
 
 class TestDefaultSources:
+    def test_tables_are_price_tables(self):
+        for table in _default_tables():
+            check_price_table(table, "default")
+
     def test_no_price_for_electricity_or_other_fuels(self):
-        fuels = set(_all_harmonized()["fuel"])
+        fuels = {f for table in _default_tables() for f in table["fuel"]}
         assert CANOEFuel.Electricity not in fuels
         assert CANOEFuel.Other not in fuels
 
     def test_sources_price_disjoint_fuels(self):
         # So the fallback does not change the default prices
-        prices = _all_harmonized()
-        per_fuel = combine_price_sources([prices], PriceFallback.PerFuel)
-        assert len(per_fuel) == len(prices)
-        assert not prices.duplicated(["region", "sector", "fuel", "year"]).any()
+        fuels = [set(table["fuel"]) for table in _default_tables()]
+        assert sum(len(f) for f in fuels) == len(set().union(*fuels))
+
+    def test_eia_proxy_series_and_factors(self):
+        eia = eia_price_table(_eia(), False)
+        cng = eia.loc[eia["fuel"].isin([CANOEFuel.CompressedNaturalGas])]
+        assert list(cng["price"]) == [pytest.approx(4.0 * 0.89)]
+        assert cng["source"].iloc[0].endswith("× 0.89")
+        assert cng["region"].isna().all()
+
+    def test_eia_rejects_a_missing_series(self):
+        with pytest.raises(ValueError, match="no EIA series"):
+            eia_price_table(_source(["eia_sector", "eia_fuel", "year"], []), False)
 
 
 EXCHANGE = pd.DataFrame({"CAD": [1.0, 1.0], "USD": [1.25, 1.2]}, index=[2020, 2024])
 INFLATION = pd.DataFrame({"gdp_deflator": [1.0, 0.9]}, index=[2020, 2024])
 
 
-def _usd_eia() -> SourcePrices:
-    return SourcePrices(pd.DataFrame(), "USD", 2024, "$/MMBtu", "EIA")
-
-
 class TestPriceConversion:
     def test_converts_mmbtu_to_gj_and_usd_to_model_cad(self):
-        factor = price_conversion_factor(_usd_eia(), 2020, EXCHANGE, INFLATION, False)
+        factor = price_conversion_factor(
+            "USD", 2024, "$/MMBtu", 2020, EXCHANGE, INFLATION, False
+        )
         assert factor == pytest.approx(1.2 * 0.9 / 1.055056)
 
     def test_previous_module_multiplies_by_the_fixed_factors(self):
-        factor = price_conversion_factor(_usd_eia(), 2020, EXCHANGE, INFLATION, True)
+        factor = price_conversion_factor(
+            "USD", 2024, "$/MMBtu", 2020, EXCHANGE, INFLATION, True
+        )
         assert factor == pytest.approx(1.055 * 1.22 * 0.877689699)
 
     def test_previous_module_only_gives_2020_dollars(self):
         with pytest.raises(ValueError, match="gives 2020 CAD"):
-            price_conversion_factor(_usd_eia(), 2022, EXCHANGE, INFLATION, True)
+            price_conversion_factor(
+                "USD", 2024, "$/MMBtu", 2022, EXCHANGE, INFLATION, True
+            )
 
-    def test_harmonizers_reject_unconverted_prices(self):
-        with pytest.raises(ValueError, match="expected CAD \\$/GJ"):
-            harmonize_eia_prices(_usd_eia(), [ON], False)
-
-
-def _eia(rows: Sequence[tuple[str | None, str | None, int, float]]) -> SourcePrices:
-    return _model_units(["eia_sector", "eia_fuel", "year"], rows)
-
-
-class TestEIAHarmonization:
-    def _prices(self) -> pd.DataFrame:
-        # One row per series, though several entries read the same one
-        eia = _eia(
-            list(
-                dict.fromkeys(
-                    (
-                        s.sector.get_eia_sector(),
-                        s.fuel.get_eia_fuel(s.sector),
-                        2030,
-                        4.0,
-                    )
-                    for s in eia_price_series(False).values()
-                )
+    def test_converts_each_row_from_its_own_currency(self, tmp_path: Path):
+        table = read_price_table(
+            _csv(
+                tmp_path,
+                "ON,COM,NG,2030,1.0,USD,2024,$/MMBtu\nON,IND,NG,2030,1.0,CAD,2020,$/GJ",
             )
         )
-        return harmonize_eia_prices(eia, [ON, NS], False)
-
-    def test_proxy_series_and_factors(self):
-        prices = self._prices()
-        cng = prices.loc[
-            prices["fuel"].isin([CANOEFuel.CompressedNaturalGas])
-            & prices["region"].isin([ON])
+        converted = convert_to_model_units(table, 2020, EXCHANGE, INFLATION, False)
+        assert list(converted["price"]) == [
+            pytest.approx(1.2 * 0.9 / 1.055056),
+            pytest.approx(1.0),
         ]
-        assert list(cng["price"]) == [pytest.approx(4.0 * 0.89)]
-        assert cng["source"].iloc[0].endswith("× 0.89")
+        assert set(converted["units"]) == {"$/GJ"}
 
-    def test_national_series_in_every_province(self):
-        prices = self._prices()
-        assert set(prices["region"]) == {ON, NS}
-        assert len(prices.loc[prices["region"].isin([ON])]) == len(
-            eia_price_series(False)
+    def test_unknown_units_name_the_source(self, tmp_path: Path):
+        table = read_price_table(
+            _csv(
+                tmp_path,
+                "ON,COM,NG,2030,1.0,CAD,2020,$/kWh,my series",
+                header=f"{_HEADER},source",
+            )
         )
-
-    def test_rejects_a_missing_series(self):
-        with pytest.raises(ValueError, match="no EIA series"):
-            harmonize_eia_prices(_eia([]), [ON], False)
+        with pytest.raises(ValueError, match="my series: Unknown price units"):
+            convert_to_model_units(table, 2020, EXCHANGE, INFLATION, False)
 
 
-def _harmonized(
+_HEADER = "region,sector,fuel,year,price,currency,currency_year,units"
+
+
+def _csv(tmp_path: Path, rows: str, header: str = _HEADER) -> Path:
+    path = tmp_path / "prices.csv"
+    path.write_text(f"{header}\n{rows}\n")
+    return path
+
+
+class TestPriceFile:
+    def test_reads_codes_and_names_in_any_format(self, tmp_path: Path):
+        table = read_price_table(
+            _csv(
+                tmp_path,
+                "ON,COM,NG,2030,9.5,CAD,2023,$/GJ\n"
+                + "Nova Scotia,commercial,natural gas,2030,9.5,CAD,2023,$/GJ",
+            )
+        )
+        assert list(zip(table["region"], table["sector"], table["fuel"])) == [
+            (ON, CANOESector.Commercial, NG),
+            (NS, CANOESector.Commercial, NG),
+        ]
+        assert list(table["source"]) == ["prices.csv", "prices.csv"]
+
+    def test_lists_every_row_that_cannot_be_read(self, tmp_path: Path):
+        path = _csv(
+            tmp_path,
+            "ON,COM,kerosene,2030,9.5,CAD,2023,$/GJ\n"
+            + "ON,COM,NG,2030,cheap,CAD,2023,$/GJ\n"
+            + "ON,,NG,2030,9.5,CAD,2023,$/GJ",
+        )
+        with pytest.raises(ValueError) as error:
+            read_price_table(path)
+        message = str(error.value)
+        assert "line 2: Unknown fuel 'kerosene'" in message
+        assert "line 3:" in message
+        assert "line 4: empty sector" in message
+
+    def test_rejects_missing_and_unknown_columns(self, tmp_path: Path):
+        path = _csv(tmp_path, "ON,COM,NG,9.5", header="region,sector,fuel,cost")
+        with pytest.raises(ValueError, match="missing columns .*'price'.*unknown"):
+            read_price_table(path)
+
+    def test_rejects_prices_given_twice(self, tmp_path: Path):
+        path = _csv(
+            tmp_path,
+            "ON,COM,NG,2030,9.5,CAD,2023,$/GJ\nOntario,C,NaturalGas,2030,9.0,CAD,2023,$/GJ",
+        )
+        with pytest.raises(ValueError, match="prices given twice"):
+            check_price_table(read_price_table(path), "file")
+
+    def test_empty_region_and_year_apply_to_all(self, tmp_path: Path):
+        table = read_price_table(_csv(tmp_path, ",COM,NG,,9.5,CAD,2023,$/GJ"))
+        expanded = expand_price_table(table, [ON, NS], [2030, 2035])
+        assert len(expanded) == 4
+        assert set(expanded["region"]) == {ON, NS}
+        assert set(expanded["year"]) == {2030, 2035}
+
+    def test_empty_rows_cannot_overlap_explicit_ones(self, tmp_path: Path):
+        table = read_price_table(
+            _csv(
+                tmp_path,
+                ",COM,NG,2030,9.5,CAD,2023,$/GJ\nON,COM,NG,2030,9.0,CAD,2023,$/GJ",
+            )
+        )
+        with pytest.raises(ValueError, match="Prices given twice"):
+            expand_price_table(table, [ON, NS], [2030])
+
+    def test_leaves_out_other_provinces(self, tmp_path: Path):
+        table = read_price_table(_csv(tmp_path, "AB,COM,NG,2030,9.5,CAD,2023,$/GJ"))
+        assert expand_price_table(table, [ON], [2030]).empty
+
+
+def _priced(
     rows: list[tuple[CANOEProvince, CANOESector, int, float]], source: str
 ) -> pd.DataFrame:
+    """Prices in the model units, as given to `canoe.fuel.prices`."""
     return pd.DataFrame(
         [
             {
@@ -175,19 +245,21 @@ def _harmonized(
                 "fuel": NG,
                 "year": y,
                 "price": p,
+                "currency": "CAD",
+                "currency_year": 2020,
+                "units": "$/GJ",
                 "source": source,
             }
             for r, s, y, p in rows
-        ],
-        columns=["region", "sector", "fuel", "year", "price", "source"],
+        ]
     )
 
 
 class TestCombine:
-    regional: pd.DataFrame = _harmonized(
+    regional: pd.DataFrame = _priced(
         [(ON, CANOESector.Commercial, 2030, 9.0)], "regional"
     )
-    national: pd.DataFrame = _harmonized(
+    national: pd.DataFrame = _priced(
         [
             (ON, CANOESector.Commercial, 2030, 8.0),
             (ON, CANOESector.Electricity, 2030, 3.0),
@@ -214,7 +286,7 @@ class TestCombine:
 
 
 def test_coverage_drops_the_provinces_without_a_price():
-    prices = _harmonized([(ON, CANOESector.Commercial, 2030, 9.0)], "")
+    prices = _priced([(ON, CANOESector.Commercial, 2030, 9.0)], "")
     with pytest.raises(ValueError, match=r"commercial natural gas \(NS\)"):
         check_price_coverage(
             [CANOEFuelImport(CANOESector.Commercial, NG, (NS, ON))], prices, "error"
@@ -225,7 +297,7 @@ def test_coverage_drops_the_provinces_without_a_price():
     assert [i.provinces for i in supplied] == [(ON,)]
 
 
-PRICES = _harmonized(
+PRICES = _priced(
     [
         (ON, CANOESector.Electricity, 2030, 3.0),
         (ON, CANOESector.Commercial, 2030, 9.0),

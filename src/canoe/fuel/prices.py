@@ -2,8 +2,8 @@
 Fuel prices: the delivered price of each (region, sector, fuel) in each period, and
 how it is split between the import and the distribution technologies.
 
-The prices come from the harmonized prices of the sources configured (see
-`canoe.fuel.price_sources`), used as they are. Each fuel is supplied in two steps,
+The prices come from the price tables of the sources configured, combined and in
+the model units (see `canoe.fuel.price_sources`), used as they are. Each fuel is supplied in two steps,
 `F_ethos -> F_IMP_<FUEL> -> F_<fuel> -> F_<S>_<FUEL> -> <S>_<fuel>`. The price a
 sector pays for a fuel (its delivered price) is the variable cost of the import
 technology plus that of its distribution technology:
@@ -32,7 +32,7 @@ def check_price_coverage(
 ) -> list[CANOEFuelImport]:
     """
     The `imports` in the provinces where their (sector, fuel) has a price in
-    `prices` (harmonized prices, see `canoe.fuel.price_sources`). The others are
+    `prices` (price table, see `canoe.fuel.price_sources`). The others are
     reported with `behavior` and left out: they are not supplied there. Imports
     priced in none of their provinces are left out.
 
@@ -84,7 +84,8 @@ def delivered_prices_by_period(
     part in the import cost (see `split_import_and_distribution`).
 
     params:
-    - prices: harmonized prices, see `canoe.fuel.price_sources`
+    - prices: price table with every region and year explicit, in M$/PJ, see
+      `canoe.fuel.price_sources`
     - projection_years: model period -> year its prices are read at, see
       `canoe.common.periods.projection_year_by_period`
 

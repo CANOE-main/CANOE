@@ -7,6 +7,7 @@ from pydantic import ValidationError
 
 from canoe.common.periods import ProjectionPoint
 from canoe.fuel.config import CANOEFuelConfig
+from canoe.fuel.price_sources import CSVPriceSource, EIAPriceSource
 from canoe.initializer import CANOEBaseConfig
 from canoe.pipeline import CANOECompilerConfig
 
@@ -85,8 +86,25 @@ class TestValidation:
     def test_rejects_repeated_price_sources(
         self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
     ):
-        with pytest.raises(ValidationError, match="repeats \\['eia'\\]"):
-            _config(compiler_raw, base, price_sources=["eia", "atb", "eia"])
+        with pytest.raises(ValidationError, match="repeats \\[\\{'source': 'eia'\\}"):
+            _config(
+                compiler_raw,
+                base,
+                price_sources=[{"source": "eia"}, {"source": "atb"}, {"source": "eia"}],
+            )
+
+    def test_reads_csv_sources(
+        self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
+    ):
+        config = _config(
+            compiler_raw,
+            base,
+            price_sources=[{"source": "csv", "path": "prices.csv"}, {"source": "eia"}],
+        )
+        assert config.price_sources == [
+            CSVPriceSource(path=Path("prices.csv")),
+            EIAPriceSource(),
+        ]
 
     def test_rejects_no_price_sources(
         self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
@@ -98,7 +116,13 @@ class TestValidation:
         self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
     ):
         with pytest.raises(ValidationError, match="price_sources"):
-            _config(compiler_raw, base, price_sources=["aeo"])
+            _config(compiler_raw, base, price_sources=[{"source": "aeo"}])
+
+    def test_csv_sources_need_a_path(
+        self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
+    ):
+        with pytest.raises(ValidationError, match="path"):
+            _config(compiler_raw, base, price_sources=[{"source": "csv"}])
 
 
 def test_previous_price_errors_need_2020_dollars(

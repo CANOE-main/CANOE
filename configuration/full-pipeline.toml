@@ -83,9 +83,13 @@ config_file = "configuration/electricity-default.toml"
 [compiler.fuel]
 # Sources of the delivered fuel prices, in priority order: "eia" (EIA AEO delivered
 # prices by sector and fuel, US average), "atb" (NREL ATB biomass and uranium),
-# "fixed" (report prices of ethanol, renewable diesel and SPK). Their prices are
-# used as they are for the import and distribution costs.
-price_sources = ["eia", "atb", "fixed"]
+# "fixed" (report prices of ethanol, renewable diesel and SPK), or "csv" with the
+# path of your own price file, e.g. { source = "csv", path = "my_prices.csv" }.
+# A price file has the columns region, sector, fuel, year, price, currency,
+# currency_year, units ("$/GJ" or "$/MMBtu") and optionally source; an empty region
+# or year means every province or year. Prices are used as they are for the import
+# and distribution costs.
+price_sources = [{ source = "eia" }, { source = "atb" }, { source = "fixed" }]
 # How the sources share the prices: each fuel from the first source that prices it
 # ("per_fuel"), or each (region, sector, fuel) from the first source that has it
 # ("per_series")
