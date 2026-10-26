@@ -142,7 +142,7 @@ def get_ieso_summer_peak_capability(year: int) -> pd.DataFrame:
     return pd.DataFrame(
         {
             "fuel_type": df["Fuel Type"].str.lower(),
-            "installed": df["Total Installed Capacity\n(MW)"].astype(float),
+            "installed": df["Total Installed Capacity (MW)"].astype(float),
             **{
                 peak_type: df[
                     f"Forecast Capability at {year} Summer Peak [{peak_type}] (MW)"
