@@ -2,7 +2,7 @@
 # configuration/industry-default.toml except: other_fuels = "free", the previous
 # module's model of NRCan's "Other" fuels.
 module_name = "industry"
-# data_version, gdp_scenario and gdp_projection_point are inherited from
+# data_version, gdp and demand_projection_point are inherited from
 # [compiler.base]; set them here to override
 
 # Year of the NRCan CEUD industry data read (energy use and fuel mix of each

@@ -16,16 +16,11 @@ from loguru import logger
 from canoe.common.cache_connector import GoldConnectorConfig
 from canoe.common.emissions import CANOEEmission
 from canoe.common.fuels import CANOEFuel
-from canoe.common.gdp import CERScenario
 from canoe.common.provinces import CANOEProvince
 from canoe.common.sectors import CANOESector
 
 
-def get_cer_gdp(
-    cache_config: GoldConnectorConfig,
-    gdp_index_year: int,
-    scenario: CERScenario = CERScenario.GlobalNetZero,
-) -> pd.DataFrame:
+def get_cer_gdp(cache_config: GoldConnectorConfig, scenario: str) -> pd.DataFrame:
     """
     Projected real GDP of Canada (CER Canada's Energy Future 2023 macro indicators).
 
@@ -33,34 +28,95 @@ def get_cer_gdp(
     ----------
     cache_config : GoldConnectorConfig
         Location and date of the cache.
-    gdp_index_year : int
-        GDP is divided by its value in this year, the year of the base demand data it
-        scales.
-    scenario : CERScenario
-        CER scenario.
+    scenario : str
+        CER scenario, as named in the data (see
+        `canoe.common.projections.CERScenario`).
 
     Returns
     -------
     pd.DataFrame
-        GDP relative to `gdp_index_year`, by year (index) in column `gdp`.
+        Columns `year` and `gdp` (2012 $ millions).
+
+    Raises
+    ------
+    ValueError
+        If the scenario has no GDP in the data.
     """
     cache_path = cache_config.cache_dir / Path("silver") / cache_config.cache_date
     file_folder = cache_path / "cer_macro"
     file_path = file_folder / f"cer_macro_{cache_config.cache_date}.parquet"
-    logger.debug(
-        f"Loading cached gdp projections gdp_index_year={gdp_index_year} scenario={scenario}"
-    )
+    logger.debug(f"Loading cached CER GDP projections, scenario {scenario}")
     df = pd.read_parquet(file_path)
-    df_gdp = (
-        df[
-            (df.Scenario == scenario.value)
-            & (df.Variable == "Real Gross Domestic Product ($2012 Millions)")
-        ][["Year", "Value"]]
-        .rename({"Year": "year", "Value": "gdp"}, axis="columns")  # pyright: ignore[reportAttributeAccessIssue]
-        .set_index("year")
-    )
+    rows = df.loc[
+        (df["Scenario"] == scenario)
+        & (df["Variable"] == "Real Gross Domestic Product ($2012 Millions)")
+    ]
+    if rows.empty:
+        raise ValueError(
+            f"CER macro indicators: no real GDP for scenario {scenario!r}; scenarios: "
+            + f"{sorted(df['Scenario'].unique())}"
+        )
+    return pd.DataFrame(
+        {"year": rows["Year"].astype(int), "gdp": rows["Value"].astype(float)}
+    ).reset_index(drop=True)
 
-    return df_gdp / df_gdp.loc[gdp_index_year]
+
+def get_statcan_population_estimates() -> pd.DataFrame:
+    """
+    Population on January 1st of each year, by geography (Canada, provinces and
+    territories), StatCan Table 17-10-0009-01 (quarterly estimates), as the previous
+    residential module cached it.
+
+    TODO: read from `canoe/common/data` until the data lake has the table (see
+    `DATA_LAKE_REQUESTS.md`).
+
+    Returns columns `geo` (StatCan name, e.g. "Ontario"), `year` and `population`.
+    """
+    resource = files("canoe.common").joinpath("data/statcan_17100009.csv")
+    with resource.open("rb") as f:
+        df = pd.read_csv(f, index_col=0)
+    # Quarterly estimates ("1946-01", "1946-04", ...): keep the January ones
+    january = df.loc[df["REF_DATE"].str.endswith("-01") & df["VALUE"].notna()]
+    return pd.DataFrame(
+        {
+            "geo": january["GEO"],
+            "year": january["REF_DATE"].str.removesuffix("-01").astype(int),
+            "population": january["VALUE"].astype(float),
+        }
+    ).reset_index(drop=True)
+
+
+def get_statcan_population_projections() -> pd.DataFrame:
+    """
+    Projected population (July 1st) by geography, medium-growth scenario M1, all
+    genders and ages, StatCan Table 17-10-0057-01.
+
+    Reads `data/statcan_17100057_extract.csv`, the rows of the full table this
+    function keeps (the full file is 154 MB, see `make_statcan_17100057_extract.py`);
+    it filters as if it read the full table.
+
+    TODO: read from `canoe/common/data` until the data lake has the table (see
+    `DATA_LAKE_REQUESTS.md`).
+
+    Returns columns `geo`, `year` and `population` (persons).
+    """
+    resource = files("canoe.common").joinpath("data/statcan_17100057_extract.csv")
+    with resource.open("rb") as f:
+        df = pd.read_csv(f, index_col=0)
+    rows = df.loc[
+        (df["Projection scenario"] == "Projection scenario M1: medium-growth")
+        & (df["Gender"] == "Total - gender")
+        & (df["Age group"] == "All ages")
+        & df["VALUE"].notna()
+    ]
+    return pd.DataFrame(
+        {
+            "geo": rows["GEO"],
+            "year": rows["REF_DATE"].astype(int),
+            # Published in thousands
+            "population": rows["VALUE"].astype(float) * 1000,
+        }
+    ).reset_index(drop=True)
 
 
 def get_exchange_and_inflation_tables() -> tuple[pd.DataFrame, pd.DataFrame]:

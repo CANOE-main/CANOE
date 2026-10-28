@@ -15,8 +15,8 @@ copied from the previous module (see `DATA_LAKE_REQUESTS.md`):
 - `data/rsmess.xlsx`: EIA AEO Residential Demand Module technology menu.
 - `data/aeo_lighting_data.csv`, `data/existing_lighting_technologies.csv`:
   hand-entered lighting data of the previous module.
-- `data/statcan_*.csv`: StatCan tables as the previous module cached them; the
-  projections table is an extract (see `data/make_statcan_17100057_extract.py`).
+- `data/statcan_*.csv`: StatCan tables as the previous module cached them (the
+  population tables are shared, in `canoe/common/data`).
 """
 
 import re
@@ -554,63 +554,6 @@ def get_statcan_energy_saving_lights(provinces: list[CANOEProvince]) -> pd.DataF
             "light_type": rows["Type of energy-saving light"],
             "year": rows["REF_DATE"].astype(int),
             "percent": rows["VALUE"].astype(float),
-        }
-    ).reset_index(drop=True)
-
-
-# ----------------------------------------------------------------------------
-# Population
-# ----------------------------------------------------------------------------
-
-
-def get_statcan_population_estimates() -> pd.DataFrame:
-    """
-    Population on January 1st of each year, by geography (Canada, provinces and
-    territories), StatCan Table 17-10-0009-01 (quarterly estimates), as the previous
-    module cached it.
-
-    Returns columns `geo` (StatCan name, e.g. "Ontario"), `year` and `population`.
-    """
-    resource = files("canoe.residential").joinpath("data/statcan_17100009.csv")
-    with resource.open("rb") as f:
-        df = pd.read_csv(f, index_col=0)
-    # Quarterly estimates ("1946-01", "1946-04", ...): keep the January ones
-    january = df.loc[df["REF_DATE"].str.endswith("-01") & df["VALUE"].notna()]
-    return pd.DataFrame(
-        {
-            "geo": january["GEO"],
-            "year": january["REF_DATE"].str.removesuffix("-01").astype(int),
-            "population": january["VALUE"].astype(float),
-        }
-    ).reset_index(drop=True)
-
-
-def get_statcan_population_projections() -> pd.DataFrame:
-    """
-    Projected population (July 1st) by geography, medium-growth scenario M1, all
-    genders and ages, StatCan Table 17-10-0057-01.
-
-    Reads `data/statcan_17100057_extract.csv`, the rows of the full table this
-    function keeps (the full file is 154 MB); it filters as if it read the full
-    table.
-
-    Returns columns `geo`, `year` and `population` (persons).
-    """
-    resource = files("canoe.residential").joinpath("data/statcan_17100057_extract.csv")
-    with resource.open("rb") as f:
-        df = pd.read_csv(f, index_col=0)
-    rows = df.loc[
-        (df["Projection scenario"] == "Projection scenario M1: medium-growth")
-        & (df["Gender"] == "Total - gender")
-        & (df["Age group"] == "All ages")
-        & df["VALUE"].notna()
-    ]
-    return pd.DataFrame(
-        {
-            "geo": rows["GEO"],
-            "year": rows["REF_DATE"].astype(int),
-            # Published in thousands
-            "population": rows["VALUE"].astype(float) * 1000,
         }
     ).reset_index(drop=True)
 

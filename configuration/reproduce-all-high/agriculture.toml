@@ -1,9 +1,9 @@
 # Reproduction of canoe-pwd/canoe-v4-all-high.sqlite (see pipeline.toml). Same as
-# configuration/agriculture-default.toml except: gdp_projection_point = "legacy", how
-# the previous agriculture module indexed its demand to GDP.
+# configuration/agriculture-default.toml except: demand_projection_point = "legacy",
+# how the previous agriculture module indexed its demand to GDP.
 module_name = "agriculture"
-# data_version and gdp_scenario are inherited from [compiler.base]
-gdp_projection_point = "legacy"
+# data_version and gdp are inherited from [compiler.base]
+demand_projection_point = "legacy"
 
 # Year of the NRCan CEUD agriculture data read (energy use and fuel mix).
 # GDP projections are indexed to this year.

@@ -13,9 +13,13 @@ from canoe.common import (
     CANOESector,
     atomic_transaction,
 )
-from canoe.common.gdp import CERScenario, GDPProjectionPoint, gdp_growth_by_period
-from canoe.common.loaders import get_cer_gdp
 from canoe.common.naming import DatasetIdentifier
+from canoe.common.projections import (
+    DemandProjectionPoint,
+    get_gdp_table,
+    growth_by_period,
+    growth_notes,
+)
 
 from .energy_use import (
     check_fuel_data,
@@ -65,31 +69,27 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
         total_energy_use = compute_total_energy_use(ceud, atlantic_shares)
         energy_use_by_source = compute_energy_use_by_source(ceud, atlantic_shares)
         check_fuel_data(energy_use_by_source, cfg.fuels, cfg.missing_data_behavior)
-        # CER: GDP indexed to the year of the CEUD energy use it scales
-        gdp_projections_index = get_cer_gdp(
-            cfg.data_cache_config,
-            gdp_index_year=cfg.ceud_data_year,
-            scenario=cfg.gdp_scenario,
-        )
+        # Projected GDP (national or by province, see `gdp`)
+        gdp_table = get_gdp_table(cfg.gdp, cfg.data_cache_config)
         logger.debug(
             f"Loaded agriculture energy use of {len(total_energy_use)} provinces "
             + f"({total_energy_use['energy_use'].sum():.1f} PJ in {cfg.ceud_data_year}) "
-            + f"and GDP projections for {len(gdp_projections_index)} years"
+            + f"and {len(gdp_table)} GDP projections"
         )
 
         # Compute parameters
         # ------------------
         # - Demand (region, period, demand): data-year energy use indexed to the
-        #   projected gdp growth of each period
-        demand_df = _compute_demand(
-            total_energy_use,
-            gdp_growth_by_period(
-                gdp_projections_index,
-                cfg.future_periods,
-                cfg.period_step,
-                cfg.gdp_projection_point,
-            ),
+        #   projected gdp growth of the province in each period
+        gdp_growth = growth_by_period(
+            gdp_table,
+            cfg.provinces,
+            cfg.ceud_data_year,
+            cfg.future_periods,
+            cfg.period_step,
+            cfg.demand_projection_point,
         )
+        demand_df = _compute_demand(total_energy_use, gdp_growth)
         # - Input splits (region, period, fuel, split): the data-year fuel mix
         input_split_df = compute_input_splits(
             energy_use_by_source,
@@ -118,7 +118,9 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
             cfg.provinces,
             cfg.future_periods,
             notes=_demand_notes(
-                cfg.ceud_data_year, cfg.gdp_scenario, cfg.gdp_projection_point
+                cfg.ceud_data_year,
+                growth_notes(gdp_growth),
+                cfg.demand_projection_point,
             ),
             data_id=sector_data_id,
         ).build(db_conn)
@@ -150,18 +152,18 @@ def build_agriculture(cfg: "CANOEAgricultureConfig") -> CANOEModuleOutput:
 
 def _demand_notes(
     ceud_data_year: int,
-    gdp_scenario: CERScenario,
-    gdp_projection_point: GDPProjectionPoint,
+    gdp_source: str,
+    demand_projection_point: DemandProjectionPoint,
 ) -> str:
     point = {
-        GDPProjectionPoint.PeriodEnd: "at the end of each period",
-        GDPProjectionPoint.PeriodStart: "at the start of each period",
-        GDPProjectionPoint.Legacy: "at the start of each period, relative to the first",
-    }[gdp_projection_point]
+        DemandProjectionPoint.PeriodEnd: "at the end of each period",
+        DemandProjectionPoint.PeriodStart: "at the start of each period",
+        DemandProjectionPoint.Legacy: "at the start of each period, relative to the first",
+    }[demand_projection_point]
     return (
         f"Total agriculture energy use (NRCan, {ceud_data_year}) indexed to projected "
-        + f"gdp growth {point} ({gdp_scenario.value}, CER, {2023}). Atlantic provinces "
-        + f"split by their share of agriculture energy use (StatCan, {2023})"
+        + f"gdp growth {point} ({gdp_source}). Atlantic provinces split by their "
+        + f"share of agriculture energy use (StatCan, {2023})"
     )
 
 
@@ -188,23 +190,20 @@ def _input_split_notes(
 
 
 def _compute_demand(
-    total_energy_use: pd.DataFrame, gdp_growth: dict[int, float]
+    total_energy_use: pd.DataFrame, gdp_growth: pd.DataFrame
 ) -> pd.DataFrame:
     """
     Agriculture energy demand of each province over the model periods.
 
     params:
     - total_energy_use: data-year energy use, columns `province`, `energy_use` (PJ)
-    - gdp_growth: model period -> gdp growth factor from the data year, see
-      `canoe.common.gdp.gdp_growth_by_period`
+    - gdp_growth: columns `region`, `period`, `growth` from the data year, see
+      `canoe.common.projections.growth_by_period`
 
     Returns region, period, demand (PJ)
     """
-    gdp_growth_df = pd.DataFrame(
-        {"period": list(gdp_growth), "gdp_factor": list(gdp_growth.values())}
-    )
     demand_df = total_energy_use.rename(columns={"province": "region"}).merge(
-        gdp_growth_df, how="cross"
+        gdp_growth[["region", "period", "growth"]], on="region"
     )
-    demand_df["demand"] = demand_df["energy_use"] * demand_df["gdp_factor"]
+    demand_df["demand"] = demand_df["energy_use"] * demand_df["growth"]
     return demand_df[["region", "period", "demand"]]  # pyright: ignore[reportReturnType]

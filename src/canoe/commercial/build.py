@@ -41,8 +41,6 @@ from canoe.common import (
     DataQualityProfile,
     atomic_transaction,
 )
-from canoe.common.gdp import gdp_growth_by_period
-from canoe.common.loaders import get_cer_gdp
 from canoe.common.naming import (
     DatasetIdentifier,
     get_commodity_name,
@@ -52,6 +50,7 @@ from canoe.common.naming import (
     season_str,
 )
 from canoe.common.periods import period_end_years
+from canoe.common.projections import get_gdp_table, growth_by_period, growth_notes
 
 from .validation import validate_db_against_config
 
@@ -115,12 +114,8 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             cfg.aeo_config.us_census_mapping,
             cfg.model_currency_year,
         )
-        # GDP indexed to the year of the CEUD energy use it scales
-        gdp_projections_index = get_cer_gdp(
-            cfg.data_cache_config,
-            gdp_index_year=cfg.ceud_config.data_year,
-            scenario=cfg.gdp_scenario,
-        )
+        # Projected GDP (national or by province, see `gdp`)
+        gdp_table = get_gdp_table(cfg.gdp, cfg.data_cache_config)
         # Estimated from EPA: kt of each gas per PJ of fuel burned (none if disabled)
         emission_factors: dict[CANOEEmission, dict[CANOEFuel, float]] = (
             load_combustion_emission_factors(cfg.data_cache_config)
@@ -152,15 +147,15 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
                 end_use=CommercialEndUse.Other.get_full_name(), dem=other_sec["sec"]
             )[["end_use", "province", "dem"]]
             base_demand = pd.concat([base_demand, other_demand], ignore_index=True)
-        demand_df = _compute_end_use_demand(
-            base_demand,
-            gdp_growth_by_period(
-                gdp_projections_index,
-                cfg.future_periods,
-                cfg.period_step,
-                cfg.gdp_projection_point,
-            ),
+        gdp_growth = growth_by_period(
+            gdp_table,
+            cfg.provinces,
+            cfg.ceud_config.data_year,
+            cfg.future_periods,
+            cfg.period_step,
+            cfg.demand_projection_point,
         )
+        demand_df = _compute_end_use_demand(base_demand, gdp_growth)
 
         # - Demand specific distribution
         #   Reorganize data in long-form region, end_use, season, tod, value
@@ -179,19 +174,20 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
         tods = sorted({t.tod for t in time_slices})
 
         # Demand objects
+        gdp_notes = f"indexed to projected gdp growth ({growth_notes(gdp_growth)})"
         demand_notes = {
             CommercialEndUse.SpaceHeating: (
                 f"Efficiency (AEO, {2012}) times secondary energy consumption (NRCan, {2022}) "
-                f"indexed to projected provincial gdp growth by (CER, {2023})"
+                + gdp_notes
             ),
             CommercialEndUse.SpaceCooling: (
                 f"Efficiency (AEO, {2012}) times secondary energy consumption (NRCan, {2022}) "
-                f"indexed to projected provincial gdp growth by (CER, {2023})"
+                + gdp_notes
             ),
             CommercialEndUse.Other: (
                 "Annual secondary energy consumption summed over all fuels minus space "
-                f"heating and cooling (NRCan, {2022}) indexed to projected provincial gdp "
-                f"growth by (CER, {2023})"
+                + f"heating and cooling (NRCan, {2022}) "
+                + gdp_notes
             ),
         }
         logger.info("Processing and building demand entities")
@@ -410,15 +406,15 @@ def _compute_other_secondary_energy(
 
 def _compute_end_use_demand(
     base_demand: pd.DataFrame,
-    gdp_growth: dict[int, float],
+    gdp_growth: pd.DataFrame,
 ) -> pd.DataFrame:
     """
     Compute end-use demand for each end-use and region over the model periods.
 
     params:
     - base_demand: base-year demand with columns `end_use`, `province`, `dem`
-    - gdp_growth: model period -> gdp growth factor from the base year, see
-      `canoe.common.gdp.gdp_growth_by_period`
+    - gdp_growth: columns `region`, `period`, `growth` from the base year, see
+      `canoe.common.projections.growth_by_period`
 
     Returns end_use (index), region, period, dem
     """
@@ -427,12 +423,9 @@ def _compute_end_use_demand(
         .groupby(["end_use", "region"], as_index=False)
         .dem.sum()
     )  # end_use, region => base-year demand
-    gdp_growth_df = pd.DataFrame(
-        {"period": list(gdp_growth), "gdp_factor": list(gdp_growth.values())}
-    )
-    demand_df = demand_df.merge(gdp_growth_df, how="cross")
-    demand_df["dem"] = demand_df["dem"] * demand_df["gdp_factor"]
-    return demand_df.drop(columns="gdp_factor").set_index("end_use")
+    demand_df = demand_df.merge(gdp_growth[["region", "period", "growth"]], on="region")
+    demand_df["dem"] = demand_df["dem"] * demand_df["growth"]
+    return demand_df.drop(columns="growth").set_index("end_use")
 
 
 def _compute_annual_capacity_factor(

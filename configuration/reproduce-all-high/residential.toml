@@ -1,7 +1,7 @@
 # Reproduction of canoe-pwd/canoe-v4-all-high.sqlite (see pipeline.toml). Same as
 # configuration/residential-default.toml.
 module_name = "residential"
-# data_version, gdp_scenario, gdp_projection_point and model_currency_year are
+# data_version, gdp, population, demand_projection_point and model_currency_year are
 # inherited from [compiler.base]; set them here to override
 
 # Year of the NRCan CEUD residential data read (energy use, stock, efficiencies): the
@@ -11,9 +11,9 @@ ceud_data_year = 2022
 # ----------------------------------------------------------
 #                   DEMAND PROJECTION
 # ----------------------------------------------------------
-# Series that projects the base-year demands: "population" (StatCan provincial
-# projections) or "gdp" (CER national GDP, as the other sectors). Read at
-# demand_projection_point of each period, inherited from gdp_projection_point.
+# Series that projects the base-year demands: "population" or "gdp" (as the other
+# sectors), from the population and gdp sources of [compiler.base]. Read at
+# demand_projection_point of each period (inherited).
 demand_driver = "population"
 
 # Existing technologies with less existing capacity than this in a province (kunit,

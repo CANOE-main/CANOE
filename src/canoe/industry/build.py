@@ -6,9 +6,13 @@ from canoe_schema.v4_0 import DataSet
 from loguru import logger
 
 from canoe.common import CANOEModuleOutput, CANOESector, atomic_transaction
-from canoe.common.gdp import CERScenario, GDPProjectionPoint, gdp_growth_by_period
-from canoe.common.loaders import get_cer_gdp
 from canoe.common.naming import DatasetIdentifier
+from canoe.common.projections import (
+    DemandProjectionPoint,
+    get_gdp_table,
+    growth_by_period,
+    growth_notes,
+)
 
 from .demand import OtherFuelsTreatment, align_demand_and_splits, compute_demand
 from .energy_use import (
@@ -73,17 +77,13 @@ def build_industry(cfg: "CANOEIndustryConfig") -> CANOEModuleOutput:
         energy_use = compute_energy_use(ceud, atlantic_shares)
         energy_use_by_source = compute_energy_use_by_source(ceud, atlantic_shares)
         check_energy_use(energy_use, cfg.missing_data_behavior)
-        # CER: GDP indexed to the year of the CEUD energy use it scales
-        gdp_projections_index = get_cer_gdp(
-            cfg.data_cache_config,
-            gdp_index_year=cfg.ceud_data_year,
-            scenario=cfg.gdp_scenario,
-        )
+        # Projected GDP (national or by province, see `gdp`)
+        gdp_table = get_gdp_table(cfg.gdp, cfg.data_cache_config)
         logger.debug(
             f"Loaded industry energy use of {len(subsectors)} subsectors in "
             + f"{len(cfg.provinces)} provinces ({energy_use['energy_use'].sum():.1f} "
             + f"PJ in {cfg.ceud_data_year}, {len(energy_use_by_source)} rows by "
-            + f"source) and GDP projections for {len(gdp_projections_index)} years"
+            + f"source) and {len(gdp_table)} GDP projections"
         )
 
         # Compute parameters
@@ -92,18 +92,18 @@ def build_industry(cfg: "CANOEIndustryConfig") -> CANOEModuleOutput:
         #   with the sources NRCan does not publish sharing the rest
         shares = compute_ceud_shares(energy_use_by_source)
         # - Demand (region, period, subsector): CEUD energy use (less "Other" fuels
-        #   with other_fuels = "deduct") indexed to the projected gdp growth
+        #   with other_fuels = "deduct") indexed to the projected gdp growth of the
+        #   province
+        gdp_growth = growth_by_period(
+            gdp_table,
+            cfg.provinces,
+            cfg.ceud_data_year,
+            cfg.future_periods,
+            cfg.period_step,
+            cfg.demand_projection_point,
+        )
         demand_df = compute_demand(
-            energy_use,
-            energy_use_by_source,
-            shares,
-            gdp_growth_by_period(
-                gdp_projections_index,
-                cfg.future_periods,
-                cfg.period_step,
-                cfg.gdp_projection_point,
-            ),
-            cfg.other_fuels,
+            energy_use, energy_use_by_source, shares, gdp_growth, cfg.other_fuels
         )
         # - Input splits (region, period, subsector, fuel): the CEUD fuel mix, with
         #   the share of the sources a subsector does not model spread over its fuels
@@ -139,8 +139,8 @@ def build_industry(cfg: "CANOEIndustryConfig") -> CANOEModuleOutput:
             cfg.input_split_operator,
             demand_notes=_demand_notes(
                 cfg.ceud_data_year,
-                cfg.gdp_scenario,
-                cfg.gdp_projection_point,
+                growth_notes(gdp_growth),
+                cfg.demand_projection_point,
                 cfg.other_fuels,
             ),
             split_notes=_input_split_notes(cfg.ceud_data_year),
@@ -166,24 +166,24 @@ def build_industry(cfg: "CANOEIndustryConfig") -> CANOEModuleOutput:
 
 def _demand_notes(
     ceud_data_year: int,
-    gdp_scenario: CERScenario,
-    gdp_projection_point: GDPProjectionPoint,
+    gdp_source: str,
+    demand_projection_point: DemandProjectionPoint,
     other_fuels: OtherFuelsTreatment,
 ) -> str:
     point = {
-        GDPProjectionPoint.PeriodEnd: "at the end of each period",
-        GDPProjectionPoint.PeriodStart: "at the start of each period",
-        GDPProjectionPoint.Legacy: "at the start of each period, relative to the first",
-    }[gdp_projection_point]
+        DemandProjectionPoint.PeriodEnd: "at the end of each period",
+        DemandProjectionPoint.PeriodStart: "at the start of each period",
+        DemandProjectionPoint.Legacy: "at the start of each period, relative to the first",
+    }[demand_projection_point]
     other = {
         OtherFuelsTreatment.Deduct: ", less its 'Other' fuels,",
         OtherFuelsTreatment.Free: "",
     }[other_fuels]
     return (
         f"Energy use of the industry subsector (NRCan, {ceud_data_year}){other} "
-        + f"indexed to projected gdp growth {point} ({gdp_scenario.value}, CER, "
-        + f"{2023}). Atlantic provinces split by their share of the subsector's "
-        + f"energy use (StatCan, {2023})"
+        + f"indexed to projected gdp growth {point} ({gdp_source}). Atlantic "
+        + "provinces split by their share of the subsector's energy use (StatCan, "
+        + f"{2023})"
     )
 
 

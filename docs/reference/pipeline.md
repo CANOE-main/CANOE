@@ -17,15 +17,33 @@ Settings under `[compiler.base]` of the pipeline TOML, shared by every sector.
     options:
       show_source: false
 
-## GDP projections
+## GDP and population projections
 
-The GDP projections that scale the demands of every sector.
+The projected GDP and population that grow the demands of every sector, the sources
+they come from (`gdp` and `population` of `[compiler.base]`) and the format of a
+user's series file.
 
-::: canoe.common.gdp.CERScenario
+::: canoe.common.projections.CERGDPSource
     options:
       show_source: false
 
-::: canoe.common.gdp.GDPProjectionPoint
+::: canoe.common.projections.StatCanPopulationSource
+    options:
+      show_source: false
+
+::: canoe.common.projections.CSVSeriesSource
+    options:
+      show_source: false
+
+::: canoe.common.projections.read_series_table
+    options:
+      show_source: false
+
+::: canoe.common.projections.CERScenario
+    options:
+      show_source: false
+
+::: canoe.common.projections.DemandProjectionPoint
     options:
       show_source: false
 

@@ -126,8 +126,15 @@ def _build(cfg: CANOEIndustryConfig) -> tuple[sqlite3.Connection, IndustryEntiti
     energy_use_by_source = compute_energy_use_by_source(ceud, ATLANTIC_SHARES)
 
     shares = compute_ceud_shares(energy_use_by_source)
+    growth = pd.DataFrame(
+        [
+            {"region": p, "period": period, "growth": factor}
+            for p in cfg.provinces
+            for period, factor in GROWTH.items()
+        ]
+    )
     demand_df = compute_demand(
-        energy_use, energy_use_by_source, shares, GROWTH, cfg.other_fuels
+        energy_use, energy_use_by_source, shares, growth, cfg.other_fuels
     )
     input_fuels_of = {s: cfg.input_fuels_of(s) for s in subsectors}
     input_split_df = compute_input_splits(shares, input_fuels_of, cfg.future_periods)
