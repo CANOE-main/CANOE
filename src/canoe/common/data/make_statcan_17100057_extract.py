@@ -4,7 +4,7 @@ previous residential module cached (`statcan_17100057.csv`, 154 MB: every scenar
 gender and age group, columns REF_DATE, GEO, Projection scenario, Gender, Age group
 and VALUE).
 
-The extract keeps the rows `residential.loaders.get_statcan_population_projections`
+The extract keeps the rows `common.loaders.get_statcan_population_projections`
 uses (medium-growth scenario M1, all genders, all ages), unchanged and with the same
 columns, so the loader reads it as it would read the full file.
 

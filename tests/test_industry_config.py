@@ -7,7 +7,7 @@ from canoe_schema.v4_0 import OperatorCode
 from pydantic import ValidationError
 
 from canoe.common import CANOEFuel
-from canoe.common.gdp import CERScenario, GDPProjectionPoint
+from canoe.common.projections import CERGDPSource, CERScenario, DemandProjectionPoint
 from canoe.industry.config import SUPPORTED_FUELS, CANOEIndustryConfig
 from canoe.industry.demand import OtherFuelsTreatment
 from canoe.industry.subsectors import IndustrySubsector
@@ -36,8 +36,8 @@ class TestDefaultConfig:
         assert isinstance(config, CANOEIndustryConfig)
         assert config.data_version == base.data_version
         assert config.provinces == base.provinces
-        assert config.gdp_scenario == CERScenario.GlobalNetZero
-        assert config.gdp_projection_point == GDPProjectionPoint.PeriodEnd
+        assert config.gdp == CERGDPSource(scenario=CERScenario.GlobalNetZero)
+        assert config.demand_projection_point == DemandProjectionPoint.PeriodEnd
         assert config.get_dataset_code() == f"INDHR{base.data_version}"
 
     def test_every_subsector_modelled_with_every_fuel_but_other(

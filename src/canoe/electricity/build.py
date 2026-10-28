@@ -627,7 +627,7 @@ def build_electricity(
                 db_conn, [trade_vintage], cfg.validation_behavior
             )
 
-        # - Exogenous demand: the CODERS forecast at gdp_projection_point, with the
+        # - Exogenous demand: the CODERS forecast at demand_projection_point, with the
         #   hourly profile of source_years.coders_hourly
         exogenous: tuple[DemandEntity, TechnologyEntity] | None = None
         if annual_demand is not None and hourly_demand is not None:
@@ -638,7 +638,7 @@ def build_electricity(
                     projection_year_by_period(
                         cfg.future_periods,
                         cfg.period_step,
-                        ProjectionPoint(cfg.gdp_projection_point.value),
+                        ProjectionPoint(cfg.demand_projection_point.value),
                     ),
                 ),
                 exogenous_demand_profiles(
@@ -650,7 +650,7 @@ def build_electricity(
                 lifetime,
                 "CODERS historic and forecasted annual energy demand (cache "
                 + f"{cfg.data_cache_config.cache_date}), read at "
-                + f"{cfg.gdp_projection_point.value}; profile: CODERS "
+                + f"{cfg.demand_projection_point.value}; profile: CODERS "
                 + f"{years.coders_hourly} hourly provincial demand (local time)",
                 electricity_data_id,
             )

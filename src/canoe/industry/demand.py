@@ -39,7 +39,7 @@ def compute_demand(
     energy_use: pd.DataFrame,
     energy_use_by_source: pd.DataFrame,
     shares: pd.DataFrame,
-    gdp_growth: dict[int, float],
+    gdp_growth: pd.DataFrame,
     other_fuels: OtherFuelsTreatment,
 ) -> pd.DataFrame:
     """
@@ -53,8 +53,8 @@ def compute_demand(
     - energy_use: see `energy_use.compute_energy_use`
     - energy_use_by_source: see `energy_use.compute_energy_use_by_source`
     - shares: see `input_splits.compute_ceud_shares`
-    - gdp_growth: model period -> gdp growth factor from the CEUD year, see
-      `canoe.common.gdp.gdp_growth_by_period`
+    - gdp_growth: columns `region`, `period`, `growth` from the CEUD year, see
+      `canoe.common.projections.growth_by_period`
     - other_fuels: what happens to "Other" fuels
 
     Returns region, period, subsector, demand (PJ; NaN where the energy use is not
@@ -70,7 +70,9 @@ def compute_demand(
     ...     [{**keys, "fuel": CANOEFuel.Other, "energy_use": 1.0, "share": 0.1}]
     ... )
     >>> shares = by_source[["province", "subsector", "fuel", "share"]]
-    >>> growth = {2025: 1.0, 2030: 1.2}
+    >>> growth = pd.DataFrame(
+    ...     {"region": CANOEProvince.ONTARIO, "period": [2025, 2030], "growth": [1.0, 1.2]}
+    ... )
     >>> compute_demand(energy_use, by_source, shares, growth, OtherFuelsTreatment.Deduct)
         region  period subsector  demand
     0  Ontario    2025    Cement     9.0
@@ -100,10 +102,8 @@ def compute_demand(
         base = base.merge(deducted, on=_KEYS, how="left")
         base["energy_use"] = base["energy_use"] - base["other"].fillna(0.0)
 
-    periods = pd.DataFrame(
-        {"period": list(gdp_growth), "growth": list(gdp_growth.values())}
-    )
-    demand = base.merge(periods, how="cross")
+    growth = gdp_growth.rename(columns={"region": "province"})
+    demand = base.merge(growth[["province", "period", "growth"]], on="province")
     demand["demand"] = demand["energy_use"] * demand["growth"]
     return demand.rename(columns={"province": "region"})[
         ["region", "period", "subsector", "demand"]

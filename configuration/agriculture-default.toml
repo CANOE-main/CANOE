@@ -1,5 +1,5 @@
 module_name = "agriculture"
-# data_version, gdp_scenario and gdp_projection_point are inherited from
+# data_version, gdp and demand_projection_point are inherited from
 # [compiler.base]; set them here to override
 
 # Year of the NRCan CEUD agriculture data read (energy use and fuel mix).

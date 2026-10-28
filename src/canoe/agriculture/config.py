@@ -27,7 +27,11 @@ from canoe.common import (
     GoldConnectorConfig,
     naming,
 )
-from canoe.common.gdp import CERScenario, GDPProjectionPoint
+from canoe.common.projections import (
+    DemandProjectionPoint,
+    GDPSource,
+    RejectsDeprecatedProjectionFields,
+)
 from canoe.common.validation import ValidationBehavior
 
 from ..common.module_inheritance import InheritsFromBase, inherit
@@ -40,7 +44,9 @@ SUPPORTED_FUELS: tuple[CANOEFuel, ...] = tuple(
 HFO and PROP."""
 
 
-class CANOEAgricultureConfig(InheritsFromBase, CANOEModule):
+class CANOEAgricultureConfig(
+    RejectsDeprecatedProjectionFields, InheritsFromBase, CANOEModule
+):
     """
     Agriculture sector, `module_name = "agriculture"`.
 
@@ -58,8 +64,8 @@ class CANOEAgricultureConfig(InheritsFromBase, CANOEModule):
     ...         "future_periods": [2025, 2030],
     ...         "period_step": 5,
     ...         "provinces": ["ON", "PEI"],
-    ...         "gdp_scenario": "Global Net-zero",
-    ...         "gdp_projection_point": "period_end",
+    ...         "gdp": {"source": "cer", "scenario": "Global Net-zero"},
+    ...         "demand_projection_point": "period_end",
     ...         "ceud_data_year": 2022,
     ...         "fuels": ["ELC", "NG", "DSL", "GSL"],
     ...     }
@@ -103,10 +109,10 @@ class CANOEAgricultureConfig(InheritsFromBase, CANOEModule):
     """Regions written. Inherited."""
 
     # Demand projections
-    gdp_scenario: CERScenario = inherit()
-    """CER scenario of the GDP projections that scale the demand. Inherited."""
+    gdp: GDPSource = inherit()
+    """Source of the projected GDP that grows the demand. Inherited."""
 
-    gdp_projection_point: GDPProjectionPoint = inherit()
+    demand_projection_point: DemandProjectionPoint = inherit()
     """Year of each period at which GDP scales the demand. Inherited."""
 
     ceud_data_year: int

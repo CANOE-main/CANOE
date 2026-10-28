@@ -24,15 +24,22 @@ from canoe_schema.v4_0.models import (
     TimeSeason,
 )
 from loguru import logger
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import ConfigDict, Field, field_validator
 
 from .common import CANOEProvince, GoldConnectorConfig
-from .common.gdp import CERScenario, GDPProjectionPoint
 from .common.periods import ProjectionPoint
+from .common.projections import (
+    CERGDPSource,
+    DemandProjectionPoint,
+    GDPSource,
+    PopulationSource,
+    RejectsDeprecatedProjectionFields,
+    StatCanPopulationSource,
+)
 from .emissions import EmissionsConfig
 
 
-class CANOEBaseConfig(BaseModel):
+class CANOEBaseConfig(RejectsDeprecatedProjectionFields):
     """
     Settings shared by the whole model, `[compiler.base]` in the pipeline TOML.
 
@@ -73,12 +80,19 @@ class CANOEBaseConfig(BaseModel):
     data_cache_config: GoldConnectorConfig
     """Location and date of the data lake cache."""
 
-    gdp_scenario: CERScenario = CERScenario.GlobalNetZero
-    """CER scenario of the GDP projections that scale the sector demands."""
+    gdp: GDPSource = Field(default_factory=CERGDPSource)
+    """Source of the projected GDP that grows the sector demands: `{ source = "cer",
+    scenario = ... }` (national) or `{ source = "csv", path = ... }` (see
+    `canoe.common.projections.read_series_table`)."""
 
-    gdp_projection_point: GDPProjectionPoint = GDPProjectionPoint.PeriodEnd
-    """Year of each model period at which projected GDP scales the base-year
-    demands."""
+    population: PopulationSource = Field(default_factory=StatCanPopulationSource)
+    """Source of the projected population that grows the demands driven by
+    population (residential): `{ source = "statcan" }` (provincial) or `{ source =
+    "csv", path = ... }`."""
+
+    demand_projection_point: DemandProjectionPoint = DemandProjectionPoint.PeriodEnd
+    """Year of each model period at which projected GDP, population or demand
+    forecasts scale the base-year demands."""
 
     price_projection_point: ProjectionPoint = ProjectionPoint.PeriodEnd
     """Year of each model period at which projected prices (e.g. fuel prices) are

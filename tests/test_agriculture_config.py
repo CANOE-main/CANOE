@@ -9,7 +9,7 @@ from pydantic import ValidationError
 from canoe.agriculture.config import CANOEAgricultureConfig
 from canoe.agriculture.input_splits import InputSplitStrategy
 from canoe.common import CANOEFuel
-from canoe.common.gdp import CERScenario, GDPProjectionPoint
+from canoe.common.projections import CERGDPSource, CERScenario, DemandProjectionPoint
 from canoe.initializer import CANOEBaseConfig
 from canoe.sector_config import resolve_sector_config
 
@@ -35,8 +35,8 @@ class TestDefaultConfig:
         assert isinstance(config, CANOEAgricultureConfig)
         assert config.data_version == base.data_version
         assert config.provinces == base.provinces
-        assert config.gdp_scenario == CERScenario.GlobalNetZero
-        assert config.gdp_projection_point == GDPProjectionPoint.PeriodEnd
+        assert config.gdp == CERGDPSource(scenario=CERScenario.GlobalNetZero)
+        assert config.demand_projection_point == DemandProjectionPoint.PeriodEnd
 
     def test_defaults_reproduce_previous_module(self, base: CANOEBaseConfig):
         config = _config(base)
@@ -53,8 +53,21 @@ class TestDefaultConfig:
         assert config.input_split_operator == OperatorCode.GE
 
     def test_sector_can_override_inherited_gdp_options(self, base: CANOEBaseConfig):
-        config = _config(base, gdp_projection_point="legacy")
-        assert config.gdp_projection_point == GDPProjectionPoint.Legacy
+        config = _config(base, demand_projection_point="legacy")
+        assert config.demand_projection_point == DemandProjectionPoint.Legacy
+
+    @pytest.mark.parametrize(
+        ("field", "message"),
+        [
+            ("gdp_scenario", "set the scenario of the CER GDP source"),
+            ("gdp_projection_point", "renamed demand_projection_point"),
+        ],
+    )
+    def test_rejects_removed_gdp_fields(
+        self, base: CANOEBaseConfig, field: str, message: str
+    ):
+        with pytest.raises(ValidationError, match=message):
+            _config(base, **{field: "period_end"})
 
 
 class TestFuels:

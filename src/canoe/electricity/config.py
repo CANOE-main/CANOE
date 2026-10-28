@@ -25,8 +25,11 @@ from canoe.common import (
     GoldConnectorConfig,
     naming,
 )
-from canoe.common.gdp import GDPProjectionPoint
 from canoe.common.periods import ProjectionPoint
+from canoe.common.projections import (
+    DemandProjectionPoint,
+    RejectsDeprecatedProjectionFields,
+)
 from canoe.common.validation import ValidationBehavior
 from canoe.electricity.build import build_electricity
 from canoe.electricity.catalogue import (
@@ -247,7 +250,7 @@ class ReliabilityConfig(BaseModel):
     `ELECTRICITY_MODULE_BUGS.md`). Off: the reservoir gets no derate (Temoa's 1)."""
 
 
-class CANOEElectricityConfig(InheritsFromBase):
+class CANOEElectricityConfig(RejectsDeprecatedProjectionFields, InheritsFromBase):
     """
     Electricity module.
 
@@ -266,7 +269,7 @@ class CANOEElectricityConfig(InheritsFromBase):
     ...         "period_step": 5,
     ...         "provinces": ["ON", "QC"],
     ...         "price_projection_point": "period_end",
-    ...         "gdp_projection_point": "period_end",
+    ...         "demand_projection_point": "period_end",
     ...         "model_currency_year": 2020,
     ...         "source_years": {
     ...             "coders_hourly": 2018,
@@ -336,7 +339,7 @@ class CANOEElectricityConfig(InheritsFromBase):
     # Demand
     exogenous_demand: bool = False
     """Add the CODERS annual provincial demand forecast (read at
-    `gdp_projection_point` of each period, with the hourly profile of
+    `demand_projection_point` of each period, with the hourly profile of
     `source_years.coders_hourly`) as an electricity demand (`E_D_elc`). Off by
     default: the sectors' electricity imports are the demand, and alongside them it
     counts their electricity use twice. Meant for runs of the electricity module on
@@ -346,7 +349,7 @@ class CANOEElectricityConfig(InheritsFromBase):
     """Hours of the exogenous demand profile below this share of the average hour are
     set to 0 (gaps and noise in the data)."""
 
-    gdp_projection_point: GDPProjectionPoint = inherit()
+    demand_projection_point: DemandProjectionPoint = inherit()
     """Year of each period at which the exogenous demand forecast is read, as the
     sectors' demand projections. Inherited."""
 

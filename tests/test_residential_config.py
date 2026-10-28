@@ -7,7 +7,7 @@ from pydantic import ValidationError
 
 from canoe.common import CANOEProvince
 from canoe.common.census_divisions import USCensusDivision
-from canoe.common.gdp import GDPProjectionPoint
+from canoe.common.projections import DemandProjectionPoint, StatCanPopulationSource
 from canoe.initializer import CANOEBaseConfig
 from canoe.residential.config import CANOEResidentialConfig
 from canoe.residential.demand import DemandDriver
@@ -45,7 +45,8 @@ class TestDefaultConfig:
         assert config.data_version == base.data_version
         assert config.provinces == base.provinces
         assert config.period_step == base.period_step
-        assert config.demand_projection_point == GDPProjectionPoint.PeriodEnd
+        assert config.demand_projection_point == DemandProjectionPoint.PeriodEnd
+        assert config.population == StatCanPopulationSource()
         assert config.get_dataset_code() == f"RESHR{base.data_version}"
 
     def test_every_end_use_modelled(self, base: CANOEBaseConfig):

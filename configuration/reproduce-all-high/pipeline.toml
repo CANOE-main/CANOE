@@ -13,7 +13,7 @@
 #
 # Deviations from the default configuration (configuration/*-default.toml):
 # - fuel: reproduce_previous_price_errors = false (it is true in full-pipeline.toml).
-# - agriculture: gdp_projection_point = "legacy".
+# - agriculture: demand_projection_point = "legacy".
 # - industry: other_fuels = "free".
 # The other module files are copies of the defaults.
 
@@ -45,10 +45,11 @@ future_periods = [2025, 2030, 2035, 2040, 2045]
 period_step = 5
 provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
 global_discount_rate = 0.03
-gdp_scenario = "Global Net-zero"
+gdp = { source = "cer", scenario = "Global Net-zero" }
+population = { source = "statcan" }
 # Commercial, industry and residential demands match the reference at period_end;
 # agriculture overrides it (see agriculture.toml)
-gdp_projection_point = "period_end"
+demand_projection_point = "period_end"
 price_projection_point = "period_end"
 model_currency_year = 2020
 
