@@ -7,6 +7,7 @@ the extreme days and cluster the days.
 """
 
 import re
+from datetime import timedelta, timezone
 from fnmatch import fnmatchcase
 from pathlib import Path
 from typing import Literal
@@ -104,7 +105,8 @@ def load_series(
         if index.has_duplicates:
             raise ValueError(f"{path}: repeated times")
         values = table.drop(columns="time").iloc[:, 0].astype(float).to_numpy()
-        columns[name] = pd.Series(values, index=index.tz_convert("EST"))
+        est = timezone(timedelta(hours=-5), "EST")
+        columns[name] = pd.Series(values, index=index.tz_convert(est))
     return pd.DataFrame(columns)
 
 
@@ -117,7 +119,7 @@ def daily_table(series: pd.DataFrame, year: int) -> pd.DataFrame:
     Examples
     --------
     >>> times = pd.date_range("2018-01-01 05:00", periods=72, freq="h", tz="UTC")
-    >>> series = pd.DataFrame({"x": range(72)}, index=times.tz_convert("EST"))
+    >>> series = pd.DataFrame({"x": range(72)}, index=times.tz_convert("-05:00"))
     >>> table = daily_table(series.iloc[:-1], 2018)
     >>> table.index.unique("season").tolist(), table.shape
     (['D001', 'D002'], (48, 1))
