@@ -4,7 +4,7 @@
   (reference case, US average, real 2024 USD/MMBtu)
   Delivered prices of the fossil fuels and hydrogen by sector, projected to 2050.
   Used for the import and distribution costs of most fuels (see
-  `canoe.fuel.prices.DELIVERED_PRICE_SOURCES`).
+  `canoe.fuel.price_sources.eia_price_series`).
 
 - NREL Annual Technology Baseline 2024 (electricity), fuel cost and heat rate of the
   default biopower and nuclear plants (2022 USD)

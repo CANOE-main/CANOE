@@ -1,6 +1,8 @@
 from enum import StrEnum
 from typing import override
 
+from .labels import match_label
+
 
 class CANOEProvince(StrEnum):
     """
@@ -45,6 +47,37 @@ class CANOEProvince(StrEnum):
             "Saskatchewan": cls.SASKATCHEWAN,
         }
         return _ALIASES.get(str(value))
+
+    @classmethod
+    def from_str(cls, text: str) -> "CANOEProvince":
+        """
+        The province `text` names: its short code (`"PEI"`), NRCan code (`"PE"`),
+        full name (`"Prince Edward Island"`) or member name
+        (`"PRINCE_EDWARD_ISLAND"`), in any case and with any separators.
+
+        Raises
+        ------
+        ValueError
+            If `text` names no province.
+
+        Examples
+        --------
+        >>> [CANOEProvince.from_str(t).short() for t in ["pe", "P.E.I.", "prince edward island"]]
+        ['PEI', 'PEI', 'PEI']
+        """
+        return match_label(
+            text,
+            {
+                province: [
+                    province.short(),
+                    province.get_nrcan_province_code(),
+                    province.value,
+                    province.name,
+                ]
+                for province in cls
+            },
+            "province",
+        )
 
     def short(self):
         SHORT = {

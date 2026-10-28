@@ -18,12 +18,6 @@
 # The other module files are copies of the defaults.
 
 # ####################################################################################
-# ELECTRICITY
-# ####################################################################################
-[compiler]
-electricity = "configuration/reproduce-all-high/electricity.toml"
-
-# ####################################################################################
 # COMPILER CONFIG
 # ####################################################################################
 [compiler.base]
@@ -73,11 +67,86 @@ industry = "configuration/reproduce-all-high/industry.toml"
 residential = "configuration/reproduce-all-high/residential.toml"
 
 # ####################################################################################
-# FUELS
+# ELECTRICITY CONFIG
 # ####################################################################################
+# Electricity supply of the sectors (E_<S>_ELC) and the grid behind it; runs after the
+# sectors, and its generators' fuels are supplied by the fuel module
+[compiler.electricity]
+config_file = "configuration/reproduce-all-high/electricity.toml"
+
+# ####################################################################################
+# FUELS CONFIG
+# ####################################################################################
+# Fuel supply of the fuels the sectors import (electricity is left to the electricity
+# module): an import technology F_IMP_<FUEL> per fuel and a distribution technology
+# F_<S>_<FUEL> per consuming sector. The import costs the lowest delivered price of
+# the fuel and each distribution technology the rest of its sector's price (see
+# canoe.fuel.prices).
 [compiler.fuel]
-# Previous module's price and emission errors not reproduced (FUEL_MODULE_BUGS.md)
-reproduce_previous_price_errors = false
+# Temporary: reproduce the price errors of the previous fuel module (unit conversion,
+# fixed exchange rate and deflators, residential LPG price) to compare with its
+# databases. See FUEL_MODULE_BUGS.md.
+reproduce_previous_price_errors = true
+# Temporary: reproduce the emission errors of the previous fuel module (agriculture
+# gasoline without combustion factors). See FUEL_MODULE_BUGS.md.
 reproduce_previous_emission_errors = false
-validation_behavior = "error"
-missing_data_behavior = "warning"
+# "error" or "warning"
+validation_behavior = "error"  # database lacks periods, regions or commodities
+missing_data_behavior = "warning"  # a fuel imported by a sector has no price or emission factors
+
+# ####################################################################################
+# REPRESENTATIVE PERIODS CONFIG
+# ####################################################################################
+# Reduce the database to representative days before running Temoa
+[representative_periods_config]
+# What the reduced database keeps of each demand: "hourly" values of the
+# representative days (the annual demand changes) or the "annual" demand
+demand_preservation = "hourly"
+# Share of each demand's distribution set to zero, from its smallest values
+dsd_threshold = 0.01
+
+# The clustering to apply: one of a collection precomputed with tsam, by name (the
+# collections packaged with canoe, or those in `collections_dir` if set)
+# [representative_periods_config.clustering]
+# kind = "tsam_collection"
+# collection = "weather2018-hierarchical-pca6"
+# # collections_dir = "path/to/my/clusterings"
+# # Representative days, forced days included
+# n_periods = 1
+# # Days added as representative days
+# # forced_days = ["D041"]
+
+# Or the days clustered with tsam when the pipeline runs, on your own series: one
+# CSV per series under `data_dir`, named after it, with a `time` column (with UTC
+# offsets) and the values
+[representative_periods_config.clustering]
+kind = "tsam"
+data_dir = "assets/rep_periods_data/timeseries"
+weather_year = 2018
+# Series clustered: patterns of their paths in data_dir without .csv; all series
+# if neither is set (not both)
+include = ["*_temperature", "*_humidity", "*_wind_speed", "*_irradiance_surface"]
+# exclude = ["ontario/*"]
+# Principal components clustered (leave out to cluster the series themselves)
+pca_components = 6
+# hierarchical, k_means, k_medoids or adjacent_periods
+method = "hierarchical"
+# Representative days, forced and extreme days included
+n_periods = 16
+forced_days = []
+# Days with the highest/lowest hourly value (peak) or daily mean of any series
+# of data_dir
+max_peak = []
+min_peak = []
+max_mean = []
+min_mean = []
+
+# ####################################################################################
+# TEMOA CONFIG
+# ####################################################################################
+[temoa_config]
+solver = "gurobi"
+scenario_mode = "perfect_foresight"
+silent = false
+save_duals = true
+save_lp_file = true
