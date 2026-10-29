@@ -10,6 +10,7 @@ from canoe.common.naming import DatasetIdentifier
 from canoe.electricity.config import CANOEElectricityConfig
 from canoe.emissions import processing as emissions_processing
 from canoe.fuel.config import CANOEFuelConfig
+from canoe.mmcf_2026.config import CANOEMMCF2026Config
 from canoe.representative_periods.build import build_representative_periods
 from canoe.representative_periods.config import RepresentativePeriodsConfig
 
@@ -28,6 +29,9 @@ class CANOECompilerConfig(BaseModel):
     fuel: CANOEFuelConfig | None = None
     """Supplies the fuels the sectors and the electricity module import; none
     supplied if left out."""
+    mmcf2026: CANOEMMCF2026Config | None = None
+    """Edits the database once the modules have run; the edits of its table
+    are applied, none if left out."""
 
     @field_validator("sectors", mode="before")
     @classmethod
@@ -60,6 +64,20 @@ class CANOECompilerConfig(BaseModel):
             return value
         base = (info.data or {}).get("base")
         return CANOEFuelConfig.model_validate(value, context={"base": base})
+
+    @field_validator("mmcf2026", mode="before")
+    @classmethod
+    def _resolve_mmcf2026(cls, value: Any, info: ValidationInfo) -> Any:
+        # Path to its TOML, a table naming it in `config_file`, or the table itself
+        if isinstance(value, (str, Path)):
+            value = {"config_file": value}
+        if isinstance(value, dict) and "config_file" in value:
+            with Path(value["config_file"]).open("rb") as f:
+                value = tomllib.load(f)
+        if not isinstance(value, dict):
+            return value
+        base = (info.data or {}).get("base")
+        return CANOEMMCF2026Config.model_validate(value, context={"base": base})
 
 
 class CANOEPipelineConfig(BaseModel):
@@ -154,6 +172,10 @@ def run_compiler(config: CANOECompilerConfig):
             config.base.emissions,
             [d for output in module_outputs for d in output.emissions],
         )
+
+    # The MMCF 2026 edits change the finished database, so they run last
+    if config.mmcf2026 is not None:
+        config.mmcf2026.run()
 
 
 def run(config: CANOEPipelineConfig):

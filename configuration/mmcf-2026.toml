@@ -1,0 +1,57 @@
+# ####################################################################################
+# MMCF 2026 CONFIG
+# ####################################################################################
+# Edits the MMCF applies to the finished database, in this order. Referenced from the
+# pipeline TOML: [compiler] mmcf2026 = "configuration/mmcf-2026.toml". Leave a
+# table out to skip that policy; the values below are the defaults.
+
+# Building codes: space heating and cooling demands of the residential and commercial
+# sectors fall linearly from base_year to end_year (CER Canada Net-zero)
+[building_codes]
+base_year = 2025
+end_year = 2050
+residential_reduction = 0.50
+commercial_reduction = 0.43
+
+# Coal power phaseout: the technology retires and its activity is zero from the year
+[coal_phaseout]
+phaseout_year = 2030
+tech = "E_COAL-EXS"
+
+# CANDU refurbishment in Ontario: after original_life years the reactors are offline
+# for shutdown_years, then run for extension_years. The cost is the Darlington
+# refurbishment (2016-2026, taken as roughly 2020 dollars).
+[candu_refurbishment]
+tech = "E_NUC_CANDU-EXS"
+region = "ON"
+original_life = 60
+shutdown_years = 3
+extension_years = 30
+fixed_cost = 177.983             # M$/GW-year, in the refurbishment period
+refurbishment_cost = 728.929385  # M$/GW, in the refurbishment period
+pj_per_gw_year = 31.536
+
+# Clean Electricity Regulations: cap on the net CO2 intensity of the fossil generators,
+# credits above it up to credit_limit at the carbon price
+[clean_electricity_regulation]
+start_period = 2035
+emission_intensity_cap = 65        # t/GWh, until the last period
+final_emission_intensity_cap = 0   # t/GWh, last period
+credit_limit = 35                  # t/GWh, until the last period
+final_credit_limit = 42            # t/GWh, last period
+carbon_price = { 2035 = 140, 2040 = 140, 2045 = 140 }  # nominal CAD/t
+price_deflator = 1.2418            # 2026 prices over 2020 (Bank of Canada most recent value)
+price_base_year = 2026
+inflation_rate = 0.02              # yearly after price_base_year
+# Generators are regulated from vintage + regulated_life, from the start if their
+# vintage is regulated_from_vintage or later, or if their name has one of these
+regulated_life = 25
+regulated_from_vintage = 2030
+always_regulated_techs = ["COAL"]
+excluded_techs = ["RFIT"]          # no direct emissions counted (retrofits)
+generator_prefix = "E_"
+fuel_supply_prefix = "F_E_"
+
+# Unit commitment of the thermal generators
+[unit_commitment]
+# data_file = "path/to/unit_commitment.csv"  # the packaged CODERS generic data if left out

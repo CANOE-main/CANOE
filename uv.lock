@@ -1,5 +1,5 @@
 version = 1
-revision = 3
+revision = 2
 requires-python = ">=3.12"
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -159,7 +159,7 @@ requires-dist = [
     { name = "pyomo-pounce", marker = "extra == 'solvers'" },
     { name = "pyyaml" },
     { name = "ruff", marker = "extra == 'dev'" },
-    { name = "temoa", git = "https://github.com/yamilbknsu/temoa.git?rev=e69223976bd9bdfbdeb25f8f73cc32922108215b" },
+    { name = "temoa", git = "https://github.com/idelder/temoa.git?rev=mmcf_2026" },
     { name = "tomlkit", marker = "extra == 'dev'" },
     { name = "tsam", git = "https://github.com/CANOE-main/tsam.git?rev=v3.2-patch" },
     { name = "typer", specifier = "==0.27.1" },
@@ -2565,8 +2565,8 @@ wheels = [
 
 [[package]]
 name = "temoa"
-version = "4.0.1"
-source = { git = "https://github.com/yamilbknsu/temoa.git?rev=e69223976bd9bdfbdeb25f8f73cc32922108215b#e69223976bd9bdfbdeb25f8f73cc32922108215b" }
+version = "4.0.0a2"
+source = { git = "https://github.com/idelder/temoa.git?rev=mmcf_2026#930eef9c895ff0c63183846ac509b2ce3f6ca966" }
 dependencies = [
     { name = "deprecated" },
     { name = "graphviz" },

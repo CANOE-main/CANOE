@@ -93,6 +93,13 @@ validation_behavior = "error"  # database lacks periods, regions or commodities
 missing_data_behavior = "warning"  # a fuel imported by a sector has no price or emission factors
 
 # ####################################################################################
+# MMCF 2026 CONFIG
+# ####################################################################################
+# Edits of the finished database, applied in this order; leave a table out to skip it
+[compiler.mmcf2026]
+config_file = "configuration/mmcf-2026.toml"
+
+# ####################################################################################
 # REPRESENTATIVE PERIODS CONFIG
 # ####################################################################################
 # Reduce the database to representative days before running Temoa
@@ -131,11 +138,11 @@ pca_components = 6
 method = "hierarchical"
 # Representative days, forced and extreme days included
 n_periods = 16
-forced_days = ["D041"]
+forced_days = []
 # Days with the highest/lowest hourly value (peak) or daily mean of any series
 # of data_dir
-max_peak = ["load"]
-min_peak = ["on_temperature"]
+max_peak = []
+min_peak = []
 max_mean = []
 min_mean = []
 
@@ -144,6 +151,10 @@ min_mean = []
 # ####################################################################################
 [temoa_config]
 solver = "gurobi"
-scenario_mode = "build_only"
+scenario_mode = "perfect_foresight"
+source_trace = true
+extensions=["growth_rates","carbon_markets","unit_commitment"]
+plot_commodity_network = true
+time_sequencing = "representative_periods"
 silent = false
 save_duals = true

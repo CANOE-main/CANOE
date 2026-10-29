@@ -1,0 +1,14 @@
+﻿tech,unit_capacity,min_output_fraction,max_output_fraction,min_up_time_hours,min_down_time_hours,linearized,cost_per_cap,notes
+E_GSL_CT-EXS,21,0.5,1,1,1,1,0.2,CODERS generic data
+E_OIL_ST-EXS,21,0.5,1,4,2,1,0.2,CODERS generic data
+E_OIL_CT-EXS,21,0.5,1,1,1,1,0.2,CODERS generic data
+E_DSL_CT-EXS,21,0.5,1,1,1,1,0.2,CODERS generic data
+E_BIO_M-EXS,50,0.4,1,8,8,1,0.008,CODERS generic data
+E_COAL-EXS,650,0.5,1,8,8,1,0.165,CODERS generic data
+E_COAL_CCS-EXS,650,0.5,1,8,8,1,0.165,CODERS generic data
+E_NG_CC-EXS,1083,0.3,1,4,2,1,0.103,CODERS generic data
+E_NG_CT-EXS,105,0.3,1,1,1,1,0.09,CODERS generic data
+E_BIO_M-NEW,50,0.4,1,8,8,1,0.008,CODERS generic data
+E_NG_CC-NEW,1083,0.3,1,4,2,1,0.103,CODERS generic data
+E_NG_CCS-NEW,377,0.3,1,4,2,1,0.103,CODERS generic data
+E_NG_CT-NEW,105,0.3,1,1,1,1,0.09,CODERS generic data
