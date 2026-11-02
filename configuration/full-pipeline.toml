@@ -70,6 +70,18 @@ agriculture = "configuration/agriculture-default.toml"
 industry = "configuration/industry-default.toml"
 residential = "configuration/residential-default.toml"
 
+# Ghost of a sector whose end-use tree is added to the database after the pipeline
+# runs: its fuels are registered (e.g. T_elc) and supplied by the electricity and
+# fuel modules, and the tree takes them as input. One module per sector.
+# [compiler.sectors.transportation]
+# module_name = "ghost"
+# sector = "TRP"                  # by name or code
+# fuels = ["ELC", "GSL", "DSL"]
+# dataset_code_description = "HR"  # e.g. HR in TRPHR003
+# # provinces are inherited from [compiler.base]; set them to reserve the fuels in
+# # some provinces only
+# # provinces = ["ON", "QC"]
+
 # ####################################################################################
 # ELECTRICITY CONFIG
 # ####################################################################################

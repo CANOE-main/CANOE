@@ -58,3 +58,7 @@ class CANOEModule(ABC):
     @abstractmethod
     def get_dataset_code(self) -> str:
         pass
+
+    @abstractmethod
+    def get_sector(self) -> CANOESector:
+        """End-use sector the module builds; at most one module per sector."""

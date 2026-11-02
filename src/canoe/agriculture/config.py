@@ -187,5 +187,9 @@ class CANOEAgricultureConfig(
         )
 
     @override
+    def get_sector(self) -> CANOESector:
+        return CANOESector.Agriculture
+
+    @override
     def run(self) -> CANOEModuleOutput:
         return build_agriculture(self)

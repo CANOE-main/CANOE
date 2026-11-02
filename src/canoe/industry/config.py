@@ -261,5 +261,9 @@ class CANOEIndustryConfig(
         )
 
     @override
+    def get_sector(self) -> CANOESector:
+        return CANOESector.Industry
+
+    @override
     def run(self) -> CANOEModuleOutput:
         return build_industry(self)
