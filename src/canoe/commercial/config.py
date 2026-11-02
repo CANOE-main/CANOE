@@ -378,5 +378,9 @@ class CANOECommercialConfig(
         )
 
     @override
+    def get_sector(self) -> CANOESector:
+        return CANOESector.Commercial
+
+    @override
     def run(self) -> CANOEModuleOutput:
         return build_commercial(self)

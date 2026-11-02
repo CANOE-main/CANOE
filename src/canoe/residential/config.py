@@ -360,5 +360,9 @@ class CANOEResidentialConfig(
         )
 
     @override
+    def get_sector(self) -> CANOESector:
+        return CANOESector.Residential
+
+    @override
     def run(self) -> CANOEModuleOutput:
         return build_residential(self)
