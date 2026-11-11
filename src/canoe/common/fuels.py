@@ -1,6 +1,7 @@
 from enum import StrEnum
 from typing import Any, override
 
+from .labels import match_label
 from .sectors import CANOESector
 
 
@@ -132,20 +133,39 @@ class CANOEFuel(StrEnum):
         return ATB_TECHNOLOGIES.get(self)
 
     @classmethod
-    def from_str(cls, name: str) -> "CANOEFuel":
-        # Try direct value match first (e.g. "ELC", "DSL")
-        try:
-            return cls(name)
-        except ValueError:
-            pass
+    def from_str(cls, text: str) -> "CANOEFuel":
+        """
+        The fuel `text` names: its code (`"NG"`), name (`"NaturalGas"`) or
+        description (`"natural gas"`), in any case and with any separators.
 
-        # Normalize to a lowercase, space-free string for name matching
-        normalized = name.lower().replace(" ", "").replace("_", "")
-        for fuel in cls:
-            if fuel.name.lower() == normalized:
-                return fuel
+        Raises
+        ------
+        ValueError
+            If `text` names no fuel.
 
-        raise ValueError(f"Unknown fuel: {name!r}")
+        Examples
+        --------
+        >>> [CANOEFuel.from_str(t) for t in ["ng", "Natural gas", "NATURAL_GAS"]]
+        [NaturalGas, NaturalGas, NaturalGas]
+        >>> CANOEFuel.from_str("Liquefied petroleum gas")
+        LiquifiedPretroleumGas
+        """
+        ALIASES: dict[CANOEFuel, list[str]] = {
+            CANOEFuel.LiquifiedPretroleumGas: ["liquefied petroleum gas"],
+        }
+        return match_label(
+            text,
+            {
+                fuel: [
+                    fuel.value,
+                    fuel.name,
+                    fuel.get_desc_name(),
+                    *ALIASES.get(fuel, []),
+                ]
+                for fuel in cls
+            },
+            "fuel",
+        )
 
     @override
     def __str__(self):

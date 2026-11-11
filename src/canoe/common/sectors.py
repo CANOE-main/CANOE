@@ -1,6 +1,8 @@
 from enum import StrEnum
 from typing import Any, override
 
+from .labels import match_label
+
 
 class CANOESector(StrEnum):
     Commercial = "COM"
@@ -20,6 +22,42 @@ class CANOESector(StrEnum):
             if value == member.get_tag():
                 return member
         return None
+
+    @classmethod
+    def from_str(cls, text: str) -> "CANOESector":
+        """
+        The sector `text` names: its code (`"COM"`), name (`"Commercial"`), tag
+        (`"C"`) or EIA name (`"Electric Power"`), in any case and with any
+        separators.
+
+        Raises
+        ------
+        ValueError
+            If `text` names no sector.
+
+        Examples
+        --------
+        >>> [CANOESector.from_str(t) for t in ["ind", "Industry", "industrial", "I"]]
+        [<CANOESector.Industry: 'IND'>, <CANOESector.Industry: 'IND'>, <CANOESector.Industry: 'IND'>, <CANOESector.Industry: 'IND'>]
+        """
+        ALIASES: dict[CANOESector, list[str]] = {
+            CANOESector.Transportation: ["transport"],
+            CANOESector.Agriculture: ["agricultural"],
+        }
+        return match_label(
+            text,
+            {
+                sector: [
+                    sector.value,
+                    sector.name,
+                    sector.get_tag(),
+                    *([eia] if (eia := sector.get_eia_sector()) else []),
+                    *ALIASES.get(sector, []),
+                ]
+                for sector in cls
+            },
+            "sector",
+        )
 
     def get_tag(self):
         _TAGS = {

@@ -37,6 +37,7 @@ available); their loaders undo a currency conversion, so they return source data
 
 import gzip
 from dataclasses import dataclass
+from datetime import timedelta, timezone
 from importlib.resources import files
 from pathlib import Path
 from xml.etree import ElementTree
@@ -898,7 +899,8 @@ def get_renewables_ninja_facility_profiles(year: int) -> pd.DataFrame:
         )
         with resource.open("rb") as f:
             df = pd.read_csv(f, compression="gzip", index_col=0)
-        timestamps = pd.Series(pd.to_datetime(df.index, utc=True).tz_convert("EST"))
+        est = timezone(timedelta(hours=-5), "EST")
+        timestamps = pd.Series(pd.to_datetime(df.index, utc=True).tz_convert(est))
         if len(df) != 8760 or set(timestamps.dt.year) != {year}:
             raise ValueError(f"renewables.ninja {technology}: not the hours of {year}")
         df.index = pd.RangeIndex(len(df), name="hour")

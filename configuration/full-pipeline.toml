@@ -81,6 +81,19 @@ config_file = "configuration/electricity-default.toml"
 # the fuel and each distribution technology the rest of its sector's price (see
 # canoe.fuel.prices).
 [compiler.fuel]
+# Sources of the delivered fuel prices, in priority order: "eia" (EIA AEO delivered
+# prices by sector and fuel, US average), "atb" (NREL ATB biomass and uranium),
+# "fixed" (report prices of ethanol, renewable diesel and SPK), or "csv" with the
+# path of your own price file, e.g. { source = "csv", path = "my_prices.csv" }.
+# A price file has the columns region, sector, fuel, year, price, currency,
+# currency_year, units ("$/GJ" or "$/MMBtu") and optionally source; an empty region
+# or year means every province or year. Prices are used as they are for the import
+# and distribution costs.
+price_sources = [{ source = "eia" }, { source = "atb" }, { source = "fixed" }]
+# How the sources share the prices: each (region, sector, fuel) from the first source
+# that has it ("per_series"), or each fuel from the first source that prices it
+# ("per_fuel")
+price_fallback = "per_series"
 # Temporary: reproduce the price errors of the previous fuel module (unit conversion,
 # fixed exchange rate and deflators, residential LPG price) to compare with its
 # databases. See FUEL_MODULE_BUGS.md.

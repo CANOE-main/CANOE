@@ -8,11 +8,9 @@ license-files = ["LICENSE*"]
 dependencies = [
   "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git@b8a177bff5032e2404f3f5ea6b807fc964bcf526",
   "loguru==0.7.3",
-  "matplotlib",
   "numpy==2.4.3",
   "pandas==3.0.1",
   "pydantic==2.13.4",
-  "pyyaml",
   "temoa @ git+https://github.com/yamilbknsu/temoa.git@e69223976bd9bdfbdeb25f8f73cc32922108215b",
   "tsam @ git+https://github.com/CANOE-main/tsam.git@v3.2-patch",
   "typer==0.27.1",
