@@ -28,11 +28,17 @@ period_step = 5
 provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
 global_discount_rate = 0.03
 
-# GDP projections that scale the sector demands, inherited by the sectors
-# gdp_scenario: "Global Net-zero", "Canada Net-zero" or "Current Measures"
-gdp_scenario = "Global Net-zero"
-# gdp_projection_point: "period_end", "period_start" or "legacy"
-gdp_projection_point = "period_end"
+# Projected GDP and population that grow the sector demands, inherited by the sectors.
+# gdp: { source = "cer", scenario = ... } with scenario "Global Net-zero", "Canada
+# Net-zero" or "Current Measures" (national), or { source = "csv", path = ... }.
+# population: { source = "statcan" } (by province) or { source = "csv", path = ... }.
+# A CSV has the columns region, year, value and optionally source; a region that is
+# empty, "Canada" or "CA" is national and applies to the provinces without rows of
+# their own.
+gdp = { source = "cer", scenario = "Global Net-zero" }
+population = { source = "statcan" }
+# demand_projection_point: "period_end", "period_start" or "legacy"
+demand_projection_point = "period_end"
 
 # Year of each period at which projected prices (e.g. fuel prices) are read, inherited
 # by the modules: "period_end" or "period_start"
@@ -63,6 +69,18 @@ commercial = "configuration/commercial-default.toml"
 agriculture = "configuration/agriculture-default.toml"
 industry = "configuration/industry-default.toml"
 residential = "configuration/residential-default.toml"
+
+# Ghost of a sector whose end-use tree is added to the database after the pipeline
+# runs: its fuels are registered (e.g. T_elc) and supplied by the electricity and
+# fuel modules, and the tree takes them as input. One module per sector.
+# [compiler.sectors.transportation]
+# module_name = "ghost"
+# sector = "TRP"                  # by name or code
+# fuels = ["ELC", "GSL", "DSL"]
+# dataset_code_description = "HR"  # e.g. HR in TRPHR003
+# # provinces are inherited from [compiler.base]; set them to reserve the fuels in
+# # some provinces only
+# # provinces = ["ON", "QC"]
 
 # ####################################################################################
 # ELECTRICITY CONFIG

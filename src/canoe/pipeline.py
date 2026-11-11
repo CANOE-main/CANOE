@@ -37,6 +37,23 @@ class CANOECompilerConfig(BaseModel):
         base = (info.data or {}).get("base")
         return {key: resolve_sector_config(item, base) for key, item in value.items()}
 
+    @field_validator("sectors")
+    @classmethod
+    def _check_one_module_per_sector(
+        cls, value: dict[str, SectorConfig]
+    ) -> dict[str, SectorConfig]:
+        # Modules of the same sector would write the same data sets and commodities
+        names_by_sector: dict[CANOESector, list[str]] = {}
+        for name, sector_config in value.items():
+            names_by_sector.setdefault(sector_config.get_sector(), []).append(name)
+        repeated = {s: names for s, names in names_by_sector.items() if len(names) > 1}
+        if repeated:
+            raise ValueError(
+                "more than one module per sector: "
+                + "; ".join(f"{s}: {', '.join(names)}" for s, names in repeated.items())
+            )
+        return value
+
     @field_validator("electricity", mode="before")
     @classmethod
     def _resolve_electricity(cls, value: Any, info: ValidationInfo) -> Any:

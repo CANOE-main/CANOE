@@ -15,7 +15,7 @@
 # the hourly profile of source_years.coders_hourly. Off by default: the end-use
 # sectors' electricity imports are the demand, and alongside them it counts their
 # electricity use twice. Meant for runs of the electricity module on its own. The
-# forecast is read at gdp_projection_point of each period (inherited).
+# forecast is read at demand_projection_point of each period (inherited).
 exogenous_demand = false
 # Hours of its profile below this share of the average hour are set to 0
 exogenous_demand_profile_tolerance = 0.02

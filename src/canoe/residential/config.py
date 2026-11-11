@@ -28,7 +28,12 @@ from canoe.common import (
     naming,
 )
 from canoe.common.census_divisions import USCensusDivision
-from canoe.common.gdp import CERScenario, GDPProjectionPoint
+from canoe.common.projections import (
+    DemandProjectionPoint,
+    GDPSource,
+    PopulationSource,
+    RejectsDeprecatedProjectionFields,
+)
 from canoe.common.time_slices import AllTimeSlices, CANOETimeSliceSet
 from canoe.common.validation import ValidationBehavior
 from canoe.residential.build import build_residential
@@ -236,7 +241,9 @@ class EndUsesConfig(BaseModel):
         return {end_use: end_use in mapped for end_use in self.enabled()}
 
 
-class CANOEResidentialConfig(InheritsFromBase, CANOEModule):
+class CANOEResidentialConfig(
+    RejectsDeprecatedProjectionFields, InheritsFromBase, CANOEModule
+):
     """
     Residential sector, `module_name = "residential"`.
 
@@ -254,7 +261,6 @@ class CANOEResidentialConfig(InheritsFromBase, CANOEModule):
     # Fields inherited as-is need no entry here; only renames/derivations do.
     _INHERIT_RESOLVERS: ClassVar[dict[str, Callable[[CANOEBaseConfig], Any]]] = {
         "database_file": lambda base: Path(base.db_output_dir),
-        "demand_projection_point": lambda base: base.gdp_projection_point,
     }
 
     # Identity
@@ -287,15 +293,18 @@ class CANOEResidentialConfig(InheritsFromBase, CANOEModule):
     the base year of the demands and existing capacity. Must be a year of the data."""
 
     demand_driver: DemandDriver = DemandDriver.Population
-    """Series that projects the base-year demands: provincial population or national
-    GDP."""
+    """Series that projects the base-year demands: population or GDP (see
+    `population` and `gdp`)."""
 
-    demand_projection_point: GDPProjectionPoint = inherit()
-    """Year of each period at which the demand driver is read. Inherited from
-    `gdp_projection_point`."""
+    demand_projection_point: DemandProjectionPoint = inherit()
+    """Year of each period at which the demand driver is read. Inherited."""
 
-    gdp_scenario: CERScenario = inherit()
-    """CER scenario of the GDP projections, with `demand_driver = "gdp"`. Inherited."""
+    population: PopulationSource = inherit()
+    """Source of the projected population, with `demand_driver = "population"`.
+    Inherited."""
+
+    gdp: GDPSource = inherit()
+    """Source of the projected GDP, with `demand_driver = "gdp"`. Inherited."""
 
     # Costs
     model_currency_year: int = inherit()
@@ -349,6 +358,10 @@ class CANOEResidentialConfig(InheritsFromBase, CANOEModule):
             version_code=self.data_version,
             province=None,
         )
+
+    @override
+    def get_sector(self) -> CANOESector:
+        return CANOESector.Residential
 
     @override
     def run(self) -> CANOEModuleOutput:

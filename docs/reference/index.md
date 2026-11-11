@@ -30,7 +30,7 @@ model:
 
 Sector settings marked as *inherited* take their value from `[compiler.base]`
 unless the sector TOML sets them, so a sector can override a shared setting (e.g.
-`data_version` or `gdp_projection_point`) without changing the others. Leaving them
+`data_version` or `demand_projection_point`) without changing the others. Leaving them
 out, or setting them to `"inherited"`, uses the base value.
 
 ## Names in configuration files

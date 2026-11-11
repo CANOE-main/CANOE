@@ -18,7 +18,11 @@ from canoe.common import (
     GoldConnectorConfig,
     naming,
 )
-from canoe.common.gdp import CERScenario, GDPProjectionPoint
+from canoe.common.projections import (
+    DemandProjectionPoint,
+    GDPSource,
+    RejectsDeprecatedProjectionFields,
+)
 from canoe.common.time_slices import AllTimeSlices, CANOETimeSliceSet
 
 from ..common.module_inheritance import InheritsFromBase, inherit
@@ -264,7 +268,9 @@ class AEOConfig(BaseModel):
     """US census division whose technology data each province takes."""
 
 
-class CANOECommercialConfig(InheritsFromBase, CANOEModule):
+class CANOECommercialConfig(
+    RejectsDeprecatedProjectionFields, InheritsFromBase, CANOEModule
+):
     """
     Commercial sector, `module_name = "commercial"`.
 
@@ -310,10 +316,10 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
     """End uses modelled, one table each."""
 
     # Demand projections
-    gdp_scenario: CERScenario = inherit()
-    """CER scenario of the GDP projections that scale the demands. Inherited."""
+    gdp: GDPSource = inherit()
+    """Source of the projected GDP that grows the demands. Inherited."""
 
-    gdp_projection_point: GDPProjectionPoint = inherit()
+    demand_projection_point: DemandProjectionPoint = inherit()
     """Year of each period at which GDP scales the demands. Inherited."""
 
     # Costs
@@ -370,6 +376,10 @@ class CANOECommercialConfig(InheritsFromBase, CANOEModule):
             version_code=self.data_version,
             province=None,
         )
+
+    @override
+    def get_sector(self) -> CANOESector:
+        return CANOESector.Commercial
 
     @override
     def run(self) -> CANOEModuleOutput:

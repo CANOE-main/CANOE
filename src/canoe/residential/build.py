@@ -13,21 +13,21 @@ from canoe.common import (
     atomic_transaction,
 )
 from canoe.common.currency import currency_conversion_factor
-from canoe.common.gdp import GDPProjectionPoint
-from canoe.common.loaders import get_cer_gdp, get_exchange_and_inflation_tables
+from canoe.common.loaders import get_exchange_and_inflation_tables
 from canoe.common.naming import DatasetIdentifier
 from canoe.common.periods import period_end_years
+from canoe.common.projections import (
+    DemandProjectionPoint,
+    get_gdp_table,
+    get_population_table,
+    growth_by_period,
+    growth_notes,
+)
 from canoe.common.weather_maps import load_weather_maps
 
 from .appliances import appliance_stock
 from .ceud import load_ceud_tables
-from .demand import (
-    DemandDriver,
-    gdp_growth,
-    population_by_year,
-    population_growth,
-    project_demand,
-)
+from .demand import DemandDriver, project_demand
 from .dsd import demand_specific_distributions
 from .end_uses import ResidentialEndUse
 from .entities import (
@@ -51,8 +51,6 @@ from .loaders import (
     get_handbook_appliance_consumption,
     get_ontario_lighting_shares,
     get_statcan_energy_saving_lights,
-    get_statcan_population_estimates,
-    get_statcan_population_projections,
 )
 from .new_technologies import new_technology_parameters
 from .profiles import load_resstock_consumption
@@ -175,53 +173,30 @@ def build_residential(cfg: "CANOEResidentialConfig") -> CANOEModuleOutput:
         class_lifetimes = aeo_class_lifetimes(aeo_menu.classes)
         # - Growth of the demands from the CEUD data year to each period, and to the
         #   start of the first period (when the existing stock stands), driven by
-        #   provincial population (StatCan) or national GDP (CER)
-        if cfg.demand_driver == DemandDriver.Population:
-            population = population_by_year(
-                get_statcan_population_estimates(),
-                get_statcan_population_projections(),
-                cfg.provinces,
-            )
-            growth, stock_growth = (
-                population_growth(
-                    population,
-                    cfg.provinces,
-                    cfg.ceud_data_year,
-                    model_periods,
-                    cfg.period_step,
-                    cfg.demand_projection_point,
-                ),
-                population_growth(
-                    population,
-                    cfg.provinces,
-                    cfg.ceud_data_year,
-                    [first_period],
-                    cfg.period_step,
-                    GDPProjectionPoint.PeriodStart,
-                ),
-            )
-        else:
-            gdp_index = get_cer_gdp(
-                cfg.data_cache_config,
-                gdp_index_year=cfg.ceud_data_year,
-                scenario=cfg.gdp_scenario,
-            )
-            growth, stock_growth = (
-                gdp_growth(
-                    gdp_index,
-                    cfg.provinces,
-                    model_periods,
-                    cfg.period_step,
-                    cfg.demand_projection_point,
-                ),
-                gdp_growth(
-                    gdp_index,
-                    cfg.provinces,
-                    [first_period],
-                    cfg.period_step,
-                    GDPProjectionPoint.PeriodStart,
-                ),
-            )
+        #   the projected population or GDP of each province (see `population`
+        #   and `gdp`)
+        driver_table = {
+            DemandDriver.Population: lambda: get_population_table(
+                cfg.population, cfg.provinces
+            ),
+            DemandDriver.GDP: lambda: get_gdp_table(cfg.gdp, cfg.data_cache_config),
+        }[cfg.demand_driver]()
+        growth = growth_by_period(
+            driver_table,
+            cfg.provinces,
+            cfg.ceud_data_year,
+            model_periods,
+            cfg.period_step,
+            cfg.demand_projection_point,
+        )
+        stock_growth = growth_by_period(
+            driver_table,
+            cfg.provinces,
+            cfg.ceud_data_year,
+            [first_period],
+            cfg.period_step,
+            DemandProjectionPoint.PeriodStart,
+        )
         # - Existing technologies (lamps and other appliances aside): lifetime and
         #   fixed cost of their equivalent new technology, vintages of their stock
         existing = [
@@ -346,7 +321,8 @@ def build_residential(cfg: "CANOEResidentialConfig") -> CANOEModuleOutput:
             pd.concat([s.base_demand for s in stocks], ignore_index=True), growth
         )
         demand_notes = {
-            end_use: f"{s.demand_notes} ({_driver_notes(cfg.demand_driver)})"
+            end_use: f"{s.demand_notes} ({cfg.demand_driver.value}: "
+            + f"{growth_notes(growth)})"
             for s in stocks
             for end_use in s.base_demand["end_use"].unique()
         }
@@ -445,14 +421,6 @@ def build_residential(cfg: "CANOEResidentialConfig") -> CANOEModuleOutput:
 
     # The fuels the technologies take, where they take them
     return CANOEModuleOutput(fuel_imports=entities.fuel_imports())
-
-
-def _driver_notes(driver: DemandDriver) -> str:
-    return {
-        DemandDriver.Population: "provincial population, StatCan estimates and "
-        + "projections (M1)",
-        DemandDriver.GDP: "national GDP, CER Canada's Energy Future 2023",
-    }[driver]
 
 
 def _dsd_notes(weather_mapped: bool) -> str:
