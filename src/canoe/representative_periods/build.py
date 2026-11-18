@@ -22,6 +22,7 @@ from loguru import logger
 
 from canoe.common import atomic_transaction
 from canoe.representative_periods.config import RepresentativePeriodsConfig
+from canoe.representative_periods.diagnostics import ClusteringDiagnostics
 from canoe.representative_periods.mapping import RepresentativeSeasonMapping
 from canoe.representative_periods.reduction import (
     representative_seasons,
@@ -38,22 +39,29 @@ class RepresentativePeriodsOutput:
     """Path of the reduced database."""
     time_sequencing: str
     """Temoa's `time_sequencing` for the reduced database."""
+    diagnostics: ClusteringDiagnostics | None = None
+    """Accuracy, original and recreated series, their duration curves and the
+    principal components; None if the clustering has no original series."""
 
 
 def build_representative_periods(
-    input_db: Path, output_dir: Path, config: RepresentativePeriodsConfig
+    input_db: Path,
+    output_dir: Path,
+    config: RepresentativePeriodsConfig,
+    diagnostics_dir: Path | None = None,
 ) -> RepresentativePeriodsOutput:
     """
     Main function of the representative periods step.
 
     Writes a copy of `input_db` reduced to the representative seasons of the
     configured clustering, as `<output_dir>/<input name>_<N>d.sqlite`. The input
-    database is only read.
+    database is only read. With `diagnostics_dir`, the clustering's diagnostics
+    (accuracy table and plots) are written there.
     """
     logger.info(f"Reducing {input_db} to representative periods...")
 
     # This is were the selection of clustering matters
-    mapping: RepresentativeSeasonMapping = config.clustering.mapping()
+    mapping: RepresentativeSeasonMapping = config.clustering.mapping(diagnostics_dir)
     # Representatives always represent themselves: their number needs no database
     n_periods = len(set(mapping.representative_of.values()))
     output_db = output_dir / f"{input_db.stem}_{n_periods}d.sqlite"
@@ -95,7 +103,9 @@ def build_representative_periods(
 
     logger.info(f"Wrote {output_db} ({n_periods} representative seasons)")
     return RepresentativePeriodsOutput(
-        db_path=output_db, time_sequencing=time_sequencing
+        db_path=output_db,
+        time_sequencing=time_sequencing,
+        diagnostics=mapping.diagnostics,
     )
 
 
