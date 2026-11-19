@@ -8,6 +8,7 @@ Each variant identifies a clustering and gives its `RepresentativeSeasonMapping`
 
 from importlib.resources import files
 from importlib.resources.abc import Traversable
+from pathlib import Path
 from typing import Annotated, Literal
 
 import pandas as pd
@@ -185,7 +186,9 @@ class TsamClustering(BaseModel):
             raise ValueError("Set `include` or `exclude`, not both")
         return self
 
-    def mapping(self, diagnostics_dir: Path | None = None) -> RepresentativeSeasonMapping:
+    def mapping(
+        self, diagnostics_dir: Path | None = None
+    ) -> RepresentativeSeasonMapping:
         """
         Cluster the days of `weather_year`. With `diagnostics_dir`, the diagnostics
         (accuracy table and plots) are also written there.
