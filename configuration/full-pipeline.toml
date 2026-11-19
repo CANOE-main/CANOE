@@ -1,6 +1,6 @@
 # Relative paths in this file (and in the TOMLs it names) are relative to the folder
 # of the file they are written in. Run from the repository root:
-#   uv run canoe -c configuration/full-pipeline.toml
+#   uv run canoe run configuration/full-pipeline.toml
 
 # ####################################################################################
 # COMPILER CONFIG

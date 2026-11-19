@@ -4,7 +4,7 @@
 # The settings the previous modules used for the reference database, as close as the
 # new modules allow. Relative paths are relative to this file's folder. Run from the
 # repository root (the working directory and Temoa outputs go there):
-#   uv run canoe -c configuration/reproduce-all-high/pipeline.toml
+#   uv run canoe run configuration/reproduce-all-high/pipeline.toml
 #
 # Not reproduced, by design:
 # - Transportation (TRPHR*): not migrated yet, so no T_* rows and no EV electricity.
