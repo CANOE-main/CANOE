@@ -2,11 +2,13 @@
 
 A CANOE run is described by TOML files, validated into the configuration models
 documented in this section. This reference is generated from the code, so it always
-matches what the pipeline accepts.
+matches what the pipeline accepts. For a guided tour of a project's configuration, see
+[Get Started](../get_started.md#6-change-the-configuration).
 
 ## How the files fit together
 
-The pipeline TOML (e.g. `configuration/full-pipeline.toml`) has two parts:
+The pipeline TOML (e.g. `config/all-high/full-pipeline.toml` in a project) has two
+parts:
 
 - `[compiler.base]`: settings shared by the whole model (database, periods,
   provinces, data cache, GDP projections, emissions), see

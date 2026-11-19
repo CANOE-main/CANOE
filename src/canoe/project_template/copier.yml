@@ -10,11 +10,16 @@ _answers_file: .copier-answers.yml
 _templates_suffix: .jinja
 _min_copier_version: "9.19"
 
+# Pre-filled with `project-` so names follow the `project-<name>` convention
+# (`canoe init --defaults` uses the folder name instead)
 project_name:
   type: str
-  help: Project name
+  help: Project name (e.g. project-hydrogen)
+  default: project-
   validator: >-
-    {% if not (project_name | regex_search('^[A-Za-z][A-Za-z0-9 _-]*$')) %}
+    {% if project_name == 'project-' %}
+    Add a name after project-
+    {% elif not (project_name | regex_search('^[A-Za-z][A-Za-z0-9 _-]*$')) %}
     Start with a letter; use letters, digits, spaces, - and _
     {% endif %}
 

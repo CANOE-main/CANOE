@@ -82,16 +82,21 @@ def create_project(
     Render the template into `project_dir`, asking the template's questions (or
     taking their defaults, or the given `answers`). Returns the pipeline TOML of the
     chosen scenario.
+
+    The name question is pre-filled with `project-` for the user to complete; with
+    `defaults` nobody completes it, so the folder name is the project name.
     """
+    data = {
+        **(answers or {}),
+        "canoe_source": canoe_source(),
+        "cache_dir": cache_dir_entry(cache_dir),
+    }
+    if defaults:
+        data.setdefault("project_name", project_dir.resolve().name)
     worker = run_copy(
         str(template_dir()),
         project_dir,
-        data={
-            **(answers or {}),
-            "canoe_source": canoe_source(),
-            "cache_dir": cache_dir_entry(cache_dir),
-        },
-        user_defaults={"project_name": project_dir.resolve().name},
+        data=data,
         defaults=defaults,
         # Copier's file list and "template version None" (an installed template
         # has no git version); `canoe init` says what it created

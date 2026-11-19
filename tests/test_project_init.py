@@ -86,6 +86,21 @@ def test_answers(tmp_path: Path):
     assert 'Hydrogen in "Quebec"' in (project / "README.md").read_text()
 
 
+def test_project_name_needs_more_than_the_prefix(tmp_path: Path):
+    # The name question is pre-filled with `project-` for the user to complete
+    with pytest.raises(ValueError, match="Add a name after project-"):
+        create_project(
+            tmp_path / "p", None, defaults=True, answers={"project_name": "project-"}
+        )
+
+
+def test_defaults_name_the_project_after_its_folder(tmp_path: Path):
+    project = tmp_path / "project-hydrogen"
+    create_project(project, None, defaults=True)
+    answers = (project / ".copier-answers.yml").read_text()
+    assert "project_name: project-hydrogen" in answers
+
+
 @pytest.mark.parametrize(
     "sector", ["agriculture", "commercial", "industry", "residential", "electricity"]
 )
