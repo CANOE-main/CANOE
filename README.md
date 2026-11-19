@@ -18,13 +18,6 @@ technologies to build and operate to meet it. It's built as an instance of
 electricity, transportation, industry, residential, commercial, agriculture and fuels
 sectors.
 
-This repository is the **CANOE compiler**: the Python package that turns that open data
-into a TEMOA database for the provinces, periods and settings you choose, reduces it to
-representative days and runs TEMOA on it.
-
-- **Documentation:** <https://CANOE-main.github.io/CANOE/>
-- **Step-by-step tutorial:** [Get Started](https://CANOE-main.github.io/CANOE/get_started/)
-
 ## Get started
 
 To run CANOE, TEMOA needs a database in its format: the technologies, demands, costs
