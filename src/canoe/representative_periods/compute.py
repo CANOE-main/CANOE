@@ -228,3 +228,50 @@ def cluster_days(
         seasons[day]: seasons[representatives[cluster]]
         for day, cluster in enumerate(aggregation.clusterOrder)
     }
+
+
+def recreate_series(
+    table: pd.DataFrame, representative_of: dict[str, str]
+) -> pd.DataFrame:
+    """`table` with each day replaced by its representative day (same index)."""
+    seasons = table.index.get_level_values("season")
+    hours = table.index.get_level_values("hour")
+    source = pd.MultiIndex.from_arrays([[representative_of[s] for s in seasons], hours])
+    return table.reindex(source).set_axis(table.index)
+
+
+def duration_curves(table: pd.DataFrame) -> pd.DataFrame:
+    """Each column of `table` sorted in descending order, indexed by rank."""
+    return pd.DataFrame(
+        -np.sort(-table.to_numpy(), axis=0), columns=table.columns
+    )
+
+
+def clustering_accuracy(
+    table: pd.DataFrame, representative_of: dict[str, str]
+) -> pd.DataFrame:
+    """
+    Accuracy of a clustering on the original series (never on principal components):
+    each day of `table` (indexed by season and hour) is replaced by its
+    representative day, and the result is compared to `table`, per series. Like
+    tsam's `accuracyIndicators`, `RMSE_duration` compares the sorted (descending)
+    series. Columns ending in `_norm` are on series min-max scaled by the original,
+    as tsam does by default.
+    """
+    recreated = recreate_series(table, representative_of)
+    rows: dict[str, dict[str, float]] = {}
+    for name in table.columns:
+        orig = table[name].to_numpy()
+        pred = recreated[name].to_numpy()
+        span = orig.max() - orig.min()
+        scale = span if span > 0 else 1.0
+        err = pred - orig
+        err_duration = np.sort(pred)[::-1] - np.sort(orig)[::-1]
+        rows[name] = {
+            "RMSE": float(np.sqrt(np.mean(err**2))),
+            "RMSE_duration": float(np.sqrt(np.mean(err_duration**2))),
+            "MAE": float(np.mean(np.abs(err))),
+            "RMSE_norm": float(np.sqrt(np.mean(err**2)) / scale),
+            "RMSE_duration_norm": float(np.sqrt(np.mean(err_duration**2)) / scale),
+        }
+    return pd.DataFrame.from_dict(rows, orient="index")
