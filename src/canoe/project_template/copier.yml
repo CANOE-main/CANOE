@@ -10,16 +10,17 @@ _answers_file: .copier-answers.yml
 _templates_suffix: .jinja
 _min_copier_version: "9.19"
 
-# Pre-filled with `project-` so names follow the `project-<name>` convention
-# (`canoe init --defaults` uses the folder name instead)
+# Pre-filled with the name of the project folder. Copier validates a default before
+# asking, so a folder name the validator rejects (e.g. starting with a digit) gives
+# no default (UNSET) instead of failing.
 project_name:
   type: str
   help: Project name (e.g. project-hydrogen)
-  default: project-
+  default: >-
+    {{ _folder_name if (_folder_name | regex_search('^[A-Za-z][A-Za-z0-9 _-]*$'))
+    else UNSET }}
   validator: >-
-    {% if project_name == 'project-' %}
-    Add a name after project-
-    {% elif not (project_name | regex_search('^[A-Za-z][A-Za-z0-9 _-]*$')) %}
+    {% if not (project_name | regex_search('^[A-Za-z][A-Za-z0-9 _-]*$')) %}
     Start with a letter; use letters, digits, spaces, - and _
     {% endif %}
 

@@ -44,8 +44,9 @@ folder `project-hydrogen` (it must be new or empty) and asks:
 project, or give the folder of a cache you already have (see [the data
 cache](#2-the-data-cache)).
 
-**Project name.** Pre-filled with `project-`: complete it, e.g. `project-hydrogen`.
-Projects are named `project-<name>` so they're easy to recognize.
+**Project name.** Pre-filled with the folder name (`project-hydrogen`): press Enter to
+keep it or type another. Projects are named `project-<name>` so they're easy to
+recognize.
 
 **Short description.** One line, for the project's README.
 

@@ -83,16 +83,14 @@ def create_project(
     taking their defaults, or the given `answers`). Returns the pipeline TOML of the
     chosen scenario.
 
-    The name question is pre-filled with `project-` for the user to complete; with
-    `defaults` nobody completes it, so the folder name is the project name.
+    The name question is pre-filled with the folder name (see the template's
+    `copier.yml`), so with `defaults` the folder name is the project name.
     """
     data = {
         **(answers or {}),
         "canoe_source": canoe_source(),
         "cache_dir": cache_dir_entry(cache_dir),
     }
-    if defaults:
-        data.setdefault("project_name", project_dir.resolve().name)
     worker = run_copy(
         str(template_dir()),
         project_dir,

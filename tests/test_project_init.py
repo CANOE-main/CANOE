@@ -4,7 +4,9 @@
 
 import tomllib
 from pathlib import Path
+from typing import Any
 
+import copier._main as copier_main
 import pytest
 from typer.testing import CliRunner
 
@@ -86,19 +88,33 @@ def test_answers(tmp_path: Path):
     assert 'Hydrogen in "Quebec"' in (project / "README.md").read_text()
 
 
-def test_project_name_needs_more_than_the_prefix(tmp_path: Path):
-    # The name question is pre-filled with `project-` for the user to complete
-    with pytest.raises(ValueError, match="Add a name after project-"):
-        create_project(
-            tmp_path / "p", None, defaults=True, answers={"project_name": "project-"}
-        )
-
-
 def test_defaults_name_the_project_after_its_folder(tmp_path: Path):
     project = tmp_path / "project-hydrogen"
     create_project(project, None, defaults=True)
     answers = (project / ".copier-answers.yml").read_text()
     assert "project_name: project-hydrogen" in answers
+
+
+@pytest.mark.parametrize(
+    ("folder", "prefill"),
+    [("project-hydrogen", "project-hydrogen"), ("2024-study", None)],
+)
+def test_name_question_is_prefilled_with_a_valid_folder_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, folder: str, prefill: str | None
+):
+    # Copier validates a question's default before asking it: an invalid one would
+    # fail instead of being shown. The prompt is replaced by one that records the
+    # pre-filled value and answers with it (or a name when there is none).
+    shown: dict[str, Any] = {}
+
+    def prompt(questions: list[dict[str, Any]], **_: Any) -> dict[str, Any]:
+        question = questions[0]
+        shown[question["name"]] = question.get("default")
+        return {question["name"]: question.get("default") or "typed-name"}
+
+    monkeypatch.setattr(copier_main, "unsafe_prompt", prompt)
+    create_project(tmp_path / folder, None, defaults=False)
+    assert shown["project_name"] == prefill
 
 
 @pytest.mark.parametrize(
