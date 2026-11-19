@@ -69,6 +69,7 @@ testpaths = [
   "src/canoe/agriculture/energy_use.py",
   "src/canoe/agriculture/entities.py",
   "src/canoe/agriculture/input_splits.py",
+  "src/canoe/common/cache_connector/install.py",
   "src/canoe/common/census_divisions.py",
   "src/canoe/common/ceud.py",
   "src/canoe/common/config_paths.py",
