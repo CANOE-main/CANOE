@@ -2,8 +2,9 @@
 # REPRODUCTION OF canoe-pwd/canoe-v4-all-high.sqlite
 # ####################################################################################
 # The settings the previous modules used for the reference database, as close as the
-# new modules allow. Run from the repository root:
-#   uv run canoe-compiler -c configuration/reproduce-all-high/pipeline.toml
+# new modules allow. Relative paths are relative to this file's folder. Run from the
+# repository root (the working directory and Temoa outputs go there):
+#   uv run canoe run configuration/reproduce-all-high/pipeline.toml
 #
 # Not reproduced, by design:
 # - Transportation (TRPHR*): not migrated yet, so no T_* rows and no EV electricity.
@@ -22,7 +23,7 @@
 # ####################################################################################
 [compiler.base]
 schema_version = "4.0"
-db_output_dir = "canoe-pwd/canoe-reproduce-all-high.sqlite"
+db_output_dir = "../../canoe-pwd/canoe-reproduce-all-high.sqlite"
 # Data sets *003 of the reference
 data_version = "003"
 # The reference's time_period
@@ -54,7 +55,7 @@ price_projection_point = "period_end"
 model_currency_year = 2020
 
 [compiler.base.data_cache_config]
-cache_dir = ".cache"
+cache_dir = "../../.cache"
 cache_date = "2026-08-10"
 force_sync = false
 
@@ -62,10 +63,10 @@ force_sync = false
 # END-USE SECTORS
 # ####################################################################################
 [compiler.sectors]
-commercial = "configuration/reproduce-all-high/commercial.toml"
-agriculture = "configuration/reproduce-all-high/agriculture.toml"
-industry = "configuration/reproduce-all-high/industry.toml"
-residential = "configuration/reproduce-all-high/residential.toml"
+commercial = "commercial.toml"
+agriculture = "agriculture.toml"
+industry = "industry.toml"
+residential = "residential.toml"
 
 # ####################################################################################
 # ELECTRICITY CONFIG
@@ -73,7 +74,7 @@ residential = "configuration/reproduce-all-high/residential.toml"
 # Electricity supply of the sectors (E_<S>_ELC) and the grid behind it; runs after the
 # sectors, and its generators' fuels are supplied by the fuel module
 [compiler.electricity]
-config_file = "configuration/reproduce-all-high/electricity.toml"
+config_file = "electricity.toml"
 
 # ####################################################################################
 # FUELS CONFIG
@@ -122,7 +123,7 @@ dsd_threshold = 0.01
 # offsets) and the values
 [representative_periods_config.clustering]
 kind = "tsam"
-data_dir = "assets/rep_periods_data/timeseries"
+data_dir = "../../assets/rep_periods_data/timeseries"
 weather_year = 2018
 # Series clustered: patterns of their paths in data_dir without .csv; all series
 # if neither is set (not both)

@@ -15,6 +15,7 @@ import pandas as pd
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, model_validator
 
+from canoe.common.config_paths import ConfigPath
 from canoe.representative_periods.compute import (
     ClusterMethod,
     cluster_days,
@@ -57,9 +58,10 @@ class TsamCollection(BaseModel):
     """Selects this variant."""
     collection: str
     """Name of the collection (its folder), e.g. `weather2018-hierarchical-pca6`."""
-    collections_dir: Path | None = None
-    """Folder holding the collection; the collections packaged with canoe
-    (`canoe/representative_periods/data/clusterings`) if left out."""
+    collections_dir: ConfigPath | None = None
+    """Folder holding the collection, relative to the folder of the TOML; the
+    collections packaged with canoe (`canoe/representative_periods/data/clusterings`)
+    if left out."""
     n_periods: PositiveInt
     """Number of representative days, forced days included: the stored clustering
     into `n_periods` minus the number of forced days is used."""
@@ -145,10 +147,11 @@ class TsamClustering(BaseModel):
 
     kind: Literal["tsam"] = "tsam"
     """Selects this variant."""
-    data_dir: Path
-    """Folder with the series: one CSV per series, at any depth, named after the
-    series (`on/on_temperature.csv` is `on_temperature`), with a `time` column (with
-    UTC offsets) and one column of values."""
+    data_dir: ConfigPath
+    """Folder with the series, relative to the folder of the TOML: one CSV per
+    series, at any depth, named after the series (`on/on_temperature.csv` is
+    `on_temperature`), with a `time` column (with UTC offsets) and one column of
+    values."""
     weather_year: int
     """Year of the series to cluster; its days are labelled by their date in EST
     (`Dnnn` is day nnn of the year)."""
@@ -183,7 +186,9 @@ class TsamClustering(BaseModel):
             raise ValueError("Set `include` or `exclude`, not both")
         return self
 
-    def mapping(self, diagnostics_dir: Path | None = None) -> RepresentativeSeasonMapping:
+    def mapping(
+        self, diagnostics_dir: Path | None = None
+    ) -> RepresentativeSeasonMapping:
         """
         Cluster the days of `weather_year`. With `diagnostics_dir`, the diagnostics
         (accuracy table and plots) are also written there.
@@ -244,7 +249,34 @@ class TsamClustering(BaseModel):
         )
 
 
-Clustering = Annotated[TsamCollection | TsamClustering, Field(discriminator="kind")]
+class ManualClustering(BaseModel):
+    """
+    A clustering given by hand: the season that represents each season, e.g. to
+    apply a selection of representative days made elsewhere. Meant to be built in
+    code (`ManualClustering(representative_of={...})`).
+
+    The mapping is used as it is: every representative must map to itself, and
+    seasons left out are not represented (the apply step warns about them). No
+    diagnostics, as there are no series to compare.
+    """
+
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
+    kind: Literal["manual"] = "manual"
+    """Selects this variant."""
+    representative_of: dict[str, str]
+    """Season -> the season that represents it (e.g. `{"D001": "D041"}`)."""
+
+    def mapping(
+        self, diagnostics_dir: Path | None = None
+    ) -> RepresentativeSeasonMapping:
+        """The given mapping. `diagnostics_dir` is ignored."""
+        return RepresentativeSeasonMapping(representative_of=self.representative_of)
+
+
+Clustering = Annotated[
+    TsamCollection | TsamClustering | ManualClustering, Field(discriminator="kind")
+]
 
 
 def _warn_if_fewer(representative_of: dict[str, str], n_periods: int) -> None:

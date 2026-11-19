@@ -6,6 +6,8 @@ from loguru import logger
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 from canoe.common import CANOEFuel, CANOEModuleOutput, CANOESector, atomic_transaction
+from canoe.common.cache_connector.install import missing_from_cache
+from canoe.common.config_paths import ConfigPath, config_dir_of, join_config_dir
 from canoe.common.naming import DatasetIdentifier
 from canoe.electricity.config import CANOEElectricityConfig
 from canoe.emissions import processing as emissions_processing
@@ -35,7 +37,11 @@ class CANOECompilerConfig(BaseModel):
         if not isinstance(value, dict):
             return value
         base = (info.data or {}).get("base")
-        return {key: resolve_sector_config(item, base) for key, item in value.items()}
+        config_dir = config_dir_of(info)
+        return {
+            key: resolve_sector_config(item, base, config_dir)
+            for key, item in value.items()
+        }
 
     @field_validator("sectors")
     @classmethod
@@ -58,16 +64,23 @@ class CANOECompilerConfig(BaseModel):
     @classmethod
     def _resolve_electricity(cls, value: Any, info: ValidationInfo) -> Any:
         # Path to its TOML, a table naming it in `config_file`, or the table itself
-        # (e.g. in tests): validated with `base` in context so inherited fields resolve
+        # (e.g. in tests): validated with `base` in context so inherited fields resolve.
+        # The TOML's path is relative to the pipeline TOML, the paths inside it to its
+        # own folder
+        config_dir = config_dir_of(info)
         if isinstance(value, (str, Path)):
             value = {"config_file": value}
         if isinstance(value, dict) and "config_file" in value:
-            with Path(value["config_file"]).open("rb") as f:
+            path = join_config_dir(Path(value["config_file"]), config_dir)
+            with path.open("rb") as f:
                 value = tomllib.load(f)
+            config_dir = path.parent
         if not isinstance(value, dict):
             return value
         base = (info.data or {}).get("base")
-        return CANOEElectricityConfig.model_validate(value, context={"base": base})
+        return CANOEElectricityConfig.model_validate(
+            value, context={"base": base, "config_dir": config_dir}
+        )
 
     @field_validator("fuel", mode="before")
     @classmethod
@@ -76,13 +89,15 @@ class CANOECompilerConfig(BaseModel):
         if not isinstance(value, dict):
             return value
         base = (info.data or {}).get("base")
-        return CANOEFuelConfig.model_validate(value, context={"base": base})
+        return CANOEFuelConfig.model_validate(
+            value, context={"base": base, "config_dir": config_dir_of(info)}
+        )
 
 
 class CANOEPipelineConfig(BaseModel):
-    working_directory: Path = Path("./canoe-pwd")
+    working_directory: ConfigPath = Path("./canoe-pwd")
     compiler: CANOECompilerConfig | None = None
-    input_database: Path | None = None
+    input_database: ConfigPath | None = None
     representative_periods_config: RepresentativePeriodsConfig | None = None
     temoa_config: CANOETemoaConfig | None = None
 
@@ -108,11 +123,29 @@ class CANOEPipelineConfig(BaseModel):
         raise RuntimeError("No database path source is set.")
 
 
+def load_pipeline_config(path: Path) -> CANOEPipelineConfig:
+    """
+    The pipeline configuration in the TOML at `path`, with the sector and electricity
+    TOMLs it names.
+
+    Relative paths in each TOML are relative to that TOML's folder, so the
+    configuration means the same whichever folder it is run from (see
+    `canoe.common.config_paths`).
+    """
+    with path.open("rb") as f:
+        raw = tomllib.load(f)
+    return CANOEPipelineConfig.model_validate(raw, context={"config_dir": path.parent})
+
+
 def run_compiler(config: CANOECompilerConfig):
     if config.base.data_cache_config.force_sync:
         raise NotImplementedError(
             "Forcing canoe-lake sync has not been implemented yet."
         )
+    # Before building anything: the loaders would fail deep in a module otherwise
+    missing = missing_from_cache(config.base.data_cache_config)
+    if missing is not None:
+        raise FileNotFoundError(missing)
 
     # Initialize empty database
     run_initializer(config.base)

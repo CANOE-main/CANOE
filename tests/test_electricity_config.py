@@ -27,7 +27,9 @@ def compiler_raw() -> dict[str, Any]:
 
 @pytest.fixture
 def base(compiler_raw: dict[str, Any]) -> CANOEBaseConfig:
-    return CANOEBaseConfig.model_validate(compiler_raw["base"])
+    return CANOEBaseConfig.model_validate(
+        compiler_raw["base"], context={"config_dir": CONFIGURATION}
+    )
 
 
 @pytest.fixture
@@ -46,14 +48,12 @@ def _config(
 
 class TestPipelineConfig:
     def test_resolves_toml_path_with_inherited_fields(
-        self,
-        compiler_raw: dict[str, Any],
-        base: CANOEBaseConfig,
-        monkeypatch: pytest.MonkeyPatch,
+        self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
     ):
-        # The pipeline TOML gives the path relative to the project root
-        monkeypatch.chdir(CONFIGURATION.parent)
-        compiler = CANOECompilerConfig.model_validate({**compiler_raw, "sectors": {}})
+        # The pipeline TOML gives the path relative to its own folder
+        compiler = CANOECompilerConfig.model_validate(
+            {**compiler_raw, "sectors": {}}, context={"config_dir": CONFIGURATION}
+        )
         assert compiler.electricity is not None
         assert compiler.electricity.data_version == base.data_version
         assert compiler.electricity.provinces == base.provinces
@@ -69,7 +69,9 @@ class TestPipelineConfig:
     ):
         # The path alone, in place of a table naming it in `config_file`
         raw = {**compiler_raw, "sectors": {}, "electricity": str(ELECTRICITY_CONFIG)}
-        compiler = CANOECompilerConfig.model_validate(raw)
+        compiler = CANOECompilerConfig.model_validate(
+            raw, context={"config_dir": CONFIGURATION}
+        )
         assert compiler.electricity == _config(electricity_raw, base)
 
     def test_electricity_is_optional(self, compiler_raw: dict[str, Any]):

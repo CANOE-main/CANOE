@@ -27,6 +27,7 @@ from loguru import logger
 from pydantic import ConfigDict, Field, field_validator
 
 from .common import CANOEProvince, GoldConnectorConfig
+from .common.config_paths import ConfigPath
 from .common.periods import ProjectionPoint
 from .common.projections import (
     CERGDPSource,
@@ -50,8 +51,9 @@ class CANOEBaseConfig(RejectsDeprecatedProjectionFields):
     model_config = ConfigDict(use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
     # TODO currently schema import for pydantic objects is hard-coded
-    db_output_dir: Path
-    """Path of the output database. Rebuilt from scratch on every run."""
+    db_output_dir: ConfigPath
+    """Path of the output database, relative to the folder of the TOML. Rebuilt from
+    scratch on every run."""
 
     data_version: str
     """Version in the data set codes (e.g. COMHR003), inherited by the modules."""
@@ -103,14 +105,14 @@ class CANOEBaseConfig(RejectsDeprecatedProjectionFields):
     modules. Must be a year of the exchange and inflation tables."""
 
     @classmethod
-    def validate_from_toml(cls, toml_dir: str):
-        with Path(toml_dir).open("rb") as f:
-            return cls.model_validate(tomllib.load(f))
-
-    @field_validator("db_output_dir")
-    @classmethod
-    def expand_path(cls, v: Path) -> Path:
-        return v.expanduser()
+    def validate_from_toml(cls, toml_path: str):
+        """The config in the TOML at `toml_path`, its paths relative to the TOML's
+        folder."""
+        path = Path(toml_path)
+        with path.open("rb") as f:
+            return cls.model_validate(
+                tomllib.load(f), context={"config_dir": path.parent}
+            )
 
     @field_validator("future_periods")
     @classmethod

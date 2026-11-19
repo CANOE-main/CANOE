@@ -16,6 +16,7 @@ from pydantic import Field, TypeAdapter
 
 from .agriculture.config import CANOEAgricultureConfig
 from .commercial.config import CANOECommercialConfig
+from .common.config_paths import join_config_dir
 from .ghost.config import CANOEGhostConfig
 from .industry.config import CANOEIndustryConfig
 from .initializer import CANOEBaseConfig
@@ -34,22 +35,31 @@ SectorConfig = Annotated[
 _SECTOR_CONFIG_ADAPTER: TypeAdapter[Any] = TypeAdapter(SectorConfig)
 
 
-def resolve_sector_config(value: Any, base: CANOEBaseConfig | None) -> Any:
+def resolve_sector_config(
+    value: Any, base: CANOEBaseConfig | None, config_dir: Path | None = None
+) -> Any:
     """Turn a path/dict into a fully-validated sector config instance.
 
-    - A string/Path is read as TOML.
-    - A dict is validated as given (lets configs be built in-memory, e.g. in tests).
+    - A string/Path is read as TOML: relative to `config_dir` (the folder of the
+      pipeline TOML naming it) if given, and the paths inside it relative to its
+      own folder (see `canoe.common.config_paths`).
+    - A dict is validated as given (lets configs be built in-memory, e.g. in tests),
+      its paths relative to `config_dir`.
     - Anything else (already a model instance) passes through untouched.
 
     Dispatch to the right sector model is handled by the `module_name`-discriminated
     `SectorConfig` union, so adding a sector only requires adding it there.
     """
     if isinstance(value, (str, Path)):
-        with Path(value).open("rb") as f:
+        path = join_config_dir(Path(value), config_dir)
+        with path.open("rb") as f:
             raw = tomllib.load(f)
+        config_dir = path.parent
     elif isinstance(value, dict):
         raw = value
     else:
         return value
 
-    return _SECTOR_CONFIG_ADAPTER.validate_python(raw, context={"base": base})
+    return _SECTOR_CONFIG_ADAPTER.validate_python(
+        raw, context={"base": base, "config_dir": config_dir}
+    )
