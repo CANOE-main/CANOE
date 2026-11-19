@@ -9,7 +9,10 @@ it is applied to; nothing about how the clustering was found is kept here.
 from collections import Counter
 from collections.abc import Sequence
 
+import pandas as pd
 from pydantic import BaseModel, ConfigDict, model_validator
+
+from canoe.representative_periods.diagnostics import ClusteringDiagnostics
 
 
 class RepresentativeSeasonMapping(BaseModel):
@@ -34,10 +37,15 @@ class RepresentativeSeasonMapping(BaseModel):
     {'D002': 1, 'D003': 2}
     """
 
-    model_config = ConfigDict(frozen=True, use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+    model_config = ConfigDict(  # pyright: ignore[reportUnannotatedClassAttribute]
+        frozen=True, use_attribute_docstrings=True, arbitrary_types_allowed=True
+    )
 
     representative_of: dict[str, str]
     """Season -> the season that represents it."""
+    diagnostics: ClusteringDiagnostics | None = None
+    """Original and recreated series, duration curves and components, if the
+    clustering had the original series."""
 
     @model_validator(mode="after")
     def _check_representatives(self) -> "RepresentativeSeasonMapping":

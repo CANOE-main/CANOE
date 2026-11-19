@@ -1,4 +1,4 @@
-"""
+﻿"""
 Where a clustering comes from: one variant per way of producing clusterings.
 
 Each variant identifies a clustering and gives its `RepresentativeSeasonMapping`
@@ -18,13 +18,17 @@ from pydantic import BaseModel, ConfigDict, Field, PositiveInt, model_validator
 from canoe.representative_periods.compute import (
     ClusterMethod,
     cluster_days,
+    clustering_accuracy,
     daily_table,
+    duration_curves,
     extreme_days,
     find_series,
     load_series,
     principal_components,
+    recreate_series,
     select_series,
 )
+from canoe.representative_periods.diagnostics import TsamDiagnostics
 from canoe.representative_periods.mapping import RepresentativeSeasonMapping
 
 
@@ -88,10 +92,13 @@ class TsamCollection(BaseModel):
             )
         return folder
 
-    def mapping(self) -> RepresentativeSeasonMapping:
+    def mapping(
+        self, diagnostics_dir: Path | None = None
+    ) -> RepresentativeSeasonMapping:
         """
         The stored clustering into `n_periods` minus the forced days, from
         `assignments.csv`, with the forced days added from `features.csv`.
+        `diagnostics_dir` is ignored: the original series are not stored.
         """
         path = self.folder().joinpath("assignments.csv")
         with path.open("rb") as f:
@@ -176,8 +183,11 @@ class TsamClustering(BaseModel):
             raise ValueError("Set `include` or `exclude`, not both")
         return self
 
-    def mapping(self) -> RepresentativeSeasonMapping:
-        """Cluster the days of `weather_year`."""
+    def mapping(self, diagnostics_dir: Path | None = None) -> RepresentativeSeasonMapping:
+        """
+        Cluster the days of `weather_year`. With `diagnostics_dir`, the diagnostics
+        (accuracy table and plots) are also written there.
+        """
         series_files = find_series(self.data_dir)
         clustered = select_series(series_files, self.include, self.exclude)
         extremes = self.max_peak + self.min_peak + self.max_mean + self.min_mean
@@ -217,7 +227,21 @@ class TsamClustering(BaseModel):
         )
         representative_of = cluster_days(features, n_clusters, self.method, added_days)
         _warn_if_fewer(representative_of, self.n_periods)
-        return RepresentativeSeasonMapping(representative_of=representative_of)
+        original = table.loc[:, clustered]
+        recreated = recreate_series(original, representative_of)
+        diagnostics = TsamDiagnostics(
+            accuracy=clustering_accuracy(original, representative_of),
+            original=original,
+            recreated=recreated,
+            original_duration=duration_curves(original),
+            recreated_duration=duration_curves(recreated),
+            components=features if self.pca_components is not None else None,
+        )
+        if diagnostics_dir is not None:
+            diagnostics.save(diagnostics_dir)
+        return RepresentativeSeasonMapping(
+            representative_of=representative_of, diagnostics=diagnostics
+        )
 
 
 Clustering = Annotated[TsamCollection | TsamClustering, Field(discriminator="kind")]
