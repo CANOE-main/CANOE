@@ -1,9 +1,13 @@
+# Relative paths in this file (and in the TOMLs it names) are relative to the folder
+# of the file they are written in. Run from the repository root:
+#   uv run canoe -c configuration/full-pipeline.toml
+
 # ####################################################################################
 # COMPILER CONFIG
 # ####################################################################################
 [compiler.base]
 schema_version = "4.0"
-db_output_dir = "canoe-pwd/canoe.sqlite"
+db_output_dir = "../canoe-pwd/canoe.sqlite"
 # Version in the data set codes (e.g. COMHR003), inherited by the sectors
 data_version = "003"
 existing_periods = [
@@ -57,7 +61,7 @@ model_currency_year = 2020
 # CACHE CONFIG
 # ####################################################################################
 [compiler.base.data_cache_config]
-cache_dir = ".cache"
+cache_dir = "../.cache"
 cache_date = "2026-08-10"
 force_sync = false
 
@@ -65,10 +69,10 @@ force_sync = false
 # END-USE SECTORS CONFIG
 # ####################################################################################
 [compiler.sectors]
-commercial = "configuration/commercial-default.toml"
-agriculture = "configuration/agriculture-default.toml"
-industry = "configuration/industry-default.toml"
-residential = "configuration/residential-default.toml"
+commercial = "commercial-default.toml"
+agriculture = "agriculture-default.toml"
+industry = "industry-default.toml"
+residential = "residential-default.toml"
 
 # Ghost of a sector whose end-use tree is added to the database after the pipeline
 # runs: its fuels are registered (e.g. T_elc) and supplied by the electricity and
@@ -88,7 +92,7 @@ residential = "configuration/residential-default.toml"
 # Electricity supply of the sectors (E_<S>_ELC) and the grid behind it; runs after the
 # sectors, and its generators' fuels are supplied by the fuel module
 [compiler.electricity]
-config_file = "configuration/electricity-default.toml"
+config_file = "electricity-default.toml"
 
 # ####################################################################################
 # FUELS CONFIG
@@ -150,7 +154,7 @@ dsd_threshold = 0.01
 # offsets) and the values
 [representative_periods_config.clustering]
 kind = "tsam"
-data_dir = "assets/rep_periods_data/timeseries"
+data_dir = "../assets/rep_periods_data/timeseries"
 weather_year = 2018
 # Series clustered: patterns of their paths in data_dir without .csv; all series
 # if neither is set (not both)

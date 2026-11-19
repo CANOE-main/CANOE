@@ -1,6 +1,7 @@
 """
 Configuration of the CANOE electricity module, one TOML file referenced from the
-pipeline (`[compiler] electricity = "configuration/electricity-default.toml"`).
+pipeline (`[compiler] electricity = "electricity-default.toml"`, relative to the
+pipeline TOML).
 
 The electricity module supplies the electricity the sectors import. It runs after the
 sectors, from their electricity imports: it delivers `E_elc_dem` to each sector's

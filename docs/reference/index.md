@@ -16,9 +16,17 @@ The pipeline TOML (e.g. `configuration/full-pipeline.toml`) has two parts:
 
 ```toml
 [compiler.sectors]
-commercial = "configuration/commercial-default.toml"
-agriculture = "configuration/agriculture-default.toml"
+commercial = "commercial-default.toml"
+agriculture = "agriculture-default.toml"
 ```
+
+## Paths in configuration files
+
+A relative path in a TOML is relative to the folder of that TOML, not to the folder
+the pipeline runs from: above, `commercial-default.toml` sits next to the pipeline
+TOML, and a path inside `commercial-default.toml` is relative to its own folder. The
+pipeline's working directory (`working_directory`) and Temoa's outputs
+(`output_path`), when left out, go to the folder the pipeline runs from.
 
 Each sector TOML starts with `module_name`, which selects the sector's configuration
 model:

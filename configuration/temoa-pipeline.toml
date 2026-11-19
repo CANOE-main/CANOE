@@ -1,4 +1,4 @@
-input_database = "canoe-pwd/canoe-v4-all-high.sqlite"
+input_database = "../canoe-pwd/canoe-v4-all-high.sqlite"
 
 # Reduce the database to representative days before running Temoa
 # [representative_periods_config]
@@ -24,7 +24,7 @@ input_database = "canoe-pwd/canoe-v4-all-high.sqlite"
 # offsets) and the values
 [representative_periods_config.clustering]
 kind = "tsam"
-data_dir = "assets/rep_periods_data/timeseries"
+data_dir = "../assets/rep_periods_data/timeseries"
 weather_year = 2018
 # Series clustered: patterns of their paths in data_dir without .csv; all series
 # if neither is set (not both)

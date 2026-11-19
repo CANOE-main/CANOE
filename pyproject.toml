@@ -21,13 +21,13 @@ dependencies = [
 ]
 
 [project.scripts]
-canoe-compiler = "canoe.cli:main"
+canoe = "canoe.cli:main"
 
 [project.optional-dependencies]
 all = ["canoe[dev]", "canoe[docs]", "canoe[solvers]"]
 dev = ["ruff", "matplotlib", "marimo", "plotly", "tomlkit"]
 docs = ["mkdocs-material>=9.5", "mkdocs-git-revision-date-localized-plugin>=1.2", "mike", "mkdocstrings[python]", "griffe-pydantic"]
-solvers = ["gurobipy", "pyomo-pounce"]
+solvers = ["gurobipy==14", "pyomo-pounce"]
 
 [dependency-groups]
 dev = [
@@ -71,6 +71,7 @@ testpaths = [
   "src/canoe/agriculture/input_splits.py",
   "src/canoe/common/census_divisions.py",
   "src/canoe/common/ceud.py",
+  "src/canoe/common/config_paths.py",
   "src/canoe/common/emissions.py",
   "src/canoe/common/gdp.py",
   "src/canoe/common/naming.py",

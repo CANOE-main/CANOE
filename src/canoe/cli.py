@@ -1,10 +1,9 @@
-import tomllib
 from pathlib import Path
 from typing import Annotated
 
 import typer
 
-from .pipeline import CANOEPipelineConfig, run
+from .pipeline import load_pipeline_config, run
 
 app = typer.Typer()
 
@@ -23,8 +22,7 @@ def run_pipeline(
     ] = False,
 ) -> None:
     """Run the CANOE pipeline with the given configuration file."""
-    with config.open("rb") as f:
-        pipeline_config = CANOEPipelineConfig.model_validate(tomllib.load(f))
+    pipeline_config = load_pipeline_config(config)
 
     if print_config:
         print(pipeline_config.model_dump_json(indent=2))

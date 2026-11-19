@@ -28,6 +28,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, ValidationInfo, field_validator
 
 from .cache_connector import GoldConnectorConfig
+from .config_paths import ConfigPath
 from .labels import normalize_label
 from .loaders import (
     get_cer_gdp,
@@ -107,8 +108,8 @@ class CSVSeriesSource(BaseModel):
         extra="forbid", frozen=True, use_attribute_docstrings=True
     )
     source: Literal["csv"] = "csv"
-    path: Path
-    """CSV file of the series, relative to the directory the pipeline runs from."""
+    path: ConfigPath
+    """CSV file of the series, relative to the folder of the TOML that names it."""
 
 
 GDPSource = Annotated[CERGDPSource | CSVSeriesSource, Field(discriminator="source")]

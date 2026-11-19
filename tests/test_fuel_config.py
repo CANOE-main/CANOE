@@ -11,7 +11,11 @@ from canoe.fuel.price_sources import CSVPriceSource, EIAPriceSource
 from canoe.initializer import CANOEBaseConfig
 from canoe.pipeline import CANOECompilerConfig
 
-PIPELINE_CONFIG = Path(__file__).parents[1] / "configuration" / "full-pipeline.toml"
+CONFIGURATION = Path(__file__).parents[1] / "configuration"
+PIPELINE_CONFIG = CONFIGURATION / "full-pipeline.toml"
+# Validation context of a TOML read from `configuration/`: its relative paths are
+# relative to that folder
+FROM_CONFIGURATION = {"config_dir": CONFIGURATION}
 
 
 @pytest.fixture
@@ -22,7 +26,9 @@ def compiler_raw() -> dict[str, Any]:
 
 @pytest.fixture
 def base(compiler_raw: dict[str, Any]) -> CANOEBaseConfig:
-    return CANOEBaseConfig.model_validate(compiler_raw["base"])
+    return CANOEBaseConfig.model_validate(
+        compiler_raw["base"], context=FROM_CONFIGURATION
+    )
 
 
 def _config(
@@ -37,7 +43,9 @@ class TestPipelineConfig:
     def test_resolves_inline_table_with_inherited_fields(
         self, compiler_raw: dict[str, Any], base: CANOEBaseConfig
     ):
-        compiler = CANOECompilerConfig.model_validate({**compiler_raw, "sectors": {}})
+        compiler = CANOECompilerConfig.model_validate(
+            {**compiler_raw, "sectors": {}}, context=FROM_CONFIGURATION
+        )
         assert compiler.fuel is not None
         assert compiler.fuel.data_version == base.data_version
         assert compiler.fuel.provinces == base.provinces
@@ -48,7 +56,9 @@ class TestPipelineConfig:
 
     def test_fuel_is_optional(self, compiler_raw: dict[str, Any]):
         raw = {key: value for key, value in compiler_raw.items() if key != "fuel"}
-        compiler = CANOECompilerConfig.model_validate({**raw, "sectors": {}})
+        compiler = CANOECompilerConfig.model_validate(
+            {**raw, "sectors": {}}, context=FROM_CONFIGURATION
+        )
         assert compiler.fuel is None
 
 

@@ -8,13 +8,13 @@ Each variant identifies a clustering and gives its `RepresentativeSeasonMapping`
 
 from importlib.resources import files
 from importlib.resources.abc import Traversable
-from pathlib import Path
 from typing import Annotated, Literal
 
 import pandas as pd
 from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field, PositiveInt, model_validator
 
+from canoe.common.config_paths import ConfigPath
 from canoe.representative_periods.compute import (
     ClusterMethod,
     cluster_days,
@@ -53,9 +53,10 @@ class TsamCollection(BaseModel):
     """Selects this variant."""
     collection: str
     """Name of the collection (its folder), e.g. `weather2018-hierarchical-pca6`."""
-    collections_dir: Path | None = None
-    """Folder holding the collection; the collections packaged with canoe
-    (`canoe/representative_periods/data/clusterings`) if left out."""
+    collections_dir: ConfigPath | None = None
+    """Folder holding the collection, relative to the folder of the TOML; the
+    collections packaged with canoe (`canoe/representative_periods/data/clusterings`)
+    if left out."""
     n_periods: PositiveInt
     """Number of representative days, forced days included: the stored clustering
     into `n_periods` minus the number of forced days is used."""
@@ -138,10 +139,11 @@ class TsamClustering(BaseModel):
 
     kind: Literal["tsam"] = "tsam"
     """Selects this variant."""
-    data_dir: Path
-    """Folder with the series: one CSV per series, at any depth, named after the
-    series (`on/on_temperature.csv` is `on_temperature`), with a `time` column (with
-    UTC offsets) and one column of values."""
+    data_dir: ConfigPath
+    """Folder with the series, relative to the folder of the TOML: one CSV per
+    series, at any depth, named after the series (`on/on_temperature.csv` is
+    `on_temperature`), with a `time` column (with UTC offsets) and one column of
+    values."""
     weather_year: int
     """Year of the series to cluster; its days are labelled by their date in EST
     (`Dnnn` is day nnn of the year)."""
