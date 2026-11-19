@@ -27,6 +27,8 @@ from pathlib import Path
 
 from loguru import logger
 
+from .config import GoldConnectorConfig
+
 
 def cache_archives() -> dict[str, str]:
     """Google Drive file ID of each archive of the cache, by file name."""
@@ -77,6 +79,25 @@ def cache_contents(cache_dir: Path) -> CacheContents:
     renewables = cache_dir / "renewables"
     has_renewables = renewables.is_dir() and any(renewables.glob("*.parquet"))
     return CacheContents(snapshots=snapshots, renewables=has_renewables)
+
+
+def missing_from_cache(cache_config: GoldConnectorConfig) -> str | None:
+    """
+    What a pipeline reading `cache_config` would miss in its cache, with how to
+    install it; None if the cache has the snapshot and the renewables.
+    """
+    contents = cache_contents(cache_config.cache_dir)
+    if contents.has(cache_config.cache_date):
+        return None
+    missing: list[str] = []
+    if cache_config.cache_date not in contents.snapshots:
+        missing.append(f"the {cache_config.cache_date} snapshot")
+    if not contents.renewables:
+        missing.append("the renewables")
+    return (
+        f"The data cache at {cache_config.cache_dir} lacks {' and '.join(missing)}. "
+        + f"Install it with: canoe cache install {cache_config.cache_dir}"
+    )
 
 
 @dataclass(frozen=True)

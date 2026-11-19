@@ -6,6 +6,7 @@ from loguru import logger
 from pydantic import BaseModel, Field, ValidationInfo, field_validator, model_validator
 
 from canoe.common import CANOEFuel, CANOEModuleOutput, CANOESector, atomic_transaction
+from canoe.common.cache_connector.install import missing_from_cache
 from canoe.common.config_paths import ConfigPath, config_dir_of, join_config_dir
 from canoe.common.naming import DatasetIdentifier
 from canoe.electricity.config import CANOEElectricityConfig
@@ -141,6 +142,10 @@ def run_compiler(config: CANOECompilerConfig):
         raise NotImplementedError(
             "Forcing canoe-lake sync has not been implemented yet."
         )
+    # Before building anything: the loaders would fail deep in a module otherwise
+    missing = missing_from_cache(config.base.data_cache_config)
+    if missing is not None:
+        raise FileNotFoundError(missing)
 
     # Initialize empty database
     run_initializer(config.base)

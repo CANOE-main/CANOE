@@ -1,0 +1,15 @@
+[project]
+name = "{{ project_slug }}"
+version = "0.1.0"
+description = {{ description | tojson }}
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  # The solvers extra brings the solver interfaces Temoa uses (e.g. gurobipy)
+  "canoe[solvers]",
+]
+
+[tool.uv.sources]
+# The canoe this project was created with; `uv lock --upgrade-package canoe` moves
+# it forward when you choose to
+canoe = {{ canoe_source }}

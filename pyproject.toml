@@ -6,7 +6,8 @@ readme = "README.md"
 requires-python = ">=3.12"
 license-files = ["LICENSE*"]
 dependencies = [
-  "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git@b8a177bff5032e2404f3f5ea6b807fc964bcf526",
+  "canoe_schema @ git+https://github.com/CANOE-main/canoe-schema.git@4cee1c2ceee115d972c3d129a4fbaffbc195c6e6",
+  "copier==9.19.1",
   "loguru==0.7.3",
   "numpy==2.4.3",
   "pandas==3.0.1",
@@ -17,7 +18,7 @@ dependencies = [
 
   # Gold connector dependencies
   "fastparquet",
-  "gdown"
+  "gdown",
 ]
 
 [project.scripts]
@@ -85,6 +86,7 @@ testpaths = [
   "src/canoe/fuel",
   "src/canoe/industry",
   "src/canoe/residential",
+  "src/canoe/project_init.py",
 ]
 
 [tool.ruff]
@@ -104,3 +106,5 @@ where = ["src"]
   "config/*.csv",
   "config/*.xlsx",
 ]
+# The project template of `canoe init`, dotfiles (.gitignore, .python-version) included
+"canoe" = ["project_template/**/*", "project_template/**/.*"]

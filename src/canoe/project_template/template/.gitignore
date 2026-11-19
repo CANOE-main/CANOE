@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+
+# Built by the pipeline
+canoe-pwd/
+temoa-outputs/
+
+# The data cache, when installed inside the project
+.cache/

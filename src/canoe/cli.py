@@ -1,6 +1,7 @@
 """
 The `canoe` command.
 
+    canoe init my-project                             # new project from the template
     canoe run config/all-high/full-pipeline.toml      # compiler, rep. periods, Temoa
     canoe compile config/all-high/full-pipeline.toml  # compiler only
     canoe check config/all-high/full-pipeline.toml    # validate the TOMLs, run nothing
@@ -30,8 +31,10 @@ from .common.cache_connector.install import (
     CacheContents,
     cache_contents,
     install_cache,
+    missing_from_cache,
 )
 from .pipeline import CANOEPipelineConfig, load_pipeline_config, run, run_compiler
+from .project_init import create_project
 
 app = typer.Typer(
     help="The Canadian Open Energy Model (CANOE).",
@@ -90,19 +93,7 @@ def _missing_cache(config: CANOEPipelineConfig) -> str | None:
     """
     if config.compiler is None:
         return None
-    cache = config.compiler.base.data_cache_config
-    contents = cache_contents(cache.cache_dir)
-    if contents.has(cache.cache_date):
-        return None
-    missing: list[str] = []
-    if cache.cache_date not in contents.snapshots:
-        missing.append(f"the {cache.cache_date} snapshot")
-    if not contents.renewables:
-        missing.append("the renewables")
-    return (
-        f"The data cache at {cache.cache_dir} lacks {' and '.join(missing)}. "
-        + f"Install it with: canoe cache install {cache.cache_dir}"
-    )
+    return missing_from_cache(config.compiler.base.data_cache_config)
 
 
 def _load_runnable_config(config: Path) -> CANOEPipelineConfig:
@@ -175,6 +166,69 @@ def check(
     missing = _missing_cache(pipeline_config)
     if missing is not None:
         typer.secho(missing, fg="yellow")
+
+
+@app.command()
+def init(
+    project_dir: Annotated[
+        Path,
+        typer.Argument(
+            metavar="FOLDER",
+            help="Folder of the new project (new or empty).",
+            file_okay=False,
+        ),
+    ],
+    defaults: Annotated[
+        bool,
+        typer.Option(
+            "--defaults",
+            help="Answer every question with its default, and don't install the "
+            + "data cache.",
+        ),
+    ] = False,
+) -> None:
+    """
+    Create a project: configuration files of a scenario, and a main.py that runs the
+    pipeline step by step.
+    """
+    if project_dir.exists() and any(project_dir.iterdir()):
+        typer.secho(f"{project_dir} is not empty", fg="red", err=True)
+        raise typer.Exit(code=1)
+
+    cache_dir: Path | None = None
+    if not defaults:
+        answer = typer.prompt(
+            "Folder of your CANOE data cache (leave empty to keep one inside the "
+            + "project)",
+            default="",
+            show_default=False,
+        ).strip()
+        if answer:
+            cache_dir = Path(answer).expanduser().resolve()
+            if cache_contents(cache_dir).is_empty():
+                typer.secho(f"No cache in {cache_dir} yet", fg="yellow")
+
+    pipeline = create_project(project_dir, cache_dir, defaults=defaults)
+    # The template's TOMLs, validated by the canoe the project uses
+    config = _load_config(pipeline)
+    assert config.compiler is not None, "the template's pipeline has a compiler"
+    cache_config = config.compiler.base.data_cache_config
+
+    missing = missing_from_cache(cache_config)
+    if missing is not None:
+        install_now = not defaults and typer.confirm(
+            f"Install the data cache in {cache_config.cache_dir} now (a few GB)?",
+            default=True,
+        )
+        if install_now:
+            install_cache(cache_config.cache_dir)
+        else:
+            typer.secho(missing, fg="yellow")
+
+    typer.secho(f"\nCreated {project_dir}. Next:", fg="green")
+    typer.echo(f"  cd {project_dir}")
+    typer.echo("  uv sync")
+    typer.echo("  uv run main.py")
 
 
 cache_app = typer.Typer(
