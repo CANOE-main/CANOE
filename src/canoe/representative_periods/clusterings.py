@@ -249,7 +249,34 @@ class TsamClustering(BaseModel):
         )
 
 
-Clustering = Annotated[TsamCollection | TsamClustering, Field(discriminator="kind")]
+class ManualClustering(BaseModel):
+    """
+    A clustering given by hand: the season that represents each season, e.g. to
+    apply a selection of representative days made elsewhere. Meant to be built in
+    code (`ManualClustering(representative_of={...})`).
+
+    The mapping is used as it is: every representative must map to itself, and
+    seasons left out are not represented (the apply step warns about them). No
+    diagnostics, as there are no series to compare.
+    """
+
+    model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
+
+    kind: Literal["manual"] = "manual"
+    """Selects this variant."""
+    representative_of: dict[str, str]
+    """Season -> the season that represents it (e.g. `{"D001": "D041"}`)."""
+
+    def mapping(
+        self, diagnostics_dir: Path | None = None
+    ) -> RepresentativeSeasonMapping:
+        """The given mapping. `diagnostics_dir` is ignored."""
+        return RepresentativeSeasonMapping(representative_of=self.representative_of)
+
+
+Clustering = Annotated[
+    TsamCollection | TsamClustering | ManualClustering, Field(discriminator="kind")
+]
 
 
 def _warn_if_fewer(representative_of: dict[str, str], n_periods: int) -> None:
