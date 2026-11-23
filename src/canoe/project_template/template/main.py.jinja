@@ -1,0 +1,71 @@
+"""
+{{ project_name }}: the CANOE pipeline, step by step.
+
+    uv run main.py
+
+1. Compile: build the database from the data cache and the configuration.
+2. Your edits: change the compiled database (`edit_database` below).
+3. Representative periods: reduce the year to representative days.
+4. Temoa: build and solve the model.
+
+Each step reads its settings from the configuration (`CONFIG`): leave a section out of
+the TOML to skip its step.
+"""
+
+import sqlite3
+from pathlib import Path
+
+from canoe.pipeline import load_pipeline_config, run_compiler
+from canoe.representative_periods.build import build_representative_periods
+from canoe.temoa_protocol import run_temoa
+
+CONFIG = Path(__file__).parent / "config" / "{{ scenario }}" / "full-pipeline.toml"
+
+
+def edit_database(db_path: Path) -> None:
+    """
+    Your changes to the compiled database, before it is reduced to representative
+    periods and solved: add technologies, change parameters, remove rows...
+
+    The tables are those of the CANOE schema (Temoa's tables, plus metadata).
+    """
+    with sqlite3.connect(db_path) as connection:
+        # For example:
+        # connection.execute(
+        #     "UPDATE cost_invest SET cost = cost * 0.8 WHERE tech LIKE 'E_SOL_PV%'"
+        # )
+        connection.commit()
+
+
+def main() -> None:
+    config = load_pipeline_config(CONFIG)
+
+    # 1. Compile
+    if config.compiler is None:
+        raise ValueError(f"{CONFIG} has no [compiler]")
+    run_compiler(config.compiler)
+    db_path = config.db_path
+
+    # 2. Your edits
+    edit_database(db_path)
+
+    # 3. Representative periods: a reduced copy of the database, which Temoa runs on
+    # with the time sequencing it needs
+    temoa_config = config.temoa_config
+    if config.representative_periods_config is not None:
+        reduced = build_representative_periods(
+            db_path, config.working_directory, config.representative_periods_config
+        )
+        db_path = reduced.db_path
+        if temoa_config is not None:
+            temoa_config = temoa_config.model_copy(
+                update={"time_sequencing": reduced.time_sequencing}
+            )
+
+    # 4. Temoa
+    if temoa_config is not None:
+        run_temoa(db_path, temoa_config)
+
+
+if __name__ == "__main__":
+    main()

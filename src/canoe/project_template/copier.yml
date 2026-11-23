@@ -1,0 +1,63 @@
+# Template of a CANOE project, rendered by `canoe init` (see canoe/project_init.py).
+#
+# The files are in template/; folders named `{% if scenario == '...' %}` only exist
+# in the projects of that scenario. `canoe_source` and `cache_dir` are not asked
+# here: `canoe init` works them out (the canoe it runs from, the cache folder the
+# user gives) and passes them as data.
+
+_subdirectory: template
+_answers_file: .copier-answers.yml
+_templates_suffix: .jinja
+_min_copier_version: "9.19"
+
+# Pre-filled with the name of the project folder. Copier validates a default before
+# asking, so a folder name the validator rejects (e.g. starting with a digit) gives
+# no default (UNSET) instead of failing.
+project_name:
+  type: str
+  help: Project name (e.g. project-hydrogen)
+  default: >-
+    {{ _folder_name if (_folder_name | regex_search('^[A-Za-z][A-Za-z0-9 _-]*$'))
+    else UNSET }}
+  validator: >-
+    {% if not (project_name | regex_search('^[A-Za-z][A-Za-z0-9 _-]*$')) %}
+    Start with a letter; use letters, digits, spaces, - and _
+    {% endif %}
+
+description:
+  type: str
+  help: Short description (goes in the README)
+  default: ""
+
+scenario:
+  type: str
+  help: Scenario of the configuration files
+  choices:
+    "all-high: every sector at high resolution": all-high
+  default: all-high
+
+provinces:
+  type: str
+  help: Provinces to model
+  multiselect: true
+  # Quoted: YAML reads a bare ON as true
+  choices: ["AB", "BC", "MB", "NB", "NLLAB", "NS", "ON", "PEI", "QC", "SK"]
+  default: ["AB", "BC", "MB", "NB", "NLLAB", "NS", "ON", "PEI", "QC", "SK"]
+  validator: "{% if not provinces %}Pick at least one province{% endif %}"
+
+# Passed by `canoe init`
+canoe_source:
+  type: str
+  when: false
+  default: '{ git = "https://github.com/CANOE-main/CANOE" }'
+
+cache_dir:
+  type: str
+  when: false
+  default: ../../.cache
+
+# Name of the Python project (pyproject.toml), from the project name
+project_slug:
+  type: str
+  when: false
+  default: "{{ project_name | lower | replace(' ', '-') | replace('_', '-') }}"

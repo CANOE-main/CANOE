@@ -1,0 +1,54 @@
+# {{ project_name }}
+
+{% if description %}{{ description }}
+
+{% endif %}A [CANOE](https://github.com/CANOE-main/CANOE) project.
+
+## Run it
+
+```bash
+uv sync           # install canoe and its dependencies (once)
+uv run main.py    # compile, your edits, representative periods, Temoa
+```
+
+`main.py` runs the pipeline step by step, so you can see and change each step:
+
+1. **Compile**: build the database from the CANOE data cache and the configuration
+   in `config/{{ scenario }}/`.
+2. **Your edits**: change the compiled database (`edit_database` in `main.py`)
+   before it is reduced and solved.
+3. **Representative periods**: reduce the year to representative days.
+4. **Temoa**: build and solve the model.
+
+Other ways to run the same configuration:
+
+```bash
+uv run canoe check config/{{ scenario }}/full-pipeline.toml    # validate the TOMLs
+uv run canoe compile config/{{ scenario }}/full-pipeline.toml  # step 1 only
+uv run canoe run config/{{ scenario }}/full-pipeline.toml      # steps 1, 3 and 4
+```
+
+## Layout
+
+```
+config/{{ scenario }}/
+├── full-pipeline.toml   # shared settings (periods, provinces, cache), rep. periods, Temoa
+└── sectors/             # one TOML per module (commercial, residential, ..., electricity)
+canoe-pwd/{{ scenario }}/        # databases built by the pipeline
+temoa-outputs/{{ scenario }}/    # Temoa results
+main.py
+```
+
+Relative paths in a TOML are relative to the folder of that TOML. To try another
+scenario, copy `config/{{ scenario }}/` to a new folder, change it, and point `CONFIG` in
+`main.py` to it.
+
+## Data cache
+
+The compiler reads a local copy of the CANOE data lake, at `cache_dir` in
+`config/{{ scenario }}/full-pipeline.toml`. Install or update it with:
+
+```bash
+uv run canoe cache install <folder>
+uv run canoe cache status <folder>
+```

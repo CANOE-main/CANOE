@@ -52,6 +52,31 @@ Both versions live in the master database at once. Choosing between them is part
 !!! info "Why two resolutions"
     The low resolution sectors significantly reduce the computational complexity of experiments. They can be used to assess changes in one sector while keeping a reasonable pressure from the rest of the modules.
 
+## Two ways to get a database
+
+- **Compile your own.** The CANOE compiler (this repository's `canoe` package) builds the
+  database directly for the provinces, periods, sectors and settings of a project's
+  configuration, from a local copy of the CANOE data lake. The representative periods
+  and the TEMOA run are steps of the same pipeline. This is what a project created with
+  `canoe init` does: see [Get Started](../get_started.md).
+- **Start from the published master database**, compiled for everything, and narrow it
+  down with the filtering interface and the representative periods tool described
+  below: see [Using the published database](../published_database.md).
+
+```mermaid
+flowchart LR
+    A[(Data cache)] --> B[Compiler
+    sectors, then electricity and fuels]
+    B --> C[(CANOE database)]
+    C --> D[Representative periods]
+    D --> E[(Reduced database)]
+    E --> F[TEMOA run]
+```
+
+In the compiler, the end-use sectors run first; each reports the fuels it consumes, which
+the electricity module and then the fuel module supply. A last step registers the
+emissions and their CO2-equivalents.
+
 ## Filtering and representative periods
 
 Before a run, the master database goes through two narrowing steps:
@@ -77,8 +102,8 @@ flowchart TD
 
 Both steps are necessary today because TEMOA can't optimize efficiently against the full master
 database directly. They're called out separately here because they show up as distinct stages
-throughout the docs (and as distinct tools/repos) — the [Get Started](../get_started.md) guide
-covers how to actually run them.
+throughout the docs (and as distinct tools/repos) — [Using the published
+database](../published_database.md) covers how to actually run them.
 
 ## Where to go next
 

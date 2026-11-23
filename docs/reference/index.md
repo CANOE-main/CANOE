@@ -2,11 +2,13 @@
 
 A CANOE run is described by TOML files, validated into the configuration models
 documented in this section. This reference is generated from the code, so it always
-matches what the pipeline accepts.
+matches what the pipeline accepts. For a guided tour of a project's configuration, see
+[Get Started](../get_started.md#6-change-the-configuration).
 
 ## How the files fit together
 
-The pipeline TOML (e.g. `configuration/full-pipeline.toml`) has two parts:
+The pipeline TOML (e.g. `config/all-high/full-pipeline.toml` in a project) has two
+parts:
 
 - `[compiler.base]`: settings shared by the whole model (database, periods,
   provinces, data cache, GDP projections, emissions), see
@@ -16,9 +18,17 @@ The pipeline TOML (e.g. `configuration/full-pipeline.toml`) has two parts:
 
 ```toml
 [compiler.sectors]
-commercial = "configuration/commercial-default.toml"
-agriculture = "configuration/agriculture-default.toml"
+commercial = "commercial-default.toml"
+agriculture = "agriculture-default.toml"
 ```
+
+## Paths in configuration files
+
+A relative path in a TOML is relative to the folder of that TOML, not to the folder
+the pipeline runs from: above, `commercial-default.toml` sits next to the pipeline
+TOML, and a path inside `commercial-default.toml` is relative to its own folder. The
+pipeline's working directory (`working_directory`) and Temoa's outputs
+(`output_path`), when left out, go to the folder the pipeline runs from.
 
 Each sector TOML starts with `module_name`, which selects the sector's configuration
 model:

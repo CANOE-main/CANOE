@@ -7,7 +7,7 @@ Settings under `[compiler.base]` of the pipeline TOML, shared by every sector.
 ::: canoe.initializer.CANOEBaseConfig
     options:
       show_source: false
-      filters: ["!^_", "!^validate_from_toml$", "!^expand_path$"]
+      filters: ["!^_", "!^validate_from_toml$"]
 
 ## Data cache
 

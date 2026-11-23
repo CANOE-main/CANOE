@@ -44,6 +44,7 @@ nav:
     - Home: index.md
     - Quickstart: quickstart.md
     - Get Started: get_started.md
+    - Using the published database: published_database.md
     - What is CANOE?:
           - Overview: what_is_canoe/index.md
           - CANOE and TEMOA: what_is_canoe/canoe_vs_temoa.md

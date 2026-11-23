@@ -37,6 +37,7 @@ from loguru import logger
 from pydantic import BaseModel, ConfigDict, Field
 
 from canoe.common import CANOEFuel, CANOEProvince, CANOESector, GoldConnectorConfig
+from canoe.common.config_paths import ConfigPath
 from canoe.common.currency import currency_conversion_factor
 from canoe.fuel.loaders import (
     SourcePrices,
@@ -84,8 +85,8 @@ class CSVPriceSource(BaseModel):
         extra="forbid", frozen=True, use_attribute_docstrings=True
     )
     source: Literal["csv"] = "csv"
-    path: Path
-    """CSV file of prices, relative to the directory the pipeline runs from."""
+    path: ConfigPath
+    """CSV file of prices, relative to the folder of the TOML that names it."""
 
 
 PriceSource = Annotated[

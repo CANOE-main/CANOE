@@ -209,7 +209,8 @@ def build_commercial(cfg: "CANOECommercialConfig") -> CANOEModuleOutput:
             demand_series = DemandSeriesArray(
                 region=cfg.provinces, period=cfg.future_periods, fill=0.0
             ).fill_from_df(
-                demand_df.loc[end_use.get_full_name()],
+                # A list keeps a DataFrame with a single (region, period) row
+                demand_df.loc[[end_use.get_full_name()]],
                 dims=["region", "period"],
                 value_col="dem",
             )

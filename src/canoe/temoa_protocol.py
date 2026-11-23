@@ -11,6 +11,8 @@ from temoa.cli import setup_logging
 from temoa.core.config import SolverNotAvailableError
 from temoa.core.solver_spec import SolverSpec
 
+from canoe.common.config_paths import ConfigPath
+
 SOLVER_DOC_LINKS = {
     "cbc": (
         "https://github.com/coin-or/Cbc#download "
@@ -29,7 +31,7 @@ SOLVER_DOC_LINKS = {
 class CANOETemoaConfig(BaseModel):
     scenario: str = "canoe"
     scenario_mode: TemoaMode | str
-    output_path: Path = Path("./temoa-outputs/")
+    output_path: ConfigPath = Path("./temoa-outputs/")
     solver: str | Mapping[str, Any] | SolverSpec
     neos: bool = False
     save_excel: bool = False
@@ -44,8 +46,8 @@ class CANOETemoaConfig(BaseModel):
     myopic: dict[str, object] | None = None
     morris: dict[str, object] | None = None
     monte_carlo: dict[str, object] | None = None
-    stochastic_config: Path | None = None
-    config_file: Path | None = None
+    stochastic_config: ConfigPath | None = None
+    config_file: ConfigPath | None = None
     silent: bool = True
     stream_output: bool = False
     price_check: bool = True
@@ -64,8 +66,11 @@ class CANOETemoaConfig(BaseModel):
 
     @classmethod
     def from_toml(cls, path: Path) -> "CANOETemoaConfig":
+        """The config in the TOML at `path`, its paths relative to the TOML's folder."""
         with path.open("rb") as f:
-            return CANOETemoaConfig.model_validate(tomllib.load(f))
+            return CANOETemoaConfig.model_validate(
+                tomllib.load(f), context={"config_dir": path.parent}
+            )
 
     def to_temoa_config(
         self,
