@@ -186,10 +186,13 @@ def compute_demand_and_splits(
         .reset_index(drop=True)
     )
 
+    no_large = ~large.groupby([shares["region"], shares["period"]]).transform("any")
     share_total = kept_share.groupby(
         [taken_shares["region"], taken_shares["period"]]
     ).transform("sum")
-    no_share: pd.DataFrame = taken_shares.loc[share_total == 0, keys]
+    no_share: pd.DataFrame = pd.concat(
+        [shares.loc[no_large, keys], taken_shares.loc[share_total == 0, keys]]
+    )
     if not no_share.empty:
         raise ValueError(
             "every fuel share is below small_share_threshold = "

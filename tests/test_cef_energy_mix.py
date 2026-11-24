@@ -119,6 +119,65 @@ def test_every_share_small_raises():
         compute_demand_and_splits(energy, 0.5, SmallShareStrategy.ZeroSmallShares)
 
 
+def _all_small(region: CANOEProvince, periods: list[int]):
+    # Three fuels, none reaching a 0.5 threshold
+    return [
+        (region, period, fuel, value)
+        for period in periods
+        for fuel, value in [
+            (CANOEFuel.Gasoline, 40.0),
+            (CANOEFuel.Diesel, 30.0),
+            (CANOEFuel.Electricity, 30.0),
+        ]
+    ]
+
+
+@pytest.mark.parametrize("strategy", list(SmallShareStrategy))
+def test_province_small_in_every_period_raises(strategy: SmallShareStrategy):
+    # ON takes no fuel at all, so it has no row among the taken fuels; QC is fine
+    energy = _energy(
+        _all_small(ON, [2025, 2030])
+        + [
+            (QC, 2025, CANOEFuel.Electricity, 60.0),
+            (QC, 2025, CANOEFuel.Gasoline, 40.0),
+            (QC, 2030, CANOEFuel.Electricity, 70.0),
+            (QC, 2030, CANOEFuel.Gasoline, 30.0),
+        ]
+    )
+    with pytest.raises(ValueError, match="every fuel share is below.*Ontario 2025"):
+        compute_demand_and_splits(energy, 0.5, strategy)
+
+
+@pytest.mark.parametrize("strategy", list(SmallShareStrategy))
+def test_every_province_small_raises(strategy: SmallShareStrategy):
+    energy = _energy(_all_small(ON, [2025, 2030]))
+    with pytest.raises(ValueError, match="every fuel share is below"):
+        compute_demand_and_splits(energy, 0.5, strategy)
+
+
+@pytest.mark.parametrize("strategy", list(SmallShareStrategy))
+def test_every_share_at_the_threshold_raises_or_keeps_shares(
+    strategy: SmallShareStrategy,
+):
+    # Shares exactly at the threshold are taken (>=), but drop_small_fuels zeroes
+    # them in the period (not > threshold): no split may be NaN either way
+    energy = _energy(
+        [
+            (ON, 2025, CANOEFuel.Gasoline, 50.0),
+            (ON, 2025, CANOEFuel.Electricity, 50.0),
+        ]
+    )
+    if strategy == SmallShareStrategy.DropSmallFuels:
+        with pytest.raises(ValueError, match="every fuel share is below"):
+            compute_demand_and_splits(energy, 0.5, strategy)
+    else:
+        _, splits = compute_demand_and_splits(energy, 0.5, strategy)
+        assert _splits_of(splits, ON, 2025) == {
+            CANOEFuel.Gasoline: 0.5,
+            CANOEFuel.Electricity: 0.5,
+        }
+
+
 def test_energy_use_by_period_fails_on_missing_years():
     energy = pd.DataFrame(
         {"region": ON, "year": [2045, 2050], "fuel": CANOEFuel.Gasoline, "value": 1.0}
