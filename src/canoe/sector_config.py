@@ -15,6 +15,7 @@ from typing import Annotated, Any
 from pydantic import Field, TypeAdapter
 
 from .agriculture.config import CANOEAgricultureConfig
+from .cef.config import CANOECEFConfig
 from .commercial.config import CANOECommercialConfig
 from .common.config_paths import join_config_dir
 from .ghost.config import CANOEGhostConfig
@@ -28,7 +29,8 @@ SectorConfig = Annotated[
     | CANOEAgricultureConfig
     | CANOEIndustryConfig
     | CANOEResidentialConfig
-    | CANOEGhostConfig,
+    | CANOEGhostConfig
+    | CANOECEFConfig,
     Field(discriminator="module_name"),
 ]
 

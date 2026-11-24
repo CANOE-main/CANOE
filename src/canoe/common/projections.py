@@ -55,6 +55,23 @@ class CERScenario(StrEnum):
     CurrentMeasures = "Current Measures"
     """Only climate policies in place today, no further action."""
 
+    def get_dataset_code_description(self) -> str:
+        """
+        Code of the scenario in the data set codes of modules built on its data (e.g.
+        CM in TRPCMON003), so databases of several scenarios can be told apart.
+
+        Examples
+        --------
+        >>> CERScenario.CanadaNetZero.get_dataset_code_description()
+        'CZ'
+        """
+        CODES: dict[CERScenario, str] = {
+            CERScenario.GlobalNetZero: "GZ",
+            CERScenario.CanadaNetZero: "CZ",
+            CERScenario.CurrentMeasures: "CM",
+        }
+        return CODES[self]
+
 
 class DemandProjectionPoint(StrEnum):
     """
