@@ -87,9 +87,9 @@ residential = "residential-default.toml"
 # # provinces = ["ON", "QC"]
 
 # Low-resolution sector from the CER Canada's Energy Future demand projections, in
-# place of the sector's own module (options in cef-default.toml). One module per
-# sector; CEF industry includes agriculture.
-# transportation = "cef-default.toml"
+# place of the sector's own module (options in cef-sectors/cef-default.toml). One
+# module per sector; CEF industry includes agriculture.
+# transportation = "cef-sectors/transportation-cm.toml"
 # or inline:
 # [compiler.sectors.transportation]
 # module_name = "cef"

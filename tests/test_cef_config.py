@@ -15,7 +15,7 @@ from canoe.pipeline import CANOECompilerConfig
 from canoe.sector_config import resolve_sector_config
 
 CONFIGURATION = Path(__file__).parents[1] / "configuration"
-DEFAULT_CONFIG = CONFIGURATION / "cef-default.toml"
+DEFAULT_CONFIG = CONFIGURATION / "cef-sectors" / "cef-default.toml"
 
 
 @pytest.fixture

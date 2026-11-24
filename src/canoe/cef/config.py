@@ -1,7 +1,7 @@
 """
 Configuration of a CEF sector, a low-resolution version of an end-use sector built
 from the CER Canada's Energy Future 2023 end-use demand projections (see
-`configuration/cef-default.toml`).
+`configuration/cef-sectors/cef-default.toml`).
 
 Any sector CEF reports (commercial, residential, industry, transportation) can be a
 CEF sector: its TOML (or inline table of `[compiler.sectors]`) sets
