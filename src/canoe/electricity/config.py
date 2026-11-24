@@ -62,7 +62,7 @@ class SourceYears(BaseModel):
     coders_hourly: int
     """Year of the CODERS hourly provincial demand and interprovincial and
     international transfers (US export demand and its profile, boundary interties,
-    exogenous demand profile, net load of the capacity credits)."""
+    exogenous demand profile)."""
 
     ieso_hourly: int
     """Year of the IESO hourly generator output (Ontario wind, solar and hydro
@@ -78,7 +78,7 @@ class SourceYears(BaseModel):
 
     ieso_reliability_outlook: int
     """Year of the IESO Reliability Outlook (Table 4.1, capability at summer peak by
-    fuel: capacity credits and reserve capacity derates)."""
+    fuel: reserve capacity derates)."""
 
     atb_currency: int = 2022
     """Year of the US dollars of NREL ATB 2024 costs, 2022. The previous module used
@@ -235,13 +235,13 @@ class ReliabilityConfig(BaseModel):
     model_config = ConfigDict(extra="forbid", use_attribute_docstrings=True)  # pyright: ignore[reportUnannotatedClassAttribute]
 
     skip: bool = False
-    """Leave out the planning reserve margin and what counts towards it: capacity
-    credits (static reserve margin) and reserve capacity derates (dynamic). Temoa's
-    `reserve_margin` setting picks which one applies."""
+    """Leave out the planning reserve margin and what counts towards it, the reserve
+    capacity derates. Only the dynamic reserve margin is written (no capacity
+    credits), so Temoa must run with `reserve_margin = "dynamic"`."""
 
     ieso_peak_type: Literal["Firm", "Planned"] = "Firm"
-    """Capability at summer peak of the IESO Reliability Outlook the capacity credits
-    and derates are read from: firm (resources under contract) or planned."""
+    """Capability at summer peak of the IESO Reliability Outlook the derates are read
+    from: firm (resources under contract) or planned."""
 
     reproduce_previous_hydro_storage_derate: bool = False
     """Derate the monthly hydro reservoir (`E_HYD_MLY-EXS`) as the previous module
@@ -365,7 +365,7 @@ class CANOEElectricityConfig(RejectsDeprecatedProjectionFields, InheritsFromBase
     """Interties between provinces and with the US."""
 
     reliability: ReliabilityConfig = ReliabilityConfig()
-    """Planning reserve margin, capacity credits and reserve capacity derates."""
+    """Planning reserve margin and reserve capacity derates."""
 
     # Runtime switches
     validation_behavior: ValidationBehavior = "error"

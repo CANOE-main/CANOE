@@ -343,7 +343,7 @@ class GenerationTechnology(StrEnum):
     def get_ieso_fuel_type(self) -> str | None:
         """
         Fuel type of the IESO Reliability Outlook (Table 4.1) whose capability at
-        summer peak gives the technology's capacity credit and derate, lower case;
+        summer peak gives the technology's reserve capacity derate, lower case;
         `None` for geothermal, which IESO does not have. Coal counts as gas/oil.
 
         Examples

@@ -591,27 +591,6 @@ def get_vre_bin_capacity_limits(cache_config: GoldConnectorConfig) -> pd.DataFra
     ).reset_index(drop=True)
 
 
-def get_vre_bin_capacity_credits(cache_config: GoldConnectorConfig) -> pd.DataFrame:
-    """
-    Capacity credit of each new wind and solar resource bin by vintage and period:
-    the NREL ReEDS method (Frew et al., 2017), the reduction of the top 100 hours of
-    the net load duration curve per unit of capacity, with the bins built out in
-    order of LCOE, one technology at a time (2018 load and weather), from
-    `renewables/capacity_credit.parquet`.
-
-    Returns columns `region`, `technology`, `bin`, `vintage`, `period` and `credit`.
-    """
-    df = _read_vre_bins(cache_config, "capacity_credit", "tech")
-    return pd.DataFrame(
-        {
-            **_vre_bin_columns(df, "tech"),
-            "vintage": df["vintage"].astype(int),
-            "period": df["period"].astype(int),
-            "credit": df["credit"].astype(float),
-        }
-    ).reset_index(drop=True)
-
-
 def get_vre_bin_capacity_factors(cache_config: GoldConnectorConfig) -> pd.DataFrame:
     """
     Hourly capacity factor of the new wind and solar resource bins by vintage
