@@ -2,7 +2,7 @@ import tomllib
 from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from loguru import logger
 from pydantic import BaseModel
@@ -40,7 +40,10 @@ class CANOETemoaConfig(BaseModel):
     save_lp_file: bool = False
     time_sequencing: str | None = "seasonal_timeslices"
     days_per_period: int = 365
-    reserve_margin: str | None = "dynamic"
+    reserve_margin: Literal["dynamic"] = "dynamic"
+    """Only the dynamic reserve margin: CANOE writes reserve capacity derates, not
+    the capacity credits Temoa's static one reads, so `"static"` would run with no
+    capacity counted towards the margin and is rejected."""
     MGA: dict[str, object] | None = None
     SVMGA: dict[str, object] | None = None
     myopic: dict[str, object] | None = None
