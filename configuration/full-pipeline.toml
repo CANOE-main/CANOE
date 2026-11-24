@@ -189,6 +189,6 @@ min_mean = []
 # ####################################################################################
 [temoa_config]
 solver = "gurobi"
-scenario_mode = "build_only"
+scenario_mode = "perfect_foresight"
 silent = false
 save_duals = true

@@ -1,0 +1,172 @@
+# Relative paths in this file (and in the TOMLs it names) are relative to the folder
+# of the file they are written in. Run from the repository root:
+#   uv run canoe run configuration/full-pipeline.toml
+
+# ####################################################################################
+# COMPILER CONFIG
+# ####################################################################################
+[compiler.base]
+schema_version = "4.0"
+db_output_dir = "../canoe-pwd/canoe-cef.sqlite"
+# Version in the data set codes (e.g. COMHR003), inherited by the sectors
+data_version = "003"
+existing_periods = [
+  1970,
+  1975,
+  1980,
+  1985,
+  1990,
+  1995,
+  2000,
+  2005,
+  2010,
+  2015,
+  2020,
+  2022,
+  2024,
+]
+# Model periods, the ones the modules write data for. The end of the horizon
+# (last period + period_step, here 2050) is added to time_period with no data
+future_periods = [2025, 2030, 2035, 2040, 2045]
+period_step = 5
+provinces = ["AB", "ON", "BC", "MB", "SK", "QC", "PEI", "NS", "NB", "NLLAB"]
+global_discount_rate = 0.03
+
+# Projected GDP and population that grow the sector demands, inherited by the sectors.
+# gdp: { source = "cer", scenario = ... } with scenario "Global Net-zero", "Canada
+# Net-zero" or "Current Measures" (national), or { source = "csv", path = ... }.
+# population: { source = "statcan" } (by province) or { source = "csv", path = ... }.
+# A CSV has the columns region, year, value and optionally source; a region that is
+# empty, "Canada" or "CA" is national and applies to the provinces without rows of
+# their own.
+gdp = { source = "cer", scenario = "Global Net-zero" }
+population = { source = "statcan" }
+# demand_projection_point: "period_end", "period_start" or "legacy"
+demand_projection_point = "period_end"
+
+# Year of each period at which projected prices (e.g. fuel prices) are read, inherited
+# by the modules: "period_end" or "period_start"
+price_projection_point = "period_end"
+
+# Year of the Canadian dollars model costs are written in, inherited by the modules
+model_currency_year = 2020
+
+# Emission commodities (CO2, CH4, N2O and CO2e) are always registered
+# [compiler.base.emissions]
+# gwp = "AR5-100"          # weights of the gases in the CO2e rows
+# cost_of_co2e = 0.1       # cost of CO2e emissions in every region and model period
+# cost_units = "M$/ktCO2e"
+
+# ####################################################################################
+# CACHE CONFIG
+# ####################################################################################
+[compiler.base.data_cache_config]
+cache_dir = "../.cache"
+cache_date = "2026-08-10"
+force_sync = false
+
+# ####################################################################################
+# END-USE SECTORS CONFIG
+# ####################################################################################
+[compiler.sectors]
+commercial = "cef-sectors/commercial-cm.toml"
+industry = "cef-sectors/industry-cm.toml"
+residential = "cef-sectors/residential-cm.toml"
+transportation = "cef-sectors/transportation-cm.toml"
+
+# ####################################################################################
+# ELECTRICITY CONFIG
+# ####################################################################################
+# Electricity supply of the sectors (E_<S>_ELC) and the grid behind it; runs after the
+# sectors, and its generators' fuels are supplied by the fuel module
+[compiler.electricity]
+config_file = "electricity-default.toml"
+
+# ####################################################################################
+# FUELS CONFIG
+# ####################################################################################
+# Fuel supply of the fuels the sectors import (electricity is left to the electricity
+# module): an import technology F_IMP_<FUEL> per fuel and a distribution technology
+# F_<S>_<FUEL> per consuming sector. The import costs the lowest delivered price of
+# the fuel and each distribution technology the rest of its sector's price (see
+# canoe.fuel.prices).
+[compiler.fuel]
+# Sources of the delivered fuel prices, in priority order: "eia" (EIA AEO delivered
+# prices by sector and fuel, US average), "atb" (NREL ATB biomass and uranium),
+# "fixed" (report prices of ethanol, renewable diesel and SPK), or "csv" with the
+# path of your own price file, e.g. { source = "csv", path = "my_prices.csv" }.
+# A price file has the columns region, sector, fuel, year, price, currency,
+# currency_year, units ("$/GJ" or "$/MMBtu") and optionally source; an empty region
+# or year means every province or year. Prices are used as they are for the import
+# and distribution costs.
+price_sources = [{ source = "eia" }, { source = "atb" }, { source = "fixed" }]
+# How the sources share the prices: each (region, sector, fuel) from the first source
+# that has it ("per_series"), or each fuel from the first source that prices it
+# ("per_fuel")
+price_fallback = "per_series"
+# Temporary: reproduce the price errors of the previous fuel module (unit conversion,
+# fixed exchange rate and deflators, residential LPG price) to compare with its
+# databases. See FUEL_MODULE_BUGS.md.
+reproduce_previous_price_errors = true
+# Temporary: reproduce the emission errors of the previous fuel module (agriculture
+# gasoline without combustion factors). See FUEL_MODULE_BUGS.md.
+reproduce_previous_emission_errors = false
+# "error" or "warning"
+validation_behavior = "error"  # database lacks periods, regions or commodities
+missing_data_behavior = "warning"  # a fuel imported by a sector has no price or emission factors
+
+# ####################################################################################
+# REPRESENTATIVE PERIODS CONFIG
+# ####################################################################################
+# Reduce the database to representative days before running Temoa
+[representative_periods_config]
+# What the reduced database keeps of each demand: "hourly" values of the
+# representative days (the annual demand changes) or the "annual" demand
+demand_preservation = "hourly"
+# Share of each demand's distribution set to zero, from its smallest values
+dsd_threshold = 0.01
+
+# The clustering to apply: one of a collection precomputed with tsam, by name (the
+# collections packaged with canoe, or those in `collections_dir` if set)
+# [representative_periods_config.clustering]
+# kind = "tsam_collection"
+# collection = "weather2018-hierarchical-pca6"
+# # collections_dir = "path/to/my/clusterings"
+# # Representative days, forced days included
+# n_periods = 1
+# # Days added as representative days
+# # forced_days = ["D041"]
+
+# Or the days clustered with tsam when the pipeline runs, on your own series: one
+# CSV per series under `data_dir`, named after it, with a `time` column (with UTC
+# offsets) and the values
+[representative_periods_config.clustering]
+kind = "tsam"
+data_dir = "../assets/rep_periods_data/timeseries"
+weather_year = 2018
+# Series clustered: patterns of their paths in data_dir without .csv; all series
+# if neither is set (not both)
+include = ["*_temperature", "*_humidity", "*_wind_speed", "*_irradiance_surface"]
+# exclude = ["ontario/*"]
+# Principal components clustered (leave out to cluster the series themselves)
+pca_components = 6
+# hierarchical, k_means, k_medoids or adjacent_periods
+method = "hierarchical"
+# Representative days, forced and extreme days included
+n_periods = 16
+forced_days = ["D041"]
+# Days with the highest/lowest hourly value (peak) or daily mean of any series
+# of data_dir
+max_peak = ["load"]
+min_peak = ["on_temperature"]
+max_mean = []
+min_mean = []
+
+# ####################################################################################
+# TEMOA CONFIG
+# ####################################################################################
+[temoa_config]
+solver = "gurobi"
+scenario_mode = "perfect_foresight"
+silent = false
+save_duals = true

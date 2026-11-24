@@ -1,0 +1,40 @@
+# Low-resolution sector built from the CER Canada's Energy Future 2023 end-use demand
+# projections: a single technology (e.g. T_TRP) turns the sector fuels into the sector
+# energy demand (e.g. T_D_TRP), with the CEF fuel mix of each period fixed by input
+# splits. Any of the sectors CEF reports can be built this way, one CEF module per
+# sector: name this file (or a copy with another sector) under [compiler.sectors],
+# e.g. transportation = "cef-default.toml", instead of the sector's own module.
+module_name = "cef"
+# data_version, provinces and demand_projection_point are inherited from
+# [compiler.base]; set them here to override. demand_projection_point picks the CEF
+# year of each period: "period_end" (2030 for period 2025) or "period_start" (2025)
+
+# Sector built, by name or code: "COM", "RES", "IND" or "TRP". CEF industry includes
+# agriculture, so don't run it together with the agriculture module.
+sector = "RES"
+
+# CEF scenario: "Global Net-zero", "Canada Net-zero" or "Current Measures". Its code
+# goes in the data set codes (GZ, CZ or CM, e.g. TRPCM003)
+scenario = "Current Measures"
+
+# ----------------------------------------------------------
+#                         FUEL MIX
+# ----------------------------------------------------------
+# Fuel shares of the sector energy demand below this become zero
+small_share_threshold = 0.02
+# What happens to the energy of the fuels below the threshold:
+#   "zero_small_shares" -> stays in the demand and is supplied by the other fuels
+#   "drop_small_fuels"  -> fuels below the threshold in every period leave the
+#                          demand (their energy is not supplied); in each period the
+#                          others below it are supplied by the rest. Reproduces the
+#                          previous CEF module
+small_share_strategy = "zero_small_shares"
+# "le" (upper bound), "e" (exact share) or "ge" (lower bound). The shares add up to
+# 1, so "le" fixes them like "e"; "ge" doesn't keep out the fuels with a zero share
+input_split_operator = "le"
+
+# ----------------------------------------------------------
+#                     RUNTIME SWITCHES
+# ----------------------------------------------------------
+# "error" or "warning"
+validation_behavior = "error"  # database lacks periods or regions
