@@ -91,6 +91,26 @@ class CANOESector(StrEnum):
         }
         return EIA_SECTORS.get(self)
 
+    def get_cef_sector(self) -> str | None:
+        """
+        Sector of the CER Canada's Energy Future end-use demand tables, if CEF has
+        one. Agriculture has none: CEF counts it in "Industrial".
+
+        Examples
+        --------
+        >>> CANOESector.Industry.get_cef_sector()
+        'Industrial'
+        >>> CANOESector.Agriculture.get_cef_sector() is None
+        True
+        """
+        CEF_SECTORS: dict[CANOESector, str] = {
+            CANOESector.Commercial: "Commercial",
+            CANOESector.Residential: "Residential",
+            CANOESector.Industry: "Industrial",
+            CANOESector.Transportation: "Transportation",
+        }
+        return CEF_SECTORS.get(self)
+
     @override
     def __str__(self):
         return str(self.name)
