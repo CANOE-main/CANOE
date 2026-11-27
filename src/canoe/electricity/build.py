@@ -93,7 +93,6 @@ from .loaders import (
     get_ramp_rates,
     get_renewables_ninja_facility_profiles,
     get_statcan_monthly_hydro,
-    get_vre_bin_capacity_credits,
     get_vre_bin_capacity_factors,
     get_vre_bin_capacity_limits,
     get_vre_bin_fixed_costs,
@@ -102,9 +101,7 @@ from .loaders import (
 from .reliability import (
     ieso_capacity_ratios,
     planning_reserve_margins,
-    process_capacity_credits,
     process_reserve_derates,
-    vre_bin_capacity_credits,
 )
 from .storage.entities import build_existing_storage, build_new_storage
 from .storage.parameters import storage_efficiencies, storage_lifetimes
@@ -229,15 +226,13 @@ def build_electricity(
         # Carbon capture: CO2 of burning each fuel (kt/PJ), shared with the fuel module
         combustion_factors = get_combustion_emission_factors()
         # Reliability: CODERS planning reserve margins (fraction), IESO capability at
-        # the summer peak by fuel (MW), capacity credits of the wind and solar bins;
-        # ramp rates (fraction of capacity per hour) whether or not
+        # the summer peak by fuel (MW); ramp rates (fraction of capacity per hour)
+        # whether or not
         reliability = cfg.reliability
-        margins = capability = bin_credits = None
+        margins = capability = None
         if not reliability.skip:
             margins = get_coders_reserve_margins()
             capability = get_ieso_summer_peak_capability(years.ieso_reliability_outlook)
-            if binned:
-                bin_credits = get_vre_bin_capacity_credits(cfg.data_cache_config)
         ramp_rates = get_ramp_rates()
         # Trade: CODERS interface capacities (MW), hourly transfers on each intertie
         # (MWh) and transmission losses (fraction); only what is modelled
@@ -313,8 +308,8 @@ def build_electricity(
         )
 
         # - Reliability: the share of each generator's capacity available at the
-        #   summer peak (Ontario's, by fuel), as capacity credits and derates; none if
-        #   the reserve margin is left out
+        #   summer peak (Ontario's, by fuel), as reserve capacity derates; none if the
+        #   reserve margin is left out
         ratios = (
             {}
             if capability is None
@@ -384,9 +379,6 @@ def build_electricity(
                 notes,
                 electricity_data_id,
                 Reliability(
-                    credits=process_capacity_credits(
-                        existing, ratios, lifetimes, cfg.future_periods
-                    ),
                     derates=process_reserve_derates(
                         existing,
                         ratios,
@@ -424,9 +416,6 @@ def build_electricity(
             notes,
             electricity_data_id,
             Reliability(
-                credits=process_capacity_credits(
-                    new, ratios, lifetimes, cfg.future_periods
-                ),
                 derates=process_reserve_derates(
                     new, ratios, reliability.reproduce_previous_hydro_storage_derate
                 ),
@@ -434,7 +423,7 @@ def build_electricity(
             ),
         )
 
-        # - New wind and solar bins: their costs, capacity limits and capacity credits
+        # - New wind and solar bins: their costs and capacity limits
         vre_bins: GenerationEntities | None = None
         if (
             bin_investment is not None
@@ -472,11 +461,6 @@ def build_electricity(
                 lifetimes,
                 notes,
                 electricity_data_id,
-                None
-                if bin_credits is None
-                else vre_bin_capacity_credits(
-                    bin_credits, binned, cfg.provinces, cfg.future_periods
-                ),
             )
         # - Storage: existing CODERS facilities grouped as the generators, new storage
         #   in every province; round-trip efficiencies from the config, costs as the
@@ -819,13 +803,8 @@ def _generation_notes(cfg: "CANOEElectricityConfig") -> GenerationNotes:
         + "(electricity sector, shared with the fuel module, which accounts the "
         + "emissions); retrofits per unit of the generator's electricity, with the "
         + "configured generator heat rate (ccs_retrofit_heat_rates)",
-        capacity_credits=f"{ieso}; the share of capacity counted in each period",
         reserve_derates=f"{ieso}; the share of available output counted in each "
         + "season",
-        vre_bin_capacity_credits="NREL ReEDS method (Frew et al., 2017): reduction of "
-        + "the top 100 hours of the net load duration curve per unit of capacity, "
-        + "bins built out in order of LCOE, one technology at a time (Sutubra, 2024; "
-        + "2018 load and weather)",
         ramp_rates="Fraction of capacity per hour, up and down: Dolter & Rivers "
         + "(2018), The cost of decarbonizing the Canadian electricity system, SI "
         + "Table 7",

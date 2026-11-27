@@ -1,6 +1,5 @@
 import sqlite3
 
-import numpy as np
 import pandas as pd
 import pytest
 from canoe_schema.sql import get_sql_schema
@@ -8,7 +7,7 @@ from canoe_schema.sql import get_sql_schema
 from canoe.canoe_objects.array_types import (
     RegionalValuesArray,
     RegionVintageArray,
-    RegionVintagePeriodArray,
+    RegionVintageSeasonArray,
 )
 from canoe.canoe_objects.technology import TechnologyEntity
 from canoe.common import CANOEProvince, CANOESector
@@ -33,9 +32,7 @@ from canoe.electricity.loaders import (
 from canoe.electricity.reliability import (
     ieso_capacity_ratios,
     planning_reserve_margins,
-    process_capacity_credits,
     process_reserve_derates,
-    vre_bin_capacity_credits,
 )
 from canoe.electricity.supply.entities import build_grid
 
@@ -47,8 +44,7 @@ NOTES = GenerationNotes(
     atb_efficiency="atb", cogeneration="cogeneration", vre_bin_costs="bins",
     vre_bin_limits="limits", vre_bin_capacity_factors="bin profiles",
     vre_capacity_factors="vre", hydro_capacity_factors="hydro", capture="capture",
-    capacity_credits="credits", reserve_derates="derates",
-    vre_bin_capacity_credits="bin credits", ramp_rates="ramps",
+    reserve_derates="derates", ramp_rates="ramps",
 )  # fmt: skip
 HOURS, DAYS = 8760, 365
 CC = GenerationTechnology.NaturalGasCC
@@ -133,7 +129,6 @@ def _build(db: sqlite3.Connection, reliability: Reliability | None, reproduce: b
     if reliability is None:
         ratios = ieso_capacity_ratios(get_ieso_summer_peak_capability(2025), "Firm")
         reliability = Reliability(
-            credits=process_capacity_credits(processes, ratios, LIFETIMES, PERIODS),
             derates=process_reserve_derates(processes, ratios, reproduce),
             ramp_rates=get_ramp_rates(),
         )
@@ -173,20 +168,11 @@ def test_stand_in_year():
         get_ieso_summer_peak_capability(2024)
 
 
-def test_capacity_credits_while_alive():
+def test_no_capacity_credits():
+    # Only the dynamic reserve margin is written
     db = _grid()
     _build(db, None, reproduce=False)
-    rows = db.execute(
-        "SELECT region, tech, vintage, period, round(credit, 4) FROM capacity_credit "
-        + "ORDER BY tech, vintage, period"
-    ).fetchall()
-    assert rows == [
-        *[("QC", "E_HYD_MLY-EXS", 2024, p, 0.5972) for p in PERIODS],
-        # 2000 combined cycle retires in 2030
-        ("ON", "E_NG_CC-EXS", 2000, 2025, 0.8579),
-        *[("ON", "E_NG_CC-EXS", 2020, p, 0.8579) for p in PERIODS],
-        *[("ON", "E_WND_ON-EXS", 2020, p, 0.1488) for p in PERIODS],
-    ]
+    assert db.execute("SELECT count(*) FROM capacity_credit").fetchone() == (0,)
 
 
 @pytest.mark.parametrize("reproduce", [False, True])
@@ -221,7 +207,6 @@ def test_no_reliability_writes_nothing():
     db = _grid()
     _build(db, Reliability(), reproduce=False)
     for table in (
-        "capacity_credit",
         "reserve_capacity_derate",
         "ramp_up_hourly",
         "planning_reserve_margin",
@@ -242,45 +227,17 @@ def test_planning_reserve_margin_missing():
         planning_reserve_margins(margins, [ON, QC])
 
 
-def test_vre_bin_credits_need_every_vintage():
-    credits = pd.DataFrame(
-        {
-            "region": ON,
-            "technology": WIND,
-            "bin": 1,
-            "vintage": [2025, 2025, 2030],
-            "period": [2025, 2030, 2030],
-            "credit": 0.4,
-        }
-    )
-    assert len(vre_bin_capacity_credits(credits, [WIND], [ON], [2025, 2030])) == 3
-    with pytest.raises(ValueError, match="without a capacity credit"):
-        vre_bin_capacity_credits(credits, [WIND], [ON], PERIODS)
-
-
 class TestValidation:
     def _entity(self) -> TechnologyEntity:
         return TechnologyEntity("E_TEST", "E_elc_tx", DATA_ID).with_efficiency(
             "E_ethos", RegionVintageArray([ON], [2025], fill=1.0)
         )
 
-    def test_credit_needs_reserve(self):
-        entity = self._entity().with_capacity_credit(
-            RegionVintagePeriodArray([ON], [2025], [2025], fill=0.5)
+    def test_derate_needs_reserve(self):
+        entity = self._entity().with_reserve_capacity_derate(
+            RegionVintageSeasonArray([ON], [2025], ["D001"], fill=0.5)
         )
         with pytest.raises(ValueError, match="not in the reserve"):
-            entity.validate()
-
-    def test_credit_within_life(self):
-        entity = (
-            self._entity()
-            .set_reserve()
-            .with_lifetime(RegionalValuesArray([ON], fill=5))
-            .with_capacity_credit(
-                RegionVintagePeriodArray([ON], [2025], [2025, 2030], fill=0.5)
-            )
-        )
-        with pytest.raises(ValueError, match="after the end of life"):
             entity.validate()
 
     def test_ramp_rate_positive(self):
@@ -289,10 +246,8 @@ class TestValidation:
         with pytest.raises(ValueError, match=r"outside \(0, 1\]"):
             entity.validate()
 
-    def test_credit_at_most_one(self):
-        values = np.full((1, 1, 1), 1.5)
-        credits = RegionVintagePeriodArray([ON], [2025], [2025])
-        credits.data[:] = values
-        entity = self._entity().set_reserve().with_capacity_credit(credits)
-        with pytest.raises(ValueError, match=r"outside \[0, 1\]"):
+    def test_ramp_rate_at_most_one(self):
+        rates = RegionalValuesArray([ON], fill=1.5)
+        entity = self._entity().with_ramp_rates(rates, rates)
+        with pytest.raises(ValueError, match=r"outside \(0, 1\]"):
             entity.validate()

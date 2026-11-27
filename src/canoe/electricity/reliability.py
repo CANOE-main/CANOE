@@ -2,16 +2,16 @@
 Reliability parameters: the planning reserve margin of each province and what counts
 towards it, plus the ramp rates of the thermal generators.
 
-Temoa's `reserve_margin` setting picks how capacity counts towards the margin:
-capacity credits (static: a share of each process's capacity, by period) or reserve
-capacity derates (dynamic: a share of each process's available output, by season).
-Both come from the same ratio, Ontario's capability at the summer peak over its
-installed capacity, by fuel (IESO Reliability Outlook), applied to every province
-(see `ELECTRICITY_MODULE_BUGS.md`, entry 3). The new wind and solar bins take their
-capacity credits from the cached bins.
+CANOE writes the dynamic reserve margin only: capacity counts towards the margin
+through reserve capacity derates (a share of each process's available output, by
+season), not capacity credits (the static reserve margin, a share of each process's
+capacity by period), so Temoa must run with `reserve_margin = "dynamic"`. The
+derates come from Ontario's capability at the summer peak over its installed
+capacity, by fuel (IESO Reliability Outlook), applied to every province (see
+`ELECTRICITY_MODULE_BUGS.md`, entry 3).
 
-Storage, the CCS retrofits and the bypasses get none: Temoa's defaults apply (no
-capacity credit, a derate of 1).
+Storage, the CCS retrofits, the bypasses and the new wind and solar bins get none:
+Temoa's default derate of 1 applies.
 """
 
 import pandas as pd
@@ -57,66 +57,6 @@ def ieso_capacity_ratios(
         for technology in GenerationTechnology
         if (fuel_type := technology.get_ieso_fuel_type()) in by_fuel
     }
-
-
-def process_capacity_credits(
-    processes: pd.DataFrame,
-    ratios: dict[GenerationTechnology, float],
-    lifetimes: dict[GenerationTechnology, int],
-    periods: list[int],
-) -> pd.DataFrame:
-    """
-    Capacity credit (static reserve margin) of each process in the periods its
-    vintage lives: the IESO ratio of its technology.
-
-    Parameters
-    ----------
-    processes : pd.DataFrame
-        Generators (not the bins), see `generation.parameters.existing_processes`
-        and `new_processes`.
-    ratios : dict[GenerationTechnology, float]
-        See `ieso_capacity_ratios`; technologies without one get no credit.
-    lifetimes : dict[GenerationTechnology, int]
-        See `generation.parameters.generation_lifetimes`.
-    periods : list[int]
-        Model periods.
-
-    Returns
-    -------
-    pd.DataFrame
-        Columns `region`, `technology`, `vintage`, `period` and `credit`.
-
-    Examples
-    --------
-    >>> processes = pd.DataFrame(
-    ...     {"region": [CANOEProvince.ONTARIO], "technology": [GenerationTechnology.Coal],
-    ...      "vintage": [2000]}
-    ... )
-    >>> process_capacity_credits(
-    ...     processes, {GenerationTechnology.Coal: 0.86}, {GenerationTechnology.Coal: 30},
-    ...     [2025, 2030, 2035],
-    ... )[["vintage", "period", "credit"]]
-       vintage  period  credit
-    0     2000    2025    0.86
-    """
-    rows = [
-        {
-            "region": region,
-            "technology": technology,
-            "vintage": vintage,
-            "period": period,
-            "credit": ratios[technology],
-        }
-        for region, technology, vintage in zip(
-            processes["region"], processes["technology"], processes["vintage"]
-        )
-        if technology in ratios
-        for period in periods
-        if vintage <= period < vintage + lifetimes[technology]
-    ]
-    return pd.DataFrame(
-        rows, columns=["region", "technology", "vintage", "period", "credit"]
-    )
 
 
 def process_reserve_derates(
@@ -188,48 +128,6 @@ def process_reserve_derates(
         if derated(technology)
     ]
     return pd.DataFrame(rows, columns=["region", "technology", "vintage", "factor"])
-
-
-def vre_bin_capacity_credits(
-    credits: pd.DataFrame,
-    technologies: list[GenerationTechnology],
-    provinces: list[CANOEProvince],
-    periods: list[int],
-) -> pd.DataFrame:
-    """
-    Capacity credit of each new wind and solar bin of `technologies` in `provinces`,
-    for the vintages and periods in `periods`.
-
-    Parameters
-    ----------
-    credits : pd.DataFrame
-        See `loaders.get_vre_bin_capacity_credits`.
-
-    Returns
-    -------
-    pd.DataFrame
-        Columns `region`, `technology`, `bin`, `vintage`, `period` and `credit`.
-
-    Raises
-    ------
-    ValueError
-        If a bin has no credit for a vintage.
-    """
-    selected = credits.loc[
-        credits["technology"].isin(technologies)
-        & credits["region"].isin(provinces)
-        & credits["vintage"].isin(periods)
-        & credits["period"].isin(periods)
-    ]
-    vintages = selected.groupby(["region", "technology", "bin"], sort=False)[
-        "vintage"
-    ].nunique()
-    short = vintages.loc[vintages < len(periods)]
-    if not short.empty:
-        raise ValueError(
-            f"VRE bins without a capacity credit for some vintages: {short.index.tolist()}"
-        )
-    return selected.reset_index(drop=True)
 
 
 def planning_reserve_margins(
